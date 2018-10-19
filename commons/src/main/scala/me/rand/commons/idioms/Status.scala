@@ -77,9 +77,9 @@ object Status {
   class PartialFunctionReturningStatusBuilder {
 
     class PartialStatementBuilder[WhenOk, WhenErr](f: Status[WhenOk, WhenErr]) {
-      def >>[ReturnType](g: WhenOk => ReturnType): Status[ReturnType, WhenErr] = f.map(g)
+      def &&[ReturnType](g: WhenOk => ReturnType): Status[ReturnType, WhenErr] = f.map(g)
 
-      def ~>[ReturnType](g: WhenOk => Status[ReturnType, WhenErr]): Status[ReturnType, WhenErr] = f.flatMap(g)
+      def &[ReturnType](g: WhenOk => Status[ReturnType, WhenErr]): Status[ReturnType, WhenErr] = f.flatMap(g)
     }
 
     def >[WhenOk, WhenErr](f: Status[WhenOk, WhenErr]): PartialStatementBuilder[WhenOk, WhenErr] =

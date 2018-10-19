@@ -131,7 +131,7 @@ class StatusTest extends FlatSpec {
     def okIfHello(string: String): String OrElse Int =
       if (string == "hello") Ok("aloha") else Err(66)
 
-    okIfHello("hello") >> (_ + "0") match {
+    okIfHello("hello") && (_ + "0") match {
       case Ok("aloha0") =>
         succeed
 
@@ -144,7 +144,7 @@ class StatusTest extends FlatSpec {
     def okIfHello(string: String): String OrElse Int =
       if (string == "hello") Ok("aloha") else Err(66)
 
-    okIfHello("goodbye") >> (_ + "0") match {
+    okIfHello("goodbye") && (_ + "0") match {
       case Err(66) =>
         succeed
 
@@ -157,7 +157,7 @@ class StatusTest extends FlatSpec {
     def okIfHello(string: String): String OrElse Int =
       if (string == "hello") Ok("aloha") else Err(66)
 
-    okIfHello("hello") ~> { x => Ok(x.head) } match {
+    okIfHello("hello") & { x => Ok(x.head) } match {
       case Ok('a') =>
         succeed
 
@@ -170,7 +170,7 @@ class StatusTest extends FlatSpec {
     def okIfHello(string: String): String OrElse Int =
       if (string == "hello") Ok("aloha") else Err(66)
 
-    okIfHello("hello") ~> { x => Err(77) } match {
+    okIfHello("hello") & { x => Err(77) } match {
       case Err(77) =>
         succeed
 
@@ -183,7 +183,7 @@ class StatusTest extends FlatSpec {
     def okIfHello(string: String): String OrElse Int =
       if (string == "hello") Ok("aloha") else Err(66)
 
-    okIfHello("goodbye") ~> { x => Ok(x + "0") } match {
+    okIfHello("goodbye") & { x => Ok(x + "0") } match {
       case Err(66) =>
         succeed
 
