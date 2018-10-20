@@ -53,6 +53,16 @@ object VmError {
         s"invalid profile string '$profile': field '$fieldName'"
     }
 
+    case class ValueExceedsMaximumAllowed(profile: String, fieldName: String, maxValue: Int) extends VmProfileStringError {
+      override def toString: String =
+        s"profile value '$fieldName' exceeds maximum allowed ($maxValue)"
+    }
+
+    case class NotAPowerOfTwo(value: Int, fieldName: String) extends VmProfileStringError {
+      override def toString: String =
+        s"profile value '$fieldName'=$value is not a power of two"
+    }
+
   }
 
 }

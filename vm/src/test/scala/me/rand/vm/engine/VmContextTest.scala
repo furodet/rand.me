@@ -42,9 +42,39 @@ class VmContextTest extends FlatSpec {
     }
   }
 
+  "VM profile" should "not be created from invalid specification (illegal string integer)" in {
+    VmProfile.fromString("bl:what?:heap:10") match {
+      case Err(VmProfileStringError.NotAPositiveNumber(_, "bl")) =>
+        succeed
+
+      case whatever =>
+        fail(s"unexpected result from profile with illegal string: $whatever")
+    }
+  }
+
   "VM profile" should "not be created from invalid specification (invalid byte len)" in {
     VmProfile.fromString("bl:0:heap:10") match {
       case Err(VmProfileStringError.NotAPositiveNumber(_, "bl")) =>
+        succeed
+
+      case whatever =>
+        fail(s"unexpected result from profile with illegal string: $whatever")
+    }
+  }
+
+  "VM profile" should "not be created from invalid specification (excessive byte len)" in {
+    VmProfile.fromString("bl:257:heap:10") match {
+      case Err(VmProfileStringError.ValueExceedsMaximumAllowed(_, "bl", VmContext.maximumByteSizeAllowed)) =>
+        succeed
+
+      case whatever =>
+        fail(s"unexpected result from profile with illegal string: $whatever")
+    }
+  }
+
+  "VM profile" should "not be created from invalid specification (byte len is not a power of two)" in {
+    VmProfile.fromString("bl:3:heap:10") match {
+      case Err(VmProfileStringError.NotAPowerOfTwo(3, "bl")) =>
         succeed
 
       case whatever =>
@@ -62,13 +92,33 @@ class VmContextTest extends FlatSpec {
     }
   }
 
+  "VM profile" should "not be created from invalid specification (excessive varsetsize)" in {
+    VmProfile.fromString(s"bl:1:heap:${VmContext.maximumNumberOfVariablesInHeap + 1}") match {
+      case Err(VmProfileStringError.ValueExceedsMaximumAllowed(_, "heap", VmContext.maximumNumberOfVariablesInHeap)) =>
+        succeed
+
+      case whatever =>
+        fail(s"unexpected result from profile with illegal string: $whatever")
+    }
+  }
+
   "VM context" should "properly initialize for 8-bits machine" in {
-    VmContext.usingProfileString("bl:1:heap:2") match {
+    VmContext.usingProfileString(s"bl:1:heap:${VmContext.maximumNumberOfVariablesInHeap}") match {
       case Ok(vmContext) =>
         assertThatVmTypesMapExactly(vmContext.vmTypes, 1)
 
       case whatever =>
         fail(s"unexpected result from profile/8-bits: $whatever")
+    }
+  }
+
+  "VM context" should "properly initialize for 64-bits machine" in {
+    VmContext.usingProfileString(s"bl:8:heap:${VmContext.maximumNumberOfVariablesInHeap}") match {
+      case Ok(vmContext) =>
+        assertThatVmTypesMapExactly(vmContext.vmTypes, 1, 2, 4, 8)
+
+      case whatever =>
+        fail(s"unexpected result from profile/64-bits: $whatever")
     }
   }
 
@@ -98,9 +148,4 @@ class VmContextTest extends FlatSpec {
 
   private def vmTypeSequenceContainsExactly(seq: Seq[VmType], signed: VmType, unsigned: VmType): Boolean =
     (seq.length == 2) && seq.contains(unsigned) && seq.contains(signed)
-
-  /*
-      seq.collect { case x if (x.byteLen == signed.byteLen) && (x.isSigned == signed.isSigned) => x }.nonEmpty &&
-      seq.collect { case x if (x.byteLen == unsigned.byteLen) && (x.isSigned == unsigned.isSigned) => x }.nonEmpty
-      */
 }

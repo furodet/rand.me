@@ -32,6 +32,9 @@ import me.rand.vm.main.VmError._
 class VmContext(val vmTypes: VmTypes, heap: VarSet)
 
 object VmContext {
+  // Maximums are totally arbitrary
+  val maximumByteSizeAllowed: Int = 2048 / 8
+  val maximumNumberOfVariablesInHeap: Int = 128 << 20
 
   class VmProfile(val machineWordByteLen: Int, val varSetSize: Int)
 
@@ -41,8 +44,9 @@ object VmContext {
       asStrings match {
         case "bl" :: bl :: "heap" :: hsz :: Nil =>
           for {
-            byteLen <- readPositiveIntOrElse(profile, bl, "bl")
-            heapSize <- readPositiveIntOrElse(profile, hsz, "heap")
+            byteLen <- readPositiveIntOrElse(profile, bl, maximumByteSizeAllowed, "bl")
+            _ <- verifyThatNumberIsAPowerOfTwo(byteLen, "bl")
+            heapSize <- readPositiveIntOrElse(profile, hsz, maximumNumberOfVariablesInHeap, "heap")
           } yield new VmProfile(byteLen, heapSize)
 
         case _ =>
@@ -50,20 +54,26 @@ object VmContext {
       }
     }
 
-    private def readPositiveIntOrElse(profile: String, string: String, fieldName: String): Int OrElse VmProfileStringError =
+    private def readPositiveIntOrElse(profile: String, stringValue: String, maxValue: Int, fieldName: String): Int OrElse VmProfileStringError =
       try {
-        val result = string.toInt
+        val result = stringValue.toInt
         result match {
-          case i if i > 0 =>
+          case i if i > 0 && i <= maxValue =>
             Ok(i)
 
-          case _ =>
+          case i if i <= 0 =>
             Err(VmProfileStringError.NotAPositiveNumber(profile, fieldName))
+
+          case _ =>
+            Err(VmProfileStringError.ValueExceedsMaximumAllowed(profile, fieldName, maxValue))
         }
       } catch {
         case _: IllegalArgumentException =>
           Err(VmProfileStringError.NotAPositiveNumber(profile, fieldName))
       }
+
+    private def verifyThatNumberIsAPowerOfTwo(value: Int, fieldName: String): Unit OrElse VmProfileStringError =
+      if (((value - 1) & value) == 0) Ok(()) else Err(VmProfileStringError.NotAPowerOfTwo(value, fieldName))
   }
 
   def usingProfile(vmProfile: VmProfile): VmContext = {
