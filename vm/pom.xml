@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>vm</artifactId>
+    <artifactId>rand.me.vm</artifactId>
     <name>rand.me vm</name>
     <description>rand.me virtual machine</description>
     <packaging>jar</packaging>
@@ -22,6 +22,12 @@
         <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_2.12</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.lmnt</groupId>
+            <artifactId>rand.me.commons</artifactId>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 
