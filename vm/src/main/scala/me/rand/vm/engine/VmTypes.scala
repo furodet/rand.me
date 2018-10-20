@@ -27,15 +27,16 @@ package me.rand.vm.engine
 
 import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.VmTypes.VmType
+import me.rand.vm.main.VmError.VmContextError.InvalidVmTypeString
 
 import scala.annotation.tailrec
 
 // Documentation: doc/vmarchitecture.md
 class VmTypes(val typeMap: Map[String, VmType]) {
-  def valueOf(s: String): VmType OrElse Exception =
+  def valueOf(s: String): VmType OrElse InvalidVmTypeString =
     typeMap.get(s) match {
       case None =>
-        Err(new IllegalArgumentException(s"$s is not a valid VM type"))
+        Err(InvalidVmTypeString(s))
 
       case Some(vmType) =>
         Ok(vmType)
@@ -64,6 +65,8 @@ object VmTypes {
 
   class VmType(val byteLen: Int, val isSigned: Boolean) {
     def bitLen: Int = byteLen * 8
+
+    lazy val isUnsigned: Boolean = !isSigned
 
     val name: String = if (isSigned) s"s$bitLen" else s"u$bitLen"
 

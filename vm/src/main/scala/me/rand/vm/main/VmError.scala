@@ -37,6 +37,10 @@ object VmError {
       override def toString: String = s"variable index out of bounds: $index"
     }
 
+    case class InvalidVmTypeString(string: String) extends VmContextError {
+      override def toString: String = s"invalid type string '$string'"
+    }
+
   }
 
   sealed trait VmProfileStringError extends VmError

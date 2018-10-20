@@ -28,6 +28,7 @@ package me.rand.vm.engine
 import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.VmContext.VmProfile
 import me.rand.vm.engine.VmTypes.VmType
+import me.rand.vm.main.VmError.VmContextError.InvalidVmTypeString
 import me.rand.vm.main.VmError._
 import org.scalatest.FlatSpec
 
@@ -122,6 +123,37 @@ class VmContextTest extends FlatSpec {
     }
   }
 
+  "VM types" should "understand legal type strings and reject illegal type strings" in {
+    VmContext.usingProfileString(s"bl:1:heap:10") match {
+      case Ok(vmContext) =>
+        vmContext.vmTypes.valueOf("u8") match {
+          case Ok(vmType) if vmType.byteLen == 1 && vmType.isUnsigned =>
+            succeed
+
+          case Err(whatever) =>
+            fail(s"unexpected result from value of (u8): $whatever")
+        }
+
+        vmContext.vmTypes.valueOf("s8") match {
+          case Ok(vmType) if vmType.byteLen == 1 && vmType.isSigned =>
+            succeed
+
+          case whatever =>
+            fail(s"unexpected result from value of (s8): $whatever")
+        }
+
+        vmContext.vmTypes.valueOf("u16") match {
+          case Err(InvalidVmTypeString("u16")) =>
+            succeed
+
+          case whatever =>
+            fail(s"unexpected result from value of (u16): $whatever")
+        }
+      case whatever =>
+        fail(s"unexpected result from valid profile definition: $whatever")
+    }
+  }
+
   private def assertThatVmTypesMapExactly(types: VmTypes, byteLens: Int*): Unit = {
     // Has every expected type
     byteLens.foreach {
@@ -130,6 +162,14 @@ class VmContextTest extends FlatSpec {
     }
     // Has no other type
     assert(2 * byteLens.length == types.typeMap.size)
+    // Just test with one stupid type at least once
+    types.select(128, isSigned = true) match {
+      case Some(unexpectedType) =>
+        fail(s"type u128 should not be known but got $unexpectedType")
+
+      case None =>
+      // Ok
+    }
   }
 
   private def assertThatVmTypesSelectAllTypesOfByteLen(byteLen: Int, types: VmTypes): Unit = {
