@@ -5,9 +5,9 @@ General structure
 -----------------
 The virtual machine architecture is defined by an execution
 context, maintained by `VmContext` including:
-  * A set of variables (aka the *VarSet*)
-  * An instruction memory
-  * A stack
+  * Heap: a set of global variables
+  * Stack: local variables and function parameters
+  * Instruction memory
 
 **Vitual machine profile**
 
@@ -20,27 +20,20 @@ represented by a description string:
 
 **Virtual machine types**
 
-TODO: format:
+rand.me virtual machine is not designed for a specific word length, but support any
+scalar type whose size is less than a supplied "target machine byte length".
 
-```
-  *
-  * Given that the machine words have fixed length, the VM supports any
-  * type whose number of bytes is less than this length. Moreover, each
-  * type can be signed or unsigned.
-  *
-  * Each type has a given name, equal to "u" (for unsigned) or "s" (for
-  * signed), followed by the type length, in bits.
-  *
-  * For example, for a 32-bits machine (4 bytes word), the allowed types
-  * are: {{{s8 u8 s16 u16 s32 u32}}}.
-  *
-  * As a consequence, the virtual machine types are not something hard-coded,
-  * but a list of allowed types, constructed by
-  * {{{VmTypes.forMachineWordByteLength}}}. The resulting {{{VmTypes}}} allow
-  * to:
-  *   - get a type definition from its name {{{valueOf}}}
-  *   - select types according to the length and signedness {{{select}}}
-```
+For example, to emulate a 32-bits machine, the VM will define 8 scalar types:
+  * unsigned and signed bytes: `u8` and `s8`
+  * unsigned and signed shorts: `u16` and `s16`
+  * unsigned and signed integers: `u32` and `s32`
+
+As a consequence, the virtual machine types are not something hard-coded,
+but a list of allowed types, constructed by `VmTypes.forMachineWordByteLength`.
+
+The resulting `VmTypes` allow to:
+  * get a type definition from its name {{{valueOf}}}
+  * select types according to the length and signedness {{{select}}}
 
 **Variables and VarSet**
 
@@ -61,6 +54,6 @@ One can:
 
 **Heap**
 
-TODO
+`VmContext.heap` is a `VarSet` providing all the program's global variables.
 
 **TODO: instruction memory, PC, stack**

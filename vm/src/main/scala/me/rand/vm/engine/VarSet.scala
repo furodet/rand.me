@@ -28,6 +28,7 @@ package me.rand.vm.engine
 import me.rand.commons.idioms.Status._
 import me.rand.vm.main.VmError.VmContextError.VariableIndexOutOfBounds
 
+// Documentation: doc/vmarchitecture.md
 class VarSet(val data: Array[Option[Variable]]) {
   def putVariable(id: Int, v: Variable): Unit OrElse VariableIndexOutOfBounds =
     try {

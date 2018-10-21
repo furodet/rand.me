@@ -27,6 +27,7 @@ package me.rand.vm.engine
 
 import me.rand.vm.engine.VmTypes.VmType
 
+// Documentation: doc/vmarchitecture.md
 sealed trait Variable {
   def name: String
 }
