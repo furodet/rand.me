@@ -71,17 +71,6 @@ object VmTypes {
     val name: String = if (isSigned) s"s$bitLen" else s"u$bitLen"
 
     override def toString: String = super.toString
-
-    override def equals(that: Any): Boolean =
-      that match {
-        case other: VmType =>
-          (other.isSigned == isSigned) && (other.byteLen == byteLen)
-
-        case _ =>
-          false
-      }
-
-    override def hashCode(): Int = if (isSigned) 2 * byteLen + 1 else 2 * byteLen
   }
 
   private class VmTypeFactory(machineWordByteLen: Int) {

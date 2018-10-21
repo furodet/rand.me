@@ -175,10 +175,8 @@ class VmContextTest extends FlatSpec {
   private def assertThatVmTypesSelectAllTypesOfByteLen(byteLen: Int, types: VmTypes): Unit = {
     assert(types.select(byteLen, isSigned = true).isDefined)
     assert(types.select(byteLen, isSigned = false).isDefined)
-    val signed = new VmType(byteLen, isSigned = false)
-    val unsigned = new VmType(byteLen, isSigned = true)
     types.select(byteLen) match {
-      case seq if vmTypeSequenceContainsExactly(seq, signed, unsigned) =>
+      case seq if vmTypeSequenceContainsSignedAndUnsignedTypes(seq, byteLen) =>
         ()
 
       case whatever =>
@@ -186,6 +184,11 @@ class VmContextTest extends FlatSpec {
     }
   }
 
-  private def vmTypeSequenceContainsExactly(seq: Seq[VmType], signed: VmType, unsigned: VmType): Boolean =
-    (seq.length == 2) && seq.contains(unsigned) && seq.contains(signed)
+  private def vmTypeSequenceContainsSignedAndUnsignedTypes(seq: Seq[VmType], byteLen: Int): Boolean =
+    (seq.length == 2) &&
+      vmTypeSeqContains(seq, byteLen, isSigned = true) &&
+      vmTypeSeqContains(seq, byteLen, isSigned = false)
+
+  private def vmTypeSeqContains(seq: Seq[VmType], byteLen: Int, isSigned: Boolean): Boolean =
+    seq.exists(t => (t.isSigned == isSigned) && (t.byteLen == byteLen))
 }
