@@ -43,7 +43,7 @@ class VmContext(val vmTypes: VmTypes, val heap: VarSet, val stack: VmStack) {
 object VmContext {
   // Maximums are totally arbitrary
   val maximumByteSizeAllowed: Int = 2048 / 8
-  val maximumNumberOfVariablesInHeap: Int = 128 << 20
+  val maximumNumberOfVariablesInHeap: Int = 1 << 20
 
   class VmProfile(val machineWordByteLen: Int, val varSetSize: Int)
 
