@@ -29,7 +29,16 @@ import me.rand.commons.idioms.Status._
 import me.rand.vm.main.VmError._
 
 // Documentation: doc/vmarchitecture.md
-class VmContext(val vmTypes: VmTypes, val heap: VarSet, val stack: VmStack)
+class VmContext(val vmTypes: VmTypes, val heap: VarSet, val stack: VmStack) {
+  def createFrameOfSize(nrVariables: Int): VmContext = copy(stack.createFrameOfSize(nrVariables))
+
+  def popFrame(): VmContext OrElse VmContextError =
+    for {
+      poppedStack <- stack.popFrame()
+    } yield copy(poppedStack)
+
+  private def copy(newStack: VmStack): VmContext = new VmContext(vmTypes, heap, newStack)
+}
 
 object VmContext {
   // Maximums are totally arbitrary

@@ -33,14 +33,15 @@ import me.rand.vm.main.VmError.VmContextError.EmptyStackAccess
 import scala.language.postfixOps
 
 // Documentation: doc/vmarchitecture.md
-class VmStack(frames: Seq[VmFrame]) {
+class VmStack(frames: List[VmFrame]) {
   private def push(newFrame: VmFrame): VmStack =
+  // Note: scala List prepend is the most efficient.
     new VmStack(newFrame +: frames)
 
-  def createFrameOfSize(nrVariables: Int): VmStack =
+  private[engine] def createFrameOfSize(nrVariables: Int): VmStack =
     push(new VmFrame(VarSet.ofSize(nrVariables)))
 
-  def popFrame(): VmStack OrElse VmContextError =
+  private[engine] def popFrame(): VmStack OrElse VmContextError =
     for {
       _ <- getTopFrameOrErrorForAction("pop")
       r = new VmStack(frames tail)
@@ -63,7 +64,7 @@ class VmStack(frames: Seq[VmFrame]) {
 }
 
 object VmStack {
-  def empty = new VmStack(Seq.empty)
+  def empty = new VmStack(List.empty)
 
   private class VmFrame(val vars: VarSet)
 
