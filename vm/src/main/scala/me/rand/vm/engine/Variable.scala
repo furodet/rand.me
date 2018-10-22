@@ -25,6 +25,7 @@
  */
 package me.rand.vm.engine
 
+import me.rand.vm.engine.Variable.ScalarBuilder.Partial
 import me.rand.vm.engine.VmTypes.VmType
 
 // Documentation: doc/vmarchitecture.md
@@ -45,6 +46,21 @@ object Variable {
     case class ToStackVariable(name: String, varIndex: Int) extends Variable
 
     // TODO: instruction pointer
+  }
+
+  class ScalarBuilder(name: String) {
+    def ofType(varType: VmType): Partial = new Partial(name, varType)
+  }
+
+  object ScalarBuilder {
+    def aScalarCalled(name: String) = new ScalarBuilder(name)
+
+    class Partial(name: String, varType: VmType) {
+      def setTo(value: BigInt): Scalar = Scalar(name, varType, value)
+
+      def setTo(longValue: Long): Scalar = setTo(BigInt(longValue))
+    }
+
   }
 
 }

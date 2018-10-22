@@ -26,15 +26,20 @@
 package me.rand.vm.engine
 
 import me.rand.commons.idioms.Status._
+import me.rand.vm.engine.Variable.ScalarBuilder.aScalarCalled
 import me.rand.vm.engine.VmContext.VmProfile
 import me.rand.vm.engine.VmTypes.VmType
-import me.rand.vm.main.VmError.VmContextError.{EmptyStackAccess, InvalidVmTypeString}
+import me.rand.vm.main.VmError.VmContextError.{EmptyStackAccess, InvalidVmTypeString, VariableIndexOutOfBounds}
 import me.rand.vm.main.VmError._
 import org.scalatest.FlatSpec
+
+import scala.language.postfixOps
 
 class VmContextTest extends FlatSpec {
   // just a decorating nit.
   private def ok(): Unit = ()
+
+  private val aStandardHeapSize = 10
 
   "VM profile" should "not be created from invalid specification (illegal string)" in {
     VmProfile.fromString("babeubi") match {
@@ -160,7 +165,7 @@ class VmContextTest extends FlatSpec {
   "VM context" should "not allow to pop frame from empty stack" in {
     givenAValidVmContext {
       vmContext =>
-        vmContext.stack.popFrame() match {
+        vmContext.popFrame() match {
           case Err(EmptyStackAccess(_)) =>
             ok()
 
@@ -170,10 +175,114 @@ class VmContextTest extends FlatSpec {
     }
   }
 
-  // TODO: need elementary tests on stack and heap
+  "VM context" should "allow to push and pop frames in the stack" in {
+    givenAValidVmContext {
+      c0 =>
+        val c1 = c0.createFrameOfSize(1)
+        assert(c1.stack.frames.length == 1)
+        val c2 = c1.createFrameOfSize(2)
+        assert(c2.stack.frames.length == 2)
+        (for {
+          c3 <- c2.popFrame()
+          _ = assert(c3.stack.frames.length == 1)
+          finalContext <- c3.popFrame()
+        } yield finalContext) match {
+          case Ok(context) if context.stack.frames isEmpty =>
+            ok()
+
+          case whatever =>
+            fail(s"unexpected result from push/pop frames: $whatever")
+        }
+    }
+  }
+
+  "VM context" should "prevent from illegal read to a VarSet (negative index)" in {
+    givenAValidVmContext {
+      vmContext =>
+        vmContext.heap.getVariable(-1) match {
+          case Err(VariableIndexOutOfBounds(-1)) =>
+            ok()
+
+          case whatever =>
+            fail(s"unexpected result from illegal access to heap: $whatever")
+        }
+    }
+  }
+
+  "VM context" should "prevent from illegal read to a VarSet (index too large)" in {
+    givenAValidVmContext {
+      vmContext =>
+        vmContext.heap.getVariable(aStandardHeapSize) match {
+          case Err(VariableIndexOutOfBounds(s)) if s == aStandardHeapSize =>
+            ok()
+
+          case whatever =>
+            fail(s"unexpected result from illegal access to heap: $whatever")
+        }
+    }
+  }
+
+  "VM context" should "prevent from illegal write to a VarSet (negative index)" in {
+    givenAValidVmContext {
+      vmContext =>
+        vmContext.heap.putVariable(Int.MinValue, aVariable(vmContext)) match {
+          case Err(VariableIndexOutOfBounds(Int.MinValue)) =>
+            ok()
+
+          case whatever =>
+            fail(s"unexpected result from illegal access to heap: $whatever")
+        }
+    }
+  }
+
+  "VM context" should "prevent from illegal write to a VarSet (index too large)" in {
+    givenAValidVmContext {
+      vmContext =>
+        vmContext.heap.putVariable(Int.MaxValue, aVariable(vmContext)) match {
+          case Err(VariableIndexOutOfBounds(Int.MaxValue)) =>
+            ok()
+
+          case whatever =>
+            fail(s"unexpected result from illegal access to heap: $whatever")
+        }
+    }
+  }
+
+  "VM context" should "allow to read undefined VarSet variables" in {
+    givenAValidVmContext {
+      vmContext =>
+        vmContext.heap.getVariable(0) match {
+          case Ok(None) =>
+            ok()
+
+          case whatever =>
+            fail(s"unexpected result from access to uninitialized heap variable: $whatever")
+        }
+    }
+  }
+
+  "VM context" should "allow to write then read a variable in a VarSet" in {
+    givenAValidVmContext {
+      vmContext =>
+        val myVariable = aVariable(vmContext)
+        (for {
+          _ <- vmContext.heap.putVariable(2, myVariable)
+          v <- vmContext.heap.getVariable(2)
+        } yield v) match {
+          case Ok(Some(variable)) if variable == myVariable =>
+            ok()
+
+          case whatever =>
+            fail(s"unexpected result from put/get variable in heap: $whatever")
+        }
+    }
+  }
+
+  private def aVariable(c: VmContext) =
+    aScalarCalled("x").ofType(c.vmTypes.select(1, isSigned = true).get).setTo(0)
 
   private def givenAValidVmContext(action: VmContext => Unit): Unit =
-    VmContext.usingProfileString(s"bl:1:heap:10") match {
+    VmContext.usingProfileString(s"bl:1:heap:$aStandardHeapSize") match {
       case Ok(vmContext) =>
         action(vmContext)
 

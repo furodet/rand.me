@@ -33,7 +33,7 @@ import me.rand.vm.main.VmError.VmContextError.EmptyStackAccess
 import scala.language.postfixOps
 
 // Documentation: doc/vmarchitecture.md
-class VmStack(frames: List[VmFrame]) {
+class VmStack(val frames: List[VmFrame]) {
   private def push(newFrame: VmFrame): VmStack =
   // Note: scala List prepend is the most efficient.
     new VmStack(newFrame +: frames)
@@ -66,6 +66,6 @@ class VmStack(frames: List[VmFrame]) {
 object VmStack {
   def empty = new VmStack(List.empty)
 
-  private class VmFrame(val vars: VarSet)
+  class VmFrame(val vars: VarSet)
 
 }
