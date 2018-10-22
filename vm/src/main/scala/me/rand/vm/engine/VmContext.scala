@@ -29,7 +29,7 @@ import me.rand.commons.idioms.Status._
 import me.rand.vm.main.VmError._
 
 // Documentation: doc/vmarchitecture.md
-class VmContext(val vmTypes: VmTypes, heap: VarSet)
+class VmContext(val vmTypes: VmTypes, val heap: VarSet, val stack: VmStack)
 
 object VmContext {
   // Maximums are totally arbitrary
@@ -78,7 +78,7 @@ object VmContext {
 
   def usingProfile(vmProfile: VmProfile): VmContext = {
     val vmTypes = VmTypes.forMachineWordByteLength(vmProfile.machineWordByteLen)
-    new VmContext(vmTypes, VarSet.ofSize(vmProfile.varSetSize))
+    new VmContext(vmTypes, VarSet.ofSize(vmProfile.varSetSize), VmStack.empty)
   }
 
   def usingProfileString(profileString: String): VmContext OrElse VmProfileStringError =

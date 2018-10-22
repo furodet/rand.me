@@ -26,30 +26,45 @@
 package me.rand.vm.engine
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.main.VmError.VmContextError.VariableIndexOutOfBounds
+import me.rand.vm.engine.VmStack.VmFrame
+import me.rand.vm.main.VmError.VmContextError
+import me.rand.vm.main.VmError.VmContextError.EmptyStackAccess
+
+import scala.language.postfixOps
 
 // Documentation: doc/vmarchitecture.md
-class VarSet(val data: Array[Option[Variable]]) {
-  def putVariable(id: Int, v: Variable): Unit OrElse VariableIndexOutOfBounds =
-    try {
-      data(id) = Some(v)
-      Ok(())
-    } catch {
-      case _: ArrayIndexOutOfBoundsException =>
-        Err(VariableIndexOutOfBounds(id))
-    }
+class VmStack(frames: Seq[VmFrame]) {
+  private def push(newFrame: VmFrame): VmStack =
+    new VmStack(newFrame +: frames)
 
-  def getVariable(id: Int): Option[Variable] OrElse VariableIndexOutOfBounds =
-    try {
-      Ok(data(id))
-    } catch {
-      case _: ArrayIndexOutOfBoundsException =>
-        Err(VariableIndexOutOfBounds(id))
-    }
+  def createFrameOfSize(nrVariables: Int): VmStack =
+    push(new VmFrame(VarSet.ofSize(nrVariables)))
 
+  def popFrame(): VmStack OrElse VmContextError =
+    for {
+      _ <- getTopFrameOrErrorForAction("pop")
+      r = new VmStack(frames tail)
+    } yield r
+
+  def getVariable(id: Int): Option[Variable] OrElse VmContextError =
+    for {
+      frame <- getTopFrameOrErrorForAction("read")
+      r <- frame.vars.getVariable(id)
+    } yield r
+
+  def putVariable(id: Int, v: Variable): Unit OrElse VmContextError =
+    for {
+      frame <- getTopFrameOrErrorForAction("write")
+      r <- frame.vars.putVariable(id, v)
+    } yield r
+
+  private def getTopFrameOrErrorForAction(action: String): VmFrame OrElse EmptyStackAccess =
+    if (frames nonEmpty) Ok(frames head) else Err(EmptyStackAccess(action))
 }
 
-object VarSet {
-  // Note: we assume that nrVariables will never be negative or null.
-  def ofSize(nrVariables: Int): VarSet = new VarSet(Array.fill(nrVariables)(None))
+object VmStack {
+  def empty = new VmStack(Seq.empty)
+
+  private class VmFrame(val vars: VarSet)
+
 }

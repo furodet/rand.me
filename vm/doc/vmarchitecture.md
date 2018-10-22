@@ -32,8 +32,8 @@ As a consequence, the virtual machine types are not something hard-coded,
 but a list of allowed types, constructed by `VmTypes.forMachineWordByteLength`.
 
 The resulting `VmTypes` allow to:
-  * get a type definition from its name {{{valueOf}}}
-  * select types according to the length and signedness {{{select}}}
+  * get a type definition from its name (`valueOf`)
+  * select types according to the length and signedness (`select`)
 
 **Variables and VarSet**
 
@@ -52,8 +52,22 @@ One can:
     can be `None` if the value is not set yet
   * `setVariable(id:Int, value:Variable)`: set the value of variable number `id`
 
+Note: `VarSet` must be created with at least ONE element. No protection is put in the constructor,
+since this is naturally checked at an upper layer.
+
 **Heap**
 
 `VmContext.heap` is a `VarSet` providing all the program's global variables.
 
-**TODO: instruction memory, PC, stack**
+**Stack**
+
+The stack is a collection of frames consisting of individual `VarSet`. Only variables of the "top"
+frame are accessible:
+  * `getVariable(id:Int)`: get the value of variable number `id` in the top frame
+  * `putVariable(id:Int, value:Variable)`: set the value of variable number `id` in the top frame
+
+The top frame is managed via two functions:
+  * `createFrameOfSize(nrVariables:Int)`: to push a new frame
+  * `popFrame()`: to delete the current top frame
+
+**TODO: instruction memory, PC**

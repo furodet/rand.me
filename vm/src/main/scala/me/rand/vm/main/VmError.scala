@@ -41,6 +41,10 @@ object VmError {
       override def toString: String = s"invalid type string '$string'"
     }
 
+    case class EmptyStackAccess(operation: String) extends VmContextError {
+      override def toString: String = s"invalid $operation to empty stack"
+    }
+
   }
 
   sealed trait VmProfileStringError extends VmError

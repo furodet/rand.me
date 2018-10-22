@@ -28,15 +28,18 @@ package me.rand.vm.engine
 import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.VmContext.VmProfile
 import me.rand.vm.engine.VmTypes.VmType
-import me.rand.vm.main.VmError.VmContextError.InvalidVmTypeString
+import me.rand.vm.main.VmError.VmContextError.{EmptyStackAccess, InvalidVmTypeString}
 import me.rand.vm.main.VmError._
 import org.scalatest.FlatSpec
 
 class VmContextTest extends FlatSpec {
+  // just a decorating nit.
+  private def ok(): Unit = ()
+
   "VM profile" should "not be created from invalid specification (illegal string)" in {
     VmProfile.fromString("babeubi") match {
       case Err(VmProfileStringError.InvalidFormat(_, _)) =>
-        succeed
+        ok()
 
       case whatever =>
         fail(s"unexpected result from profile with illegal string: $whatever")
@@ -46,7 +49,7 @@ class VmContextTest extends FlatSpec {
   "VM profile" should "not be created from invalid specification (illegal string integer)" in {
     VmProfile.fromString("bl:what?:heap:10") match {
       case Err(VmProfileStringError.NotAPositiveNumber(_, "bl")) =>
-        succeed
+        ok()
 
       case whatever =>
         fail(s"unexpected result from profile with illegal string: $whatever")
@@ -56,7 +59,7 @@ class VmContextTest extends FlatSpec {
   "VM profile" should "not be created from invalid specification (invalid byte len)" in {
     VmProfile.fromString("bl:0:heap:10") match {
       case Err(VmProfileStringError.NotAPositiveNumber(_, "bl")) =>
-        succeed
+        ok()
 
       case whatever =>
         fail(s"unexpected result from profile with illegal string: $whatever")
@@ -66,7 +69,7 @@ class VmContextTest extends FlatSpec {
   "VM profile" should "not be created from invalid specification (excessive byte len)" in {
     VmProfile.fromString("bl:257:heap:10") match {
       case Err(VmProfileStringError.ValueExceedsMaximumAllowed(_, "bl", VmContext.maximumByteSizeAllowed)) =>
-        succeed
+        ok()
 
       case whatever =>
         fail(s"unexpected result from profile with illegal string: $whatever")
@@ -76,7 +79,7 @@ class VmContextTest extends FlatSpec {
   "VM profile" should "not be created from invalid specification (byte len is not a power of two)" in {
     VmProfile.fromString("bl:3:heap:10") match {
       case Err(VmProfileStringError.NotAPowerOfTwo(3, "bl")) =>
-        succeed
+        ok()
 
       case whatever =>
         fail(s"unexpected result from profile with illegal string: $whatever")
@@ -86,7 +89,7 @@ class VmContextTest extends FlatSpec {
   "VM profile" should "not be created from invalid specification (invalid varsetsize)" in {
     VmProfile.fromString("bl:1:heap:-1") match {
       case Err(VmProfileStringError.NotAPositiveNumber(_, "heap")) =>
-        succeed
+        ok()
 
       case whatever =>
         fail(s"unexpected result from profile with illegal string: $whatever")
@@ -96,7 +99,7 @@ class VmContextTest extends FlatSpec {
   "VM profile" should "not be created from invalid specification (excessive varsetsize)" in {
     VmProfile.fromString(s"bl:1:heap:${VmContext.maximumNumberOfVariablesInHeap + 1}") match {
       case Err(VmProfileStringError.ValueExceedsMaximumAllowed(_, "heap", VmContext.maximumNumberOfVariablesInHeap)) =>
-        succeed
+        ok()
 
       case whatever =>
         fail(s"unexpected result from profile with illegal string: $whatever")
@@ -128,7 +131,7 @@ class VmContextTest extends FlatSpec {
       case Ok(vmContext) =>
         vmContext.vmTypes.valueOf("u8") match {
           case Ok(vmType) if vmType.byteLen == 1 && vmType.isUnsigned =>
-            succeed
+            ok()
 
           case Err(whatever) =>
             fail(s"unexpected result from value of (u8): $whatever")
@@ -136,7 +139,7 @@ class VmContextTest extends FlatSpec {
 
         vmContext.vmTypes.valueOf("s8") match {
           case Ok(vmType) if vmType.byteLen == 1 && vmType.isSigned =>
-            succeed
+            ok()
 
           case whatever =>
             fail(s"unexpected result from value of (s8): $whatever")
@@ -144,7 +147,7 @@ class VmContextTest extends FlatSpec {
 
         vmContext.vmTypes.valueOf("u16") match {
           case Err(InvalidVmTypeString("u16")) =>
-            succeed
+            ok()
 
           case whatever =>
             fail(s"unexpected result from value of (u16): $whatever")
@@ -153,6 +156,30 @@ class VmContextTest extends FlatSpec {
         fail(s"unexpected result from valid profile definition: $whatever")
     }
   }
+
+  "VM context" should "not allow to pop frame from empty stack" in {
+    givenAValidVmContext {
+      vmContext =>
+        vmContext.stack.popFrame() match {
+          case Err(EmptyStackAccess(_)) =>
+            ok()
+
+          case whatever =>
+            fail(s"unexpected result for pop frame from empty stack: $whatever")
+        }
+    }
+  }
+
+  // TODO: need elementary tests on stack and heap
+
+  private def givenAValidVmContext(action: VmContext => Unit): Unit =
+    VmContext.usingProfileString(s"bl:1:heap:10") match {
+      case Ok(vmContext) =>
+        action(vmContext)
+
+      case whatever =>
+        fail(s"unexpected result from valid profile definition: $whatever")
+    }
 
   private def assertThatVmTypesMapExactly(types: VmTypes, byteLens: Int*): Unit = {
     // Has every expected type
