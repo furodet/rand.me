@@ -70,7 +70,7 @@ object VmTypes {
 
     val name: String = if (isSigned) s"s$bitLen" else s"u$bitLen"
 
-    override def toString: String = super.toString
+    override def toString: String = name
   }
 
   private class VmTypeFactory(machineWordByteLen: Int) {

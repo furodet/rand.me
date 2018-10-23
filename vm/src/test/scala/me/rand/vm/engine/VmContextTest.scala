@@ -196,6 +196,50 @@ class VmContextTest extends FlatSpec {
     }
   }
 
+  "VM context" should "not allow to read variables from an empty stack" in {
+    givenAValidVmContext {
+      vmContext =>
+        vmContext.stack.getVariable(0) match {
+          case Err(EmptyStackAccess(_)) =>
+            ok()
+
+          case whatever =>
+            fail(s"unexpected result from get variable from empty stack: $whatever")
+        }
+    }
+  }
+
+  "VM context" should "not allow to write variables into an empty stack" in {
+    givenAValidVmContext {
+      vmContext =>
+        vmContext.stack.putVariable(0, aVariable(vmContext)) match {
+          case Err(EmptyStackAccess(_)) =>
+            ok()
+
+          case whatever =>
+            fail(s"unexpected result from put variable from empty stack: $whatever")
+        }
+    }
+  }
+
+  "VM context" should "allow to write then read variables in stack" in {
+    givenAValidVmContext {
+      vmContext =>
+        val myVariable = aVariable(vmContext)
+        val hasFrame = vmContext.createFrameOfSize(1)
+        (for {
+          _ <- hasFrame.stack.putVariable(0, myVariable)
+          v <- hasFrame.stack.getVariable(0)
+        } yield v) match {
+          case Ok(Some(variable)) if variable == myVariable =>
+            ok()
+
+          case whatever =>
+            fail(s"unexpected result from put/get variable from stack: $whatever")
+        }
+    }
+  }
+
   "VM context" should "prevent from illegal read to a VarSet (negative index)" in {
     givenAValidVmContext {
       vmContext =>
@@ -323,8 +367,15 @@ class VmContextTest extends FlatSpec {
   private def vmTypeSequenceContainsSignedAndUnsignedTypes(seq: Seq[VmType], byteLen: Int): Boolean =
     (seq.length == 2) &&
       vmTypeSeqContains(seq, byteLen, isSigned = true) &&
-      vmTypeSeqContains(seq, byteLen, isSigned = false)
+      vmTypeSeqContains(seq, byteLen, isSigned = false) &&
+      vmTypeSeqContainsTypeNameForLength(seq, byteLen)
 
   private def vmTypeSeqContains(seq: Seq[VmType], byteLen: Int, isSigned: Boolean): Boolean =
     seq.exists(t => (t.isSigned == isSigned) && (t.byteLen == byteLen))
+
+  private def vmTypeSeqContainsTypeNameForLength(seq: Seq[VmType], byteLen: Int): Boolean =
+    (seq.length == 2) &&
+      seq.exists(t => t.toString == s"s${8 * byteLen}") &&
+      seq.exists(t => t.toString == s"u${8 * byteLen}")
+
 }
