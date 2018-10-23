@@ -29,15 +29,15 @@ import me.rand.commons.idioms.Status._
 import me.rand.vm.main.VmError._
 
 // Documentation: doc/vmarchitecture.md
-class VmContext(val vmTypes: VmTypes, val heap: VarSet, val stack: VmStack) {
-  def createFrameOfSize(nrVariables: Int): VmContext = copy(stack.createFrameOfSize(nrVariables))
+case class VmContext(vmTypes: VmTypes, heap: VarSet, stack: VmStack, program: VmProgram) {
+  def createFrameOfSize(nrVariables: Int): VmContext = copy(stack = stack.createFrameOfSize(nrVariables))
 
   def popFrame(): VmContext OrElse VmContextError =
     for {
       poppedStack <- stack.popFrame()
-    } yield copy(poppedStack)
+    } yield copy(stack = poppedStack)
 
-  private def copy(newStack: VmStack): VmContext = new VmContext(vmTypes, heap, newStack)
+  def setProgram(newProgram: VmProgram): VmContext = copy(program = newProgram)
 }
 
 object VmContext {
@@ -87,7 +87,7 @@ object VmContext {
 
   def usingProfile(vmProfile: VmProfile): VmContext = {
     val vmTypes = VmTypes.forMachineWordByteLength(vmProfile.machineWordByteLen)
-    new VmContext(vmTypes, VarSet.ofSize(vmProfile.varSetSize), VmStack.empty)
+    new VmContext(vmTypes, VarSet.ofSize(vmProfile.varSetSize), VmStack.empty, VmProgram.empty)
   }
 
   def usingProfileString(profileString: String): VmContext OrElse VmProfileStringError =
