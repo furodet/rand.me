@@ -25,15 +25,48 @@
  */
 package me.rand.vm.engine
 
-import me.rand.vm.engine.VmProgram.VmProgramBasicBlock
+import me.rand.commons.idioms.Status._
+import me.rand.vm.engine.VmProgram.{VmProgramBasicBlock, VmProgramCounter}
+import me.rand.vm.main.VmError.VmContextError
+import me.rand.vm.main.VmError.VmContextError.{NoSuchBasicBlock, ProgramCounterOutOfBlock, ProgramCounterOutOfBounds}
+
+import scala.language.postfixOps
 
 // Documentation: doc/vmarchitecture.md
-class VmProgram(val basicBlocks: Map[String, VmProgramBasicBlock]) {
+class VmProgram(val basicBlocks: Map[String, VmProgramBasicBlock], val pc: VmProgramCounter) {
   def +(basicBlock: VmProgramBasicBlock): VmProgram =
-    new VmProgram(basicBlocks + (basicBlock.name -> basicBlock))
+    new VmProgram(basicBlocks + (basicBlock.name -> basicBlock), pc)
+
+  def getCurrentInstruction: Instruction OrElse VmContextError =
+    pc.basicBlock match {
+      case None =>
+        Err(ProgramCounterOutOfBlock())
+
+      case Some(basicBlock) =>
+        try {
+          Ok(basicBlock.instructions(pc.index))
+        } catch {
+          case _: ArrayIndexOutOfBoundsException =>
+            Err(ProgramCounterOutOfBounds(pc.index))
+        }
+    }
+
+  def incrementPc: VmProgram = setPc(pc ++)
+
+  def setPcToBlockCalled(blockName: String): VmProgram OrElse VmContextError =
+    basicBlocks.get(blockName) match {
+      case Some(basicBlock) =>
+        Ok(setPc(VmProgramCounter.atTheBeginningOf(basicBlock)))
+
+      case None =>
+        Err(NoSuchBasicBlock(blockName))
+    }
+
+  private def setPc(pc: VmProgramCounter) = new VmProgram(basicBlocks, pc)
 }
 
 object VmProgram {
+  def empty: VmProgram = new VmProgram(Map.empty, VmProgramCounter.reset)
 
   class VmProgramBasicBlock(val name: String, val instructions: Array[Instruction])
 
@@ -50,5 +83,15 @@ object VmProgram {
     def aBasicBlockCalled(name: String) = new VmProgramBasicBlockBuilder(name, Vector.empty)
   }
 
-  def empty: VmProgram = new VmProgram(Map.empty)
+  class VmProgramCounter(val basicBlock: Option[VmProgramBasicBlock], val index: Int) {
+    private[engine] def ++ = new VmProgramCounter(basicBlock, index + 1)
+  }
+
+  object VmProgramCounter {
+    def reset = new VmProgramCounter(None, 0)
+
+    def atTheBeginningOf(basicBlock: VmProgramBasicBlock) =
+      new VmProgramCounter(Some(basicBlock), 0)
+  }
+
 }

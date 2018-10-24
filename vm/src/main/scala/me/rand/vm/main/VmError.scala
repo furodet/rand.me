@@ -45,6 +45,18 @@ object VmError {
       override def toString: String = s"invalid $operation to empty stack"
     }
 
+    case class ProgramCounterOutOfBounds(index: Int) extends VmContextError {
+      override def toString: String = s"program counter index out of bounds: $index"
+    }
+
+    case class ProgramCounterOutOfBlock() extends VmContextError {
+      override def toString: String = s"program counter not on any basic block"
+    }
+
+    case class NoSuchBasicBlock(blockName: String) extends VmContextError {
+      override def toString: String = s"no such basic block '$blockName'"
+    }
+
   }
 
   sealed trait VmProfileStringError extends VmError
