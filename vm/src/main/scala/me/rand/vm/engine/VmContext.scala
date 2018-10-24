@@ -37,6 +37,12 @@ case class VmContext(vmTypes: VmTypes, heap: VarSet, stack: VmStack, program: Vm
       poppedStack <- stack.popFrame()
     } yield copy(stack = poppedStack)
 
+  def incrementPc: VmContext =
+    setProgram(program.incrementPc)
+
+  def setPcToBlockCalled(blockName: String): VmContext OrElse VmContextError =
+    program.setPcToBlockCalled(blockName) && setProgram
+
   def setProgram(newProgram: VmProgram): VmContext = copy(program = newProgram)
 }
 

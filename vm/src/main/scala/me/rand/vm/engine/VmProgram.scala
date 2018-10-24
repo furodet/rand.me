@@ -26,21 +26,21 @@
 package me.rand.vm.engine
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.VmProgram.{VmProgramBasicBlock, VmProgramCounter}
+import me.rand.vm.engine.VmProgram.{BasicBlock, Counter}
 import me.rand.vm.main.VmError.VmContextError
 import me.rand.vm.main.VmError.VmContextError.{NoSuchBasicBlock, ProgramCounterOutOfBlock, ProgramCounterOutOfBounds}
 
 import scala.language.postfixOps
 
 // Documentation: doc/vmarchitecture.md
-class VmProgram(val basicBlocks: Map[String, VmProgramBasicBlock], val pc: VmProgramCounter) {
-  def +(basicBlock: VmProgramBasicBlock): VmProgram =
+class VmProgram(val basicBlocks: Map[String, BasicBlock], val pc: Counter) {
+  def ++(basicBlock: BasicBlock): VmProgram =
     new VmProgram(basicBlocks + (basicBlock.name -> basicBlock), pc)
 
-  def getCurrentInstruction: Instruction OrElse VmContextError =
+  def nextInstruction: Instruction OrElse VmContextError =
     pc.basicBlock match {
       case None =>
-        Err(ProgramCounterOutOfBlock())
+        Err(ProgramCounterOutOfBlock)
 
       case Some(basicBlock) =>
         try {
@@ -51,47 +51,47 @@ class VmProgram(val basicBlocks: Map[String, VmProgramBasicBlock], val pc: VmPro
         }
     }
 
-  def incrementPc: VmProgram = setPc(pc ++)
+  private[engine] def incrementPc: VmProgram = setPc(pc ++)
 
-  def setPcToBlockCalled(blockName: String): VmProgram OrElse VmContextError =
+  private[engine] def setPcToBlockCalled(blockName: String): VmProgram OrElse VmContextError =
     basicBlocks.get(blockName) match {
       case Some(basicBlock) =>
-        Ok(setPc(VmProgramCounter.atTheBeginningOf(basicBlock)))
+        Ok(setPc(Counter.atTheBeginningOf(basicBlock)))
 
       case None =>
         Err(NoSuchBasicBlock(blockName))
     }
 
-  private def setPc(pc: VmProgramCounter) = new VmProgram(basicBlocks, pc)
+  private def setPc(pc: Counter) = new VmProgram(basicBlocks, pc)
 }
 
 object VmProgram {
-  def empty: VmProgram = new VmProgram(Map.empty, VmProgramCounter.reset)
+  def empty: VmProgram = new VmProgram(Map.empty, Counter.reset)
 
-  class VmProgramBasicBlock(val name: String, val instructions: Array[Instruction])
+  class BasicBlock(val name: String, val instructions: Array[Instruction])
 
-  class VmProgramBasicBlockBuilder(val name: String, val instructions: Vector[Instruction]) {
-    def +(instruction: Instruction): VmProgramBasicBlockBuilder =
-      new VmProgramBasicBlockBuilder(name, instructions :+ instruction)
+  class BasicBlockBuilder(val name: String, val instructions: Vector[Instruction]) {
+    def +(instruction: Instruction): BasicBlockBuilder =
+      new BasicBlockBuilder(name, instructions :+ instruction)
 
-    def build: VmProgramBasicBlock = {
-      new VmProgramBasicBlock(name, instructions.toArray)
+    def build: BasicBlock = {
+      new BasicBlock(name, instructions.toArray)
     }
   }
 
-  object VmProgramBasicBlockBuilder {
-    def aBasicBlockCalled(name: String) = new VmProgramBasicBlockBuilder(name, Vector.empty)
+  object BasicBlockBuilder {
+    def aBasicBlockCalled(name: String) = new BasicBlockBuilder(name, Vector.empty)
   }
 
-  class VmProgramCounter(val basicBlock: Option[VmProgramBasicBlock], val index: Int) {
-    private[engine] def ++ = new VmProgramCounter(basicBlock, index + 1)
+  class Counter(val basicBlock: Option[BasicBlock], val index: Int) {
+    private[engine] def ++ = new Counter(basicBlock, index + 1)
   }
 
-  object VmProgramCounter {
-    def reset = new VmProgramCounter(None, 0)
+  object Counter {
+    def reset = new Counter(None, 0)
 
-    def atTheBeginningOf(basicBlock: VmProgramBasicBlock) =
-      new VmProgramCounter(Some(basicBlock), 0)
+    def atTheBeginningOf(basicBlock: BasicBlock) =
+      new Counter(Some(basicBlock), 0)
   }
 
 }

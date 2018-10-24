@@ -27,3 +27,8 @@ package me.rand.vm.engine
 
 trait Instruction
 
+object Instruction {
+
+  case object ReplaceMeWithRealInstrucion extends Instruction
+
+}

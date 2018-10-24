@@ -49,7 +49,7 @@ object VmError {
       override def toString: String = s"program counter index out of bounds: $index"
     }
 
-    case class ProgramCounterOutOfBlock() extends VmContextError {
+    case object ProgramCounterOutOfBlock extends VmContextError {
       override def toString: String = s"program counter not on any basic block"
     }
 

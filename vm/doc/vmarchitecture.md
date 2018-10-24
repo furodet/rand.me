@@ -70,4 +70,32 @@ The top frame is managed via two functions:
   * `createFrameOfSize(nrVariables:Int)`: to push a new frame
   * `popFrame()`: to delete the current top frame
 
-**TODO: instruction memory, PC**
+**Instruction memory and program counter**
+
+The instruction memory is represented as a collection of *basic blocks* (`VmProgram.BasicBlock`,
+along with the companion builder object `VmProgram.BasicBlockBuilder`).
+
+Each block consists of:
+  * A name (which must be unique amongst the program)
+  * A sequence of instructions (represented by the common trait `Instruction`)
+
+The program counter (`VmProgram.Counter`) maintains a "pointer" to the next instruction to execute:
+  * The current basic block
+  * The instruction index within this block
+
+Notice that if the program is not executing, the counter's basic block is set to `None`.
+
+From the instruction memory, one can invoke `nextInstruction` to fetch the next instruction to execute.
+This function may raise errors:
+  * If the program is stopped (i.e. no current basic block)
+  * Or if all the instructions of the basic block were read
+
+A `VmContext` provides functions to move the PC amongst the program:
+  * `incrementPc`: to go to next instruction
+  * `setPcToBlockCalled` to jump to another block (which resets the instruction index)
+
+Construction of a program consists of:
+  * Creating basic block builders to which instructions can be appended with `+`
+  * Build the basic blocks with builders' `build` function
+  * Register the basic blocks to a program, with the `++` method
+  * Registering the program to the virtual machine context, thanks to `setProgram`

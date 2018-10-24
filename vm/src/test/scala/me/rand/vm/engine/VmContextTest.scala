@@ -29,7 +29,7 @@ import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.Variable.ScalarBuilder.aScalarCalled
 import me.rand.vm.engine.VmContext.VmProfile
 import me.rand.vm.engine.VmTypes.VmType
-import me.rand.vm.main.VmError.VmContextError.{EmptyStackAccess, InvalidVmTypeString, VariableIndexOutOfBounds}
+import me.rand.vm.main.VmError.VmContextError._
 import me.rand.vm.main.VmError._
 import org.scalatest.FlatSpec
 
@@ -322,6 +322,90 @@ class VmContextTest extends FlatSpec {
     }
   }
 
+  "VM program" should "not return instruction if no basic block is defined" in {
+    givenAValidVmContext {
+      vmContext =>
+        vmContext.program.nextInstruction match {
+          case Err(ProgramCounterOutOfBlock) =>
+            ok()
+
+          case whatever =>
+            fail(s"unexpected result when reading empty program memory: $whatever")
+        }
+    }
+  }
+
+  "VM program" should "return an instruction if basic block is not entirely parsed" in {
+    givenAValidVmContext {
+      vmContext =>
+        val c0 = vmContext.setProgram(aDummyProgramWithOneBasicBlockOfOneInstruction)
+        (for {
+          c1 <- c0.setPcToBlockCalled("b0")
+          instruction <- c1.program.nextInstruction
+        } yield instruction) match {
+          case Ok(Instruction.ReplaceMeWithRealInstrucion) =>
+            ok()
+
+          case whatever =>
+            fail(s"unexpected result when reading valid program memory: $whatever")
+        }
+    }
+  }
+
+  "VM program" should "not return instruction if basic block is entirely parsed" in {
+    givenAValidVmContext {
+      vmContext =>
+        val c0 = vmContext.setProgram(aDummyProgramWithOneBasicBlockOfOneInstruction)
+        (
+          for {
+            c1 <- c0.setPcToBlockCalled("b0")
+            c2 = c1.incrementPc.incrementPc
+            instruction <- c2.program.nextInstruction
+          } yield instruction) match {
+          case Err(ProgramCounterOutOfBounds(2)) =>
+            ok()
+
+          case whatever =>
+            fail(s"unexpected result when reading invalid program memory: $whatever")
+        }
+    }
+  }
+
+  "VM program" should "not allow to jump to an unknown block" in {
+    givenAValidVmContext {
+      vmContext =>
+        val c0 = vmContext.setProgram(aDummyProgramWithOneBasicBlockOfOneInstruction)
+        c0.setPcToBlockCalled("b1") match {
+          case Err(NoSuchBasicBlock("b1")) =>
+            ok()
+
+          case whatever =>
+            fail(s"unexpected result when jumping to unknown block: $whatever")
+        }
+    }
+  }
+
+  "VM program" should "allow to jump to a known block and reset PC offset" in {
+    givenAValidVmContext {
+      vmContext =>
+        val c0 = vmContext.setProgram(aDummyProgramWithTwoBasicBlocksOfOneInstruction)
+        c0.setPcToBlockCalled("b1") match {
+          case Ok(c1) =>
+            c1.program.pc.basicBlock match {
+              case Some(basicBlock) if basicBlock.name == "b1" =>
+                ok()
+
+              case whatever =>
+                fail(s"unexpected result from valid jump: $whatever")
+            }
+            assert(c1.program.pc.index == 0)
+
+          case whatever =>
+            fail(s"unexpected result when jumping to unknown block: $whatever")
+        }
+    }
+  }
+
   private def aVariable(c: VmContext) =
     aScalarCalled("x").ofType(c.vmTypes.select(1, isSigned = true).get).setTo(0)
 
@@ -377,5 +461,23 @@ class VmContextTest extends FlatSpec {
     (seq.length == 2) &&
       seq.exists(t => t.toString == s"s${8 * byteLen}") &&
       seq.exists(t => t.toString == s"u${8 * byteLen}")
+
+  private def aDummyProgramWithOneBasicBlockOfOneInstruction: VmProgram =
+    VmProgram.empty ++
+      VmProgram.BasicBlockBuilder
+        .aBasicBlockCalled("b0")
+        .+(Instruction.ReplaceMeWithRealInstrucion)
+        .build
+
+  private def aDummyProgramWithTwoBasicBlocksOfOneInstruction: VmProgram =
+    VmProgram.empty ++
+      VmProgram.BasicBlockBuilder
+        .aBasicBlockCalled("b0")
+        .+(Instruction.ReplaceMeWithRealInstrucion)
+        .build ++
+      VmProgram.BasicBlockBuilder
+        .aBasicBlockCalled("b1")
+        .+(Instruction.ReplaceMeWithRealInstrucion)
+        .build
 
 }
