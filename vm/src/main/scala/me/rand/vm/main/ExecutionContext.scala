@@ -23,49 +23,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.vm.engine
+package me.rand.vm.main
 
-import me.rand.vm.engine.Variable.ScalarBuilder.Partial
-import me.rand.vm.engine.VmTypes.VmType
+import me.rand.commons.idioms.Logger
 
-// Documentation: doc/vmarchitecture.md
-sealed trait Variable {
-  def name: String
-}
-
-object Variable {
-
-  case class Scalar(name: String, vmType: VmType, value: BigInt) extends Variable
-
-  sealed trait Pointer extends Variable
-
-  object Pointer {
-
-    sealed trait ToVariable extends Variable {
-      def index: Int
-    }
-
-    case class ToHeapVariable(name: String, index: Int) extends ToVariable
-
-    case class ToStackVariable(name: String, index: Int) extends ToVariable
-
-    case class ToInstructionVariable(name: String, value: VmProgram.Counter)
-
-  }
-
-  class ScalarBuilder(name: String) {
-    def ofType(varType: VmType): Partial = new Partial(name, varType)
-  }
-
-  object ScalarBuilder {
-    def aScalarCalled(name: String) = new ScalarBuilder(name)
-
-    class Partial(name: String, varType: VmType) {
-      def setTo(value: BigInt): Scalar = Scalar(name, varType, value)
-
-      def setTo(longValue: Long): Scalar = setTo(BigInt(longValue))
-    }
-
-  }
-
-}
+class ExecutionContext(logger: Logger)

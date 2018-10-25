@@ -59,6 +59,26 @@ object VmError {
 
   }
 
+  sealed trait VmExecutionError extends VmError
+
+  object VmExecutionError {
+
+    sealed trait IllegalEncoding extends VmExecutionError
+
+    object IllegalEncoding {
+
+      case object UnspecifiedDestinationOperand extends IllegalEncoding {
+        override def toString: String = "destination operation is not specified"
+      }
+
+      case class UnspecifiedSourceOperand(operandId: Int) extends IllegalEncoding {
+        override def toString: String = s"source operand #$operandId is not specified"
+      }
+
+    }
+
+  }
+
   sealed trait VmProfileStringError extends VmError
 
   object VmProfileStringError {
