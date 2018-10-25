@@ -4,12 +4,12 @@ rand.me virtual machine architecture overview
 General structure
 -----------------
 The virtual machine architecture is defined by an execution
-context, maintained by `VmContext` including:
+context, maintained by `VmContext` objects including:
   * Heap: a set of global variables
   * Stack: local variables and function parameters
-  * Instruction memory
+  * Instruction memory: the program
 
-**Vitual machine profile**
+**Virtual machine profile**
 
 An execution context is created on the basis of a profile (`VmProfile`), initially
 represented by a description string:
@@ -20,7 +20,7 @@ represented by a description string:
 
 **Virtual machine types**
 
-rand.me virtual machine is not designed for a specific word length, but support any
+rand.me virtual machine is not designed for a specific word length, but supports any
 scalar type whose size is less than a supplied "target machine byte length".
 
 For example, to emulate a 32-bits machine, the VM will define 8 scalar types:
@@ -50,7 +50,7 @@ indexed by variable numbers.
 One can:
   * `getVariable(id:Int)`: get the value of variable number `id`, which
     can be `None` if the value is not set yet
-  * `setVariable(id:Int, value:Variable)`: set the value of variable number `id`
+  * `putVariable(id:Int, value:Variable)`: set the value of variable number `id`
 
 Note: `VarSet` must be created with at least ONE element. No protection is put in the constructor,
 since this is naturally checked at an upper layer.
@@ -90,7 +90,7 @@ This function may raise errors:
   * If the program is stopped (i.e. no current basic block)
   * Or if all the instructions of the basic block were read
 
-A `VmContext` provides functions to move the PC amongst the program:
+A `VmContext` provides functions to move the PC through the program:
   * `incrementPc`: to go to next instruction
   * `setPcToBlockCalled` to jump to another block (which resets the instruction index)
 
