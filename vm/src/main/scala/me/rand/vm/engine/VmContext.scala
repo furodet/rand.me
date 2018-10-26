@@ -29,7 +29,11 @@ import me.rand.commons.idioms.Status._
 import me.rand.vm.main.VmError._
 
 // Documentation: doc/vmarchitecture.md
-case class VmContext(vmTypes: VmTypes, heap: VarSet, stack: VmStack, program: VmProgram) {
+case class VmContext(vmTypes: VmTypes,
+                     heap: VarSet,
+                     stack: VmStack,
+                     program: VmProgram,
+                     exitCode: Option[Int]) {
   def createFrameOfSize(nrVariables: Int): VmContext = copy(stack = stack.createFrameOfSize(nrVariables))
 
   def popFrame(): VmContext OrElse VmContextError =
@@ -44,6 +48,8 @@ case class VmContext(vmTypes: VmTypes, heap: VarSet, stack: VmStack, program: Vm
     program.setPcToBlockCalled(blockName) && setProgram
 
   def setProgram(newProgram: VmProgram): VmContext = copy(program = newProgram)
+
+  def halt(exitCode: Int): VmContext = copy(exitCode = Some(exitCode))
 }
 
 object VmContext {
@@ -93,7 +99,7 @@ object VmContext {
 
   def usingProfile(vmProfile: VmProfile): VmContext = {
     val vmTypes = VmTypes.forMachineWordByteLength(vmProfile.machineWordByteLen)
-    new VmContext(vmTypes, VarSet.ofSize(vmProfile.varSetSize), VmStack.empty, VmProgram.empty)
+    new VmContext(vmTypes, VarSet.ofSize(vmProfile.varSetSize), VmStack.empty, VmProgram.empty, None)
   }
 
   def usingProfileString(profileString: String): VmContext OrElse VmProfileStringError =

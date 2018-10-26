@@ -8,6 +8,7 @@ context, maintained by `VmContext` objects including:
   * Heap: a set of global variables
   * Stack: local variables and function parameters
   * Instruction memory: the program
+  * Exit code: set when the program terminates with an exit value
 
 **Virtual machine profile**
 

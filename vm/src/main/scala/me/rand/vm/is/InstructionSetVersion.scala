@@ -23,53 +23,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.vm.engine
+package me.rand.vm.is
 
-import me.rand.vm.engine.Variable.ScalarBuilder.Partial
-import me.rand.vm.engine.VmTypes.VmType
+import me.rand.commons.idioms.Status._
+import me.rand.vm.main.VmError.IncompatibleInstructionSetVersion
 
-// Documentation: doc/vmarchitecture.md
-sealed trait Variable {
-  def name: String
+class InstructionSetVersion(val major: Int, val minor: Int) {
+  def isOlderThan(other: InstructionSetVersion): Boolean =
+    (major < other.major) || (minor < other.minor)
 }
 
-object Variable {
+object InstructionSetVersion {
+  val current = new InstructionSetVersion(0, 1)
 
-  case class Scalar(name: String, value: VmWord) extends Variable
-
-  sealed trait Pointer extends Variable
-
-  object Pointer {
-
-    sealed trait ToVariable extends Variable {
-      def index: Int
-    }
-
-    object ToVariable {
-
-      case class InTheHeap(name: String, index: Int) extends ToVariable
-
-      case class InTheStack(name: String, index: Int) extends ToVariable
-
-    }
-
-    case class ToInstruction(name: String, value: VmProgram.Counter) extends Pointer
-
-  }
-
-  class ScalarBuilder(name: String) {
-    def ofType(varType: VmType): Partial = new Partial(name, varType)
-  }
-
-  object ScalarBuilder {
-    def aScalarCalled(name: String) = new ScalarBuilder(name)
-
-    class Partial(name: String, varType: VmType) {
-      def setTo(value: BigInt): Scalar = Scalar(name, new VmWord(varType, value))
-
-      def setTo(longValue: Long): Scalar = setTo(BigInt(longValue))
-    }
-
-  }
-
+  def assertThatVirtualMachineVersionIsCompatibleWith(version: InstructionSetVersion): Unit OrElse IncompatibleInstructionSetVersion =
+    if (current.isOlderThan(version) || (current.major != version.major)) Err(IncompatibleInstructionSetVersion(version))
+    else Ok(())
 }

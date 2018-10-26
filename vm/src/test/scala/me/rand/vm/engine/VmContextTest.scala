@@ -29,6 +29,7 @@ import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.Variable.ScalarBuilder.aScalarCalled
 import me.rand.vm.engine.VmContext.VmProfile
 import me.rand.vm.engine.VmTypes.VmType
+import me.rand.vm.is.Exit
 import me.rand.vm.main.VmError.VmContextError._
 import me.rand.vm.main.VmError._
 import org.scalatest.FlatSpec
@@ -343,7 +344,7 @@ class VmContextTest extends FlatSpec {
           c1 <- c0.setPcToBlockCalled("b0")
           instruction <- c1.program.nextInstruction
         } yield instruction) match {
-          case Ok(Instruction.ReplaceMeWithRealInstrucion) =>
+          case Ok(Exit) =>
             ok()
 
           case whatever =>
@@ -463,21 +464,12 @@ class VmContextTest extends FlatSpec {
       seq.exists(t => t.toString == s"u${8 * byteLen}")
 
   private def aDummyProgramWithOneBasicBlockOfOneInstruction: VmProgram =
-    VmProgram.empty ++
-      VmProgram.BasicBlockBuilder
-        .aBasicBlockCalled("b0")
-        .+(Instruction.ReplaceMeWithRealInstrucion)
-        .build
+    VmProgram.empty ++ aDummyBasicBlockCalled("b0")
 
   private def aDummyProgramWithTwoBasicBlocksOfOneInstruction: VmProgram =
-    VmProgram.empty ++
-      VmProgram.BasicBlockBuilder
-        .aBasicBlockCalled("b0")
-        .+(Instruction.ReplaceMeWithRealInstrucion)
-        .build ++
-      VmProgram.BasicBlockBuilder
-        .aBasicBlockCalled("b1")
-        .+(Instruction.ReplaceMeWithRealInstrucion)
-        .build
+    VmProgram.empty ++ aDummyBasicBlockCalled("b0") ++ aDummyBasicBlockCalled("b1")
 
+  private def aDummyBasicBlockCalled(name: String) =
+    VmProgram.BasicBlockBuilder
+      .aBasicBlockCalled(name) + Exit build
 }

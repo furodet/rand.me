@@ -25,6 +25,9 @@
  */
 package me.rand.vm.main
 
+import me.rand.vm.engine.Variable.Pointer
+import me.rand.vm.is.InstructionSetVersion
+
 sealed trait VmError
 
 object VmError {
@@ -75,6 +78,38 @@ object VmError {
         override def toString: String = s"source operand #$operandId is not specified"
       }
 
+      case class InvalidWordOperand(operandId: Int) extends IllegalEncoding {
+        override def toString: String = s"source operand #$operandId does not reduce to a word"
+      }
+
+    }
+
+    sealed trait InvalidPointerValue extends VmExecutionError
+
+    object InvalidPointerValue {
+
+      case class InvalidHeapReference(definition: Pointer.ToVariable.InTheHeap, cause: VmError) extends InvalidPointerValue {
+        override def toString: String = s"heap pointer [${definition.name}=${definition.index}] is invalid: $cause"
+      }
+
+      case class InvalidStackReference(definition: Pointer.ToVariable.InTheStack, cause: VmError) extends InvalidPointerValue {
+        override def toString: String = s"stack pointer [${definition.name}=${definition.index}] is invalid: $cause"
+      }
+
+    }
+
+    sealed trait UndefinedVariableValue extends VmExecutionError
+
+    object UndefinedVariableValue {
+
+      case class UndefinedHeapVariableValue(pointedBy: Pointer.ToVariable.InTheHeap) extends UndefinedVariableValue {
+        override def toString: String = s"illegal read to heap variable [${pointedBy.name}=${pointedBy.index}]: value not yet defined"
+      }
+
+      case class UndefinedStackVariableValue(pointedBy: Pointer.ToVariable.InTheStack) extends UndefinedVariableValue {
+        override def toString: String = s"illegal read to stack variable [${pointedBy.name}=${pointedBy.index}]: value not yet defined"
+      }
+
     }
 
   }
@@ -103,6 +138,11 @@ object VmError {
         s"profile value '$fieldName'=$value is not a power of two"
     }
 
+  }
+
+  case class IncompatibleInstructionSetVersion(v0: InstructionSetVersion) extends VmError {
+    override def toString: String =
+      s"instruction set version $v0 is incompatible with current version ${InstructionSetVersion.current}"
   }
 
 }

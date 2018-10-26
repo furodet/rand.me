@@ -29,11 +29,12 @@ import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.Instruction.Operand.{DestinationOperand, SourceOperand}
 import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.engine.Variable.Pointer
+import me.rand.vm.main.ExecutionContext
+import me.rand.vm.main.VmError.VmExecutionError
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncoding
-import me.rand.vm.main.{ExecutionContext, VmError}
 
 trait Instruction {
-  def execute(vmContext: VmContext, operands: Operands)(implicit executionContext: ExecutionContext): VmContext OrElse VmError
+  def execute(vmContext: VmContext, operands: Operands)(implicit executionContext: ExecutionContext): VmContext OrElse VmExecutionError
 }
 
 object Instruction {
@@ -42,15 +43,9 @@ object Instruction {
 
   object Operand {
 
-    sealed trait SourceOperand extends Operand
+    case class SourceOperand(variable: Variable) extends Operand
 
-    case class OpWord(value: VmWord) extends SourceOperand
-
-    case class OpLabel(name: String) extends SourceOperand
-
-    case class OpPointer(pointer: VmProgram.Counter) extends SourceOperand
-
-    class DestinationOperand(val to: Option[Pointer.ToVariable]) extends Operand
+    case class DestinationOperand(to: Option[Pointer.ToVariable]) extends Operand
 
     object DestinationOperand {
       def none = new DestinationOperand(None)
@@ -86,11 +81,6 @@ object Instruction {
 
   object Operands {
     def none = new Operands(DestinationOperand.none, Map.empty)
-  }
-
-  case object ReplaceMeWithRealInstrucion extends Instruction {
-    override def execute(vmContext: VmContext, operands: Operands)(implicit executionContext: ExecutionContext): OrElse[VmContext, VmError] =
-      ???
   }
 
 }

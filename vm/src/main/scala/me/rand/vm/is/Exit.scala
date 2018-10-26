@@ -23,53 +23,23 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.vm.engine
+package me.rand.vm.is
 
-import me.rand.vm.engine.Variable.ScalarBuilder.Partial
-import me.rand.vm.engine.VmTypes.VmType
+import me.rand.commons.idioms.Status.OrElse
+import me.rand.vm.engine.{Instruction, VmContext}
+import me.rand.vm.main.ExecutionContext
+import me.rand.vm.main.VmError.VmExecutionError
 
-// Documentation: doc/vmarchitecture.md
-sealed trait Variable {
-  def name: String
-}
-
-object Variable {
-
-  case class Scalar(name: String, value: VmWord) extends Variable
-
-  sealed trait Pointer extends Variable
-
-  object Pointer {
-
-    sealed trait ToVariable extends Variable {
-      def index: Int
-    }
-
-    object ToVariable {
-
-      case class InTheHeap(name: String, index: Int) extends ToVariable
-
-      case class InTheStack(name: String, index: Int) extends ToVariable
-
-    }
-
-    case class ToInstruction(name: String, value: VmProgram.Counter) extends Pointer
-
+/// exit IMM
+///
+/// Generates a trap that stops the virtual machine execution.
+/// Argument is an "exit status code" equal, by convention, to 0 in case of successful
+//  run and an error code otherwise.
+object Exit extends Instruction {
+  override def execute(vmContext: VmContext, operands: Instruction.Operands)(implicit executionContext: ExecutionContext): VmContext OrElse VmExecutionError = {
+    for {
+      exitCode <- InstructionHelpers.fetchOperandValue(0, operands)(vmContext)
+      out = vmContext.halt(exitCode.data.toInt)
+    } yield out
   }
-
-  class ScalarBuilder(name: String) {
-    def ofType(varType: VmType): Partial = new Partial(name, varType)
-  }
-
-  object ScalarBuilder {
-    def aScalarCalled(name: String) = new ScalarBuilder(name)
-
-    class Partial(name: String, varType: VmType) {
-      def setTo(value: BigInt): Scalar = Scalar(name, new VmWord(varType, value))
-
-      def setTo(longValue: Long): Scalar = setTo(BigInt(longValue))
-    }
-
-  }
-
 }
