@@ -26,30 +26,42 @@
 package me.rand.vm.engine
 
 import me.rand.commons.idioms.Status._
+import me.rand.vm.engine
+import me.rand.vm.main.VmError.VmContextError
 import me.rand.vm.main.VmError.VmContextError.VariableIndexOutOfBounds
 
 // Documentation: doc/vmarchitecture.md
-class VarSet(val data: Array[Option[Variable]]) {
-  def putVariable(id: Int, v: Variable): Unit OrElse VariableIndexOutOfBounds =
-    try {
-      data(id) = Some(v)
-      Ok(())
-    } catch {
-      case _: ArrayIndexOutOfBoundsException =>
-        Err(VariableIndexOutOfBounds(id))
-    }
+trait VarSet {
+  def putVariable(id: Int, v: Variable): Unit OrElse VmContextError
 
-  def getVariable(id: Int): Option[Variable] OrElse VariableIndexOutOfBounds =
-    try {
-      Ok(data(id))
-    } catch {
-      case _: ArrayIndexOutOfBoundsException =>
-        Err(VariableIndexOutOfBounds(id))
-    }
-
+  def getVariable(id: Int): Option[Variable] OrElse VmContextError
 }
 
 object VarSet {
-  // Note: we assume that nrVariables will never be negative or null.
-  def ofSize(nrVariables: Int): VarSet = new VarSet(Array.fill(nrVariables)(None))
+
+  class InArray(val data: Array[Option[Variable]]) extends VarSet {
+    override def putVariable(id: Int, v: Variable): Unit OrElse VariableIndexOutOfBounds =
+      try {
+        data(id) = Some(v)
+        Ok(())
+      } catch {
+        case _: ArrayIndexOutOfBoundsException =>
+          Err(VariableIndexOutOfBounds(id))
+      }
+
+    override def getVariable(id: Int): Option[Variable] OrElse VariableIndexOutOfBounds =
+      try {
+        Ok(data(id))
+      } catch {
+        case _: ArrayIndexOutOfBoundsException =>
+          Err(VariableIndexOutOfBounds(id))
+      }
+
+  }
+
+  object InArray {
+    // Note: we assume that nrVariables will never be negative or null.
+    def ofSize(nrVariables: Int) = new engine.VarSet.InArray(Array.fill(nrVariables)(None))
+  }
+
 }

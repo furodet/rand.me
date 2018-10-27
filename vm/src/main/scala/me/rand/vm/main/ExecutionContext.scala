@@ -27,4 +27,4 @@ package me.rand.vm.main
 
 import me.rand.commons.idioms.Logger
 
-class ExecutionContext(logger: Logger)
+class ExecutionContext(val logger: Logger)

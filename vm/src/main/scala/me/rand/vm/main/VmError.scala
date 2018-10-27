@@ -25,7 +25,6 @@
  */
 package me.rand.vm.main
 
-import me.rand.vm.engine.Variable.Pointer
 import me.rand.vm.is.InstructionSetVersion
 
 sealed trait VmError
@@ -66,48 +65,61 @@ object VmError {
 
   object VmExecutionError {
 
-    sealed trait IllegalEncoding extends VmExecutionError
+    sealed trait IllegalEncodingError extends VmExecutionError
 
-    object IllegalEncoding {
+    object IllegalEncodingError {
 
-      case object UnspecifiedDestinationOperand extends IllegalEncoding {
-        override def toString: String = "destination operation is not specified"
+      case object UnspecifiedDestinationOperand extends IllegalEncodingError {
+        override def toString: String = "destination operand is not specified"
       }
 
-      case class UnspecifiedSourceOperand(operandId: Int) extends IllegalEncoding {
+      case class UnspecifiedSourceOperand(operandId: Int) extends IllegalEncodingError {
         override def toString: String = s"source operand #$operandId is not specified"
       }
 
-      case class InvalidWordOperand(operandId: Int) extends IllegalEncoding {
-        override def toString: String = s"source operand #$operandId does not reduce to a word"
-      }
-
     }
 
-    sealed trait InvalidPointerValue extends VmExecutionError
+    sealed trait VmFetchOperandError extends IllegalEncodingError
 
-    object InvalidPointerValue {
+    object VmFetchOperandError {
 
-      case class InvalidHeapReference(definition: Pointer.ToVariable.InTheHeap, cause: VmError) extends InvalidPointerValue {
-        override def toString: String = s"heap pointer [${definition.name}=${definition.index}] is invalid: $cause"
+      case class NotAnImmediateOperand(operandId: Int) extends VmFetchOperandError {
+        override def toString: String = s"operand #$operandId is not an immediate"
       }
 
-      case class InvalidStackReference(definition: Pointer.ToVariable.InTheStack, cause: VmError) extends InvalidPointerValue {
-        override def toString: String = s"stack pointer [${definition.name}=${definition.index}] is invalid: $cause"
+      case class NotAnImmediateOrScalarVariableOperand(operandId: Int) extends VmFetchOperandError {
+        override def toString: String = s"operand #$operandId is neither an immediate nor a scalar variable"
       }
 
-    }
-
-    sealed trait UndefinedVariableValue extends VmExecutionError
-
-    object UndefinedVariableValue {
-
-      case class UndefinedHeapVariableValue(pointedBy: Pointer.ToVariable.InTheHeap) extends UndefinedVariableValue {
-        override def toString: String = s"illegal read to heap variable [${pointedBy.name}=${pointedBy.index}]: value not yet defined"
+      case class NotAnImmediateOrScalarVariableOperandAfterRedirections(operandId: Int) extends VmFetchOperandError {
+        override def toString: String = s"operand #$operandId redirects to neither an immediate nor a scalar variable"
       }
 
-      case class UndefinedStackVariableValue(pointedBy: Pointer.ToVariable.InTheStack) extends UndefinedVariableValue {
-        override def toString: String = s"illegal read to stack variable [${pointedBy.name}=${pointedBy.index}]: value not yet defined"
+      sealed trait InvalidPointerValue extends VmFetchOperandError
+
+      object InvalidPointerValue {
+
+        case class InvalidTargetReference(pointerName: String, variableIndex: Int, cause: Option[VmError]) extends InvalidPointerValue {
+          override def toString: String = {
+            val explanation = cause match {
+              case Some(error) =>
+                error.toString
+
+              case None =>
+                "value not set"
+            }
+            s"pointer [$pointerName=$variableIndex] is invalid: $explanation"
+          }
+        }
+
+        case class InvalidRedirection(operandId: Int) extends IllegalEncodingError {
+          override def toString: String = s"source operand #$operandId redirects to an unexpected type of variable"
+        }
+
+        case object IllegalDestinationPointer extends IllegalEncodingError {
+          override def toString: String = "destination is neither a heap nor a stack variable"
+        }
+
       }
 
     }

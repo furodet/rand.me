@@ -26,14 +26,14 @@
 package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine._
+import me.rand.vm.engine.{Instruction, VmContext}
 import me.rand.vm.main.{ExecutionContext, VmError}
 
-object Exit extends Instruction {
+object Copy extends Instruction {
   override def execute(vmContext: VmContext, operands: Instruction.Operands)(implicit executionContext: ExecutionContext): VmContext OrElse VmError =
-    InstructionHelpers.fetchImmediateOperandValue(0, operands) && {
-      code =>
-        executionContext.logger ~> s"exit ${code.data.toInt}"
-        vmContext.halt(code.data.toInt)
-    }
+    for {
+      source <- InstructionHelpers.fetchImmediateOrVariable(0, operands)(vmContext)
+      destination <- operands.fetchDestination
+      _ <- InstructionHelpers.updateDestination(destination, source)(vmContext)
+    } yield vmContext
 }

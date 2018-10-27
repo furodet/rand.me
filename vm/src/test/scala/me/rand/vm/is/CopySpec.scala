@@ -26,14 +26,36 @@
 package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine._
-import me.rand.vm.main.{ExecutionContext, VmError}
+import me.rand.vm.engine.Instruction.Operand.DestinationOperand._
+import me.rand.vm.engine.Variable.Scalar
+import me.rand.vm.engine.VmContext
+import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError.UnspecifiedDestinationOperand
 
-object Exit extends Instruction {
-  override def execute(vmContext: VmContext, operands: Instruction.Operands)(implicit executionContext: ExecutionContext): VmContext OrElse VmError =
-    InstructionHelpers.fetchImmediateOperandValue(0, operands) && {
-      code =>
-        executionContext.logger ~> s"exit ${code.data.toInt}"
-        vmContext.halt(code.data.toInt)
+class CopySpec extends BaseIsSpec {
+  "copy" should "pass 'copy var imm'" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    Copy.execute(vmContext, ops_(ToHeapVariable(0), 0 -> imm_("u32", 123))) & (
+      _.heap.getVariable(0)
+      ) match {
+      case Ok(Some(Scalar(variableName, value))) =>
+        assert(variableName == "hp0")
+        assert(value.data.toInt == 123)
+        assert(value.vmType.isUnsigned)
+        assert(value.vmType.byteLen == 4)
+
+      case whatever =>
+        fail(s"unexpected result of 'copy %0 123': $whatever")
     }
+  }
+
+  "copy" should "not pass 'copy _ imm'" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    Copy.execute(vmContext, ops_(NoDestination, 0 -> imm_("u32", 123))) match {
+      case Err(error@UnspecifiedDestinationOperand) =>
+        executionContext.logger > error.toString
+
+      case whatever =>
+        fail(s"unexpected result of 'copy _ 123': $whatever")
+    }
+  }
 }

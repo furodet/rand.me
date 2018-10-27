@@ -31,29 +31,39 @@ import me.rand.vm.engine.VmTypes.VmType
 // Documentation: doc/vmarchitecture.md
 sealed trait Variable {
   def name: String
+
+  def rename(newName: String): Variable
 }
 
 object Variable {
 
-  case class Scalar(name: String, value: VmWord) extends Variable
+  case class Scalar(name: String, value: VmWord) extends Variable {
+    override def rename(newName: String): Variable = copy(name = newName)
+  }
 
   sealed trait Pointer extends Variable
 
   object Pointer {
 
-    sealed trait ToVariable extends Variable {
+    sealed trait ToVariable extends Pointer {
       def index: Int
     }
 
     object ToVariable {
 
-      case class InTheHeap(name: String, index: Int) extends ToVariable
+      case class InTheHeap(name: String, index: Int) extends ToVariable {
+        override def rename(newName: String): Variable = copy(name = newName)
+      }
 
-      case class InTheStack(name: String, index: Int) extends ToVariable
+      case class InTheStack(name: String, index: Int) extends ToVariable {
+        override def rename(newName: String): Variable = copy(name = newName)
+      }
 
     }
 
-    case class ToInstruction(name: String, value: VmProgram.Counter) extends Pointer
+    case class ToInstruction(name: String, value: VmProgram.Counter) extends Pointer {
+      override def rename(newName: String): Variable = copy(name = newName)
+    }
 
   }
 
