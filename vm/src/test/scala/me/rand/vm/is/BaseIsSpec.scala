@@ -36,6 +36,13 @@ import me.rand.vm.main.ExecutionContext
 import org.scalatest._
 
 class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
+
+  protected trait VariableLocation
+
+  protected case object HeapVariable extends VariableLocation
+
+  protected case object StackVariable extends VariableLocation
+
   private val prErr = new PrintWriter(System.err)
   private val prOut = new PrintWriter(System.out)
   implicit val executionContext: ExecutionContext =
@@ -56,8 +63,17 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
 
   protected def givenAnEmptyVmContext: VmContext =
     VmContext.usingProfileString("bl:4:heap:1024") match {
-      case Ok(vmContext) =>
-        vmContext
+      case Ok(emptyContext) =>
+        implicit val c: VmContext = emptyContext
+        (for {
+          _ <- c.heap.putVariable(0, createScalarVariable("hp0", "u32", 0))
+        } yield c) match {
+          case Ok(context) =>
+            context
+
+          case Err(error) =>
+            fail(s"could not create VM context: $error")
+        }
 
       case Err(error) =>
         fail(s"could not create VM context: $error")
@@ -114,8 +130,24 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
   protected def imm_(typeString: String, value: Int)(implicit vmContext: VmContext): SourceOperand.Immediate =
     SourceOperand.Immediate(createVmWord(typeString, value, vmContext))
 
-  protected def var_(varName: String, typeString: String, value: Int)(implicit vmContext: VmContext): SourceOperand.ToVariable =
-    SourceOperand.ToVariable(createScalarVariable(varName, typeString, value))
+  protected def var_(location: VariableLocation, varIndex: Int)(implicit vmContext: VmContext): SourceOperand.ToVariable = {
+    (location match {
+      case HeapVariable =>
+        vmContext.heap.getVariable(varIndex)
+
+      case StackVariable =>
+        vmContext.stack.getVariable(varIndex)
+    }) match {
+      case Ok(Some(variable)) =>
+        SourceOperand.ToVariable(variable)
+
+      case Ok(None) =>
+        fail("could not create variable: not defined yet")
+
+      case Err(error) =>
+        fail(s"could not create variable: $error")
+    }
+  }
 
   protected def ind_(variableName: String, variableIndex: Int, nrIndirections: Int): SourceOperand.Indirections =
     SourceOperand.Indirections(Variable.Pointer.ToVariable.InTheHeap(variableName, variableIndex), nrIndirections)

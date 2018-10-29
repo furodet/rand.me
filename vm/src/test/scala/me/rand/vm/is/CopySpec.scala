@@ -48,6 +48,22 @@ class CopySpec extends BaseIsSpec {
     }
   }
 
+  "copy" should "pass 'copy var var'" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    Copy.execute(vmContext, ops_(ToHeapVariable(0), 0 -> var_(StackVariable, 0))) & (
+      _.heap.getVariable(0)
+      ) match {
+      case Ok(Some(Scalar(variableName, value))) =>
+        assert(variableName == "hp0")
+        assert(value.data.toInt == 0x12345678)
+        assert(value.vmType.isUnsigned)
+        assert(value.vmType.byteLen == 4)
+
+      case whatever =>
+        fail(s"unexpected result of copy %0 stk0: $whatever")
+    }
+  }
+
   "copy" should "not pass 'copy _ imm'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     Copy.execute(vmContext, ops_(NoDestination, 0 -> imm_("u32", 123))) match {
@@ -58,4 +74,13 @@ class CopySpec extends BaseIsSpec {
         fail(s"unexpected result of 'copy _ 123': $whatever")
     }
   }
+
+  "copy" should "not pass 'copy var <undef>'" in {
+    // TODO:
+  }
+
+  "copy" should "not pass 'copy <undef> var'" in {
+    // TODO:
+  }
+
 }
