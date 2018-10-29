@@ -34,6 +34,7 @@ object Copy extends Instruction {
     for {
       source <- InstructionHelpers.fetchImmediateOrVariable(0, operands)(vmContext)
       destination <- operands.fetchDestination
-      _ <- InstructionHelpers.updateDestination(destination, source)(vmContext)
+      update <- InstructionHelpers.updateDestination(destination, source)(vmContext)
+      _ = executionContext.logger ~> s"${update.name} := ${update.getValueString}"
     } yield vmContext
 }

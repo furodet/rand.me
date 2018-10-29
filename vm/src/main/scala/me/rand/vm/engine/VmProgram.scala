@@ -88,6 +88,14 @@ object VmProgram {
 
   class Counter(val basicBlock: Option[BasicBlock], val index: Int) {
     private[engine] def ++ = new Counter(basicBlock, index + 1)
+
+    override def toString: String = basicBlock match {
+      case None =>
+        s"<undef>:$index"
+
+      case Some(block) =>
+        s"${block.name}:$index"
+    }
   }
 
   object Counter {

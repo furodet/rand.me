@@ -33,12 +33,16 @@ sealed trait Variable {
   def name: String
 
   def rename(newName: String): Variable
+
+  def getValueString: String
 }
 
 object Variable {
 
   case class Scalar(name: String, value: VmWord) extends Variable {
     override def rename(newName: String): Variable = copy(name = newName)
+
+    override def getValueString: String = value.toString
   }
 
   sealed trait Pointer extends Variable
@@ -53,16 +57,22 @@ object Variable {
 
       case class InTheHeap(name: String, index: Int) extends ToVariable {
         override def rename(newName: String): Variable = copy(name = newName)
+
+        override def getValueString: String = s"HEAP[$index]"
       }
 
       case class InTheStack(name: String, index: Int) extends ToVariable {
         override def rename(newName: String): Variable = copy(name = newName)
+
+        override def getValueString: String = s"STACK[$index]"
       }
 
     }
 
     case class ToInstruction(name: String, value: VmProgram.Counter) extends Pointer {
       override def rename(newName: String): Variable = copy(name = newName)
+
+      override def getValueString: String = s"PC[${value.toString}]"
     }
 
   }

@@ -87,7 +87,7 @@ object InstructionHelpers {
         Err(InvalidRedirection(operandId))
     }
 
-  private[is] def updateDestination(pointer: Pointer, variable: Variable)(implicit vmContext: VmContext): Unit OrElse IllegalEncodingError =
+  private[is] def updateDestination(pointer: Pointer, variable: Variable)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
     pointer match {
       case Pointer.ToVariable.InTheStack(pointerName, variableIndex) =>
         updateDestination(vmContext.stack, pointerName, variableIndex, variable)
@@ -101,13 +101,13 @@ object InstructionHelpers {
 
   private def updateDestination(varSet: VarSet,
                                 pointerName: String, variableIndex: Int,
-                                newValue: Variable): Unit OrElse IllegalEncodingError =
+                                newValue: Variable): Variable OrElse IllegalEncodingError =
     for {
       targetVariable <- fetchTargetVariable(varSet, pointerName, variableIndex)
       mergedVariable = newValue.rename(targetVariable.name)
       // putVariable could not fail here: we just fetched the name at the same index.
       _ = varSet.putVariable(variableIndex, mergedVariable)
-    } yield ()
+    } yield mergedVariable
 
   private def fetchTargetVariable(varSet: VarSet, pointerName: String, variableIndex: Int): Variable OrElse IllegalEncodingError =
     varSet.getVariable(variableIndex) match {

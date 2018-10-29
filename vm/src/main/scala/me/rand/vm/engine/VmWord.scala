@@ -27,4 +27,6 @@ package me.rand.vm.engine
 
 import me.rand.vm.engine.VmTypes.VmType
 
-class VmWord(val vmType: VmType, val data: BigInt)
+class VmWord(val vmType: VmType, val data: BigInt) {
+  override def toString: String = s"$data:$vmType"
+}
