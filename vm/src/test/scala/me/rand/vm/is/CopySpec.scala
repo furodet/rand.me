@@ -27,7 +27,7 @@ package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.Instruction.Operand.DestinationOperand._
-import me.rand.vm.engine.Variable.Scalar
+import me.rand.vm.engine.Variable.{Pointer, Scalar}
 import me.rand.vm.engine.VmContext
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError.UnspecifiedDestinationOperand
 
@@ -62,6 +62,54 @@ class CopySpec extends BaseIsSpec {
       case whatever =>
         fail(s"unexpected result of copy %0 stk0: $whatever")
     }
+  }
+
+  "copy" should "pass 'copy var stack_ptr'" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    Copy.execute(vmContext, ops_(ToHeapVariable(0), 0 -> var_(HeapVariable, 1))) & (
+      _.heap.getVariable(0)
+      ) match {
+      case Ok(Some(Pointer.ToVariable.InTheStack(pointerName, variableIndex))) =>
+        assert(pointerName == "hp0")
+        assert(variableIndex == 0)
+
+      case whatever =>
+        fail(s"unexpected result of copy %0 stk1: $whatever")
+    }
+  }
+
+  "copy" should "pass 'copy var heap_ptr'" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    Copy.execute(vmContext, ops_(ToHeapVariable(0), 0 -> var_(StackVariable, 1))) & (
+      _.heap.getVariable(0)
+      ) match {
+      case Ok(Some(Pointer.ToVariable.InTheHeap(pointerName, variableIndex))) =>
+        assert(pointerName == "hp0")
+        assert(variableIndex == 0)
+
+      case whatever =>
+        fail(s"unexpected result of copy %0 hp1: $whatever")
+    }
+  }
+
+  "copy" should "pass 'copy var **ptr'" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    Copy.execute(vmContext, ops_(ToHeapVariable(0), 0 -> ind_(HeapVariable, 2, 2))) & (
+      _.heap.getVariable(0)
+      ) match {
+      case Ok(Some(Scalar(name, value))) =>
+        assert(name == "hp0")
+        assert(value.data.toInt == 0x12345678)
+        assert(value.vmType.isUnsigned)
+        assert(value.vmType.byteLen == 4)
+
+      case whatever =>
+        fail(s"unexpected result of copy %0 **hp2: $whatever")
+    }
+  }
+
+  "copy" should "pass 'copy var inst_ptr'" in {
+    // TODO:
   }
 
   "copy" should "not pass 'copy _ imm'" in {

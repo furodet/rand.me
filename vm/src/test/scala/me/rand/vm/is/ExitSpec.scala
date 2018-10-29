@@ -56,7 +56,7 @@ class ExitSpec extends BaseIsSpec {
 
   "exit" should "fail 'exit var'" in {
     implicit val vmContext: VmContext = givenAnEmptyVmContext
-    Exit.execute(vmContext, ops_(NoDestination, 0 -> var_(HeapVariable, 0 ))) match {
+    Exit.execute(vmContext, ops_(NoDestination, 0 -> var_(HeapVariable, 0))) match {
       case Err(err: NotAnImmediateOperand) =>
         executionContext.logger > err.toString
 
@@ -65,9 +65,9 @@ class ExitSpec extends BaseIsSpec {
     }
   }
 
-  "exit" should "fail 'exit ind'" in {
-    implicit val vmContext: VmContext = givenAnEmptyVmContext
-    Exit.execute(vmContext, ops_(NoDestination, 0 -> ind_("x", 0, 2))) match {
+  "exit" should "fail 'exit *ptr'" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    Exit.execute(vmContext, ops_(NoDestination, 0 -> ind_(HeapVariable, 2, 2))) match {
       case Err(err: NotAnImmediateOperand) =>
         executionContext.logger > err.toString
 

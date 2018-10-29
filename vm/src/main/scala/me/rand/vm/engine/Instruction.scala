@@ -49,7 +49,7 @@ object Instruction {
 
       case class ToVariable(variable: Variable) extends SourceOperand
 
-      case class Indirections(pointer: Variable.Pointer.ToVariable, nrIndirections: Int) extends SourceOperand
+      case class Indirections(pointer: Variable, nrIndirections: Int) extends SourceOperand
 
       case class Immediate(value: VmWord) extends SourceOperand
 

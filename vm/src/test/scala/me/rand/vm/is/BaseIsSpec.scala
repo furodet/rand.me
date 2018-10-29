@@ -29,6 +29,7 @@ import java.io.PrintWriter
 
 import me.rand.commons.idioms.Logger._
 import me.rand.commons.idioms.Status._
+import me.rand.vm.engine.Instruction.Operand.SourceOperand.Indirections
 import me.rand.vm.engine.Instruction.Operand.{DestinationOperand, SourceOperand}
 import me.rand.vm.engine.Instruction.{Operands, OperandsBuilder}
 import me.rand.vm.engine.{Variable, VmContext, VmWord}
@@ -130,27 +131,38 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
   protected def imm_(typeString: String, value: Int)(implicit vmContext: VmContext): SourceOperand.Immediate =
     SourceOperand.Immediate(createVmWord(typeString, value, vmContext))
 
-  protected def var_(location: VariableLocation, varIndex: Int)(implicit vmContext: VmContext): SourceOperand.ToVariable = {
-    (location match {
-      case HeapVariable =>
-        vmContext.heap.getVariable(varIndex)
-
-      case StackVariable =>
-        vmContext.stack.getVariable(varIndex)
-    }) match {
-      case Ok(Some(variable)) =>
+  protected def var_(location: VariableLocation, varIndex: Int)(implicit vmContext: VmContext): SourceOperand.ToVariable =
+    fetchVariable(location, varIndex) match {
+      case Ok(variable) =>
         SourceOperand.ToVariable(variable)
-
-      case Ok(None) =>
-        fail("could not create variable: not defined yet")
 
       case Err(error) =>
         fail(s"could not create variable: $error")
     }
-  }
 
-  protected def ind_(variableName: String, variableIndex: Int, nrIndirections: Int): SourceOperand.Indirections =
-    SourceOperand.Indirections(Variable.Pointer.ToVariable.InTheHeap(variableName, variableIndex), nrIndirections)
+  protected def ind_(sourceLocation: VariableLocation, sourceIndex: Int, nrIndirections: Int)(implicit vmContext: VmContext): SourceOperand.Indirections =
+    fetchVariable(sourceLocation, sourceIndex) match {
+      case Ok(pointer) =>
+        Indirections(pointer, nrIndirections)
+
+      case Err(error) =>
+        fail(s"could not create indirection: $error")
+    }
+
+  private def fetchVariable(location: VariableLocation, index: Int)(implicit vmContext: VmContext) =
+    (location match {
+      case HeapVariable =>
+        vmContext.heap.getVariable(index)
+
+      case StackVariable =>
+        vmContext.stack.getVariable(index)
+    }) & {
+      case None =>
+        fail("could not create variable: not defined yet")
+
+      case Some(variable) =>
+        Ok(variable)
+    }
 
   private def createScalarVariable(name: String, typeString: String, value: Int)(implicit vmContext: VmContext): Variable.Scalar =
     Variable.Scalar(name, createVmWord(typeString, value, vmContext))
