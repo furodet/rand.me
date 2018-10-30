@@ -32,7 +32,9 @@ import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.Instruction.Operand.SourceOperand.Indirections
 import me.rand.vm.engine.Instruction.Operand.{DestinationOperand, SourceOperand}
 import me.rand.vm.engine.Instruction.{Operands, OperandsBuilder}
-import me.rand.vm.engine.{Variable, VmContext, VmWord}
+import me.rand.vm.engine.VmProgram.BasicBlockBuilder.aBasicBlockCalled
+import me.rand.vm.engine.VmProgram.{Counter, InstructionInstance}
+import me.rand.vm.engine.{Variable, VmContext, VmProgram, VmWord}
 import me.rand.vm.main.ExecutionContext
 import org.scalatest._
 
@@ -83,7 +85,7 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
   protected def givenABareMinimalVmContext: VmContext =
     VmContext.usingProfileString("bl:4:heap:1024") match {
       case Ok(emptyContext) =>
-        implicit val c: VmContext = emptyContext.createFrameOfSize(2)
+        implicit val c: VmContext = emptyContext.createFrameOfSize(3)
         // Here's what we build:
         // HEAP:
         //
@@ -95,6 +97,7 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
         //  |                           |
         //  +--------------------+      |
         // STACK:                |      |
+        //      2 stk2    Iptr to 'foo' |
         //      1 &hp0         >-+      |
         //  +-> 0 stk0      ...:u32     |
         //  |                           |
@@ -103,13 +106,17 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
         // So that we have:
         //   **(&&stk0) = *(&stk0) = stk0 = 0x12345678
         //    *(hp0) = hp0 = 0xabcdef0
+        val fooBasicBlock = aBasicBlockCalled("foo")
+          .+(new InstructionInstance(Exit, Operands.none.addSource(0 -> imm_("u8", 123))))
+          .build
         (for {
           _ <- c.stack.putVariable(0, createScalarVariable("stk0", "u32", 0x12345678))
           _ <- c.stack.putVariable(1, Variable.Pointer.ToVariable.InTheHeap("&hp0", 0))
+          _ <- c.stack.putVariable(2, Variable.Pointer.ToInstruction("stk2", Counter.atTheBeginningOf(fooBasicBlock)))
           _ <- c.heap.putVariable(0, createScalarVariable("hp0", "u32", 0xabcdef0))
           _ <- c.heap.putVariable(1, Variable.Pointer.ToVariable.InTheStack("&stk0", 0))
           _ <- c.heap.putVariable(2, Variable.Pointer.ToVariable.InTheHeap("&&stk0", 1))
-        } yield c) match {
+        } yield c.setProgram(VmProgram.empty.++(fooBasicBlock))) match {
           case Ok(context) =>
             context
 

@@ -32,8 +32,9 @@ import me.rand.vm.engine.VmContext
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError.UnspecifiedDestinationOperand
 
 class CopySpec extends BaseIsSpec {
+  private implicit val vmContext: VmContext = givenABareMinimalVmContext
+
   "copy" should "pass 'copy var imm'" in {
-    implicit val vmContext: VmContext = givenABareMinimalVmContext
     Copy.execute(vmContext, ops_(ToHeapVariable(0), 0 -> imm_("u32", 123))) & (
       _.heap.getVariable(0)
       ) match {
@@ -49,7 +50,6 @@ class CopySpec extends BaseIsSpec {
   }
 
   "copy" should "pass 'copy var var'" in {
-    implicit val vmContext: VmContext = givenABareMinimalVmContext
     Copy.execute(vmContext, ops_(ToHeapVariable(0), 0 -> var_(StackVariable, 0))) & (
       _.heap.getVariable(0)
       ) match {
@@ -60,12 +60,11 @@ class CopySpec extends BaseIsSpec {
         assert(value.vmType.byteLen == 4)
 
       case whatever =>
-        fail(s"unexpected result of copy %0 stk0: $whatever")
+        fail(s"unexpected result of 'copy %0 stk0': $whatever")
     }
   }
 
   "copy" should "pass 'copy var stack_ptr'" in {
-    implicit val vmContext: VmContext = givenABareMinimalVmContext
     Copy.execute(vmContext, ops_(ToHeapVariable(0), 0 -> var_(HeapVariable, 1))) & (
       _.heap.getVariable(0)
       ) match {
@@ -74,12 +73,11 @@ class CopySpec extends BaseIsSpec {
         assert(variableIndex == 0)
 
       case whatever =>
-        fail(s"unexpected result of copy %0 stk1: $whatever")
+        fail(s"unexpected result of 'copy %0 stk1': $whatever")
     }
   }
 
   "copy" should "pass 'copy var heap_ptr'" in {
-    implicit val vmContext: VmContext = givenABareMinimalVmContext
     Copy.execute(vmContext, ops_(ToHeapVariable(0), 0 -> var_(StackVariable, 1))) & (
       _.heap.getVariable(0)
       ) match {
@@ -88,12 +86,11 @@ class CopySpec extends BaseIsSpec {
         assert(variableIndex == 0)
 
       case whatever =>
-        fail(s"unexpected result of copy %0 hp1: $whatever")
+        fail(s"unexpected result of 'copy %0 hp1': $whatever")
     }
   }
 
   "copy" should "pass 'copy var **ptr'" in {
-    implicit val vmContext: VmContext = givenABareMinimalVmContext
     Copy.execute(vmContext, ops_(ToHeapVariable(0), 0 -> ind_(HeapVariable, 2, 2))) & (
       _.heap.getVariable(0)
       ) match {
@@ -104,16 +101,30 @@ class CopySpec extends BaseIsSpec {
         assert(value.vmType.byteLen == 4)
 
       case whatever =>
-        fail(s"unexpected result of copy %0 **hp2: $whatever")
+        fail(s"unexpected result of 'copy %0 **hp2': $whatever")
     }
   }
 
   "copy" should "pass 'copy var inst_ptr'" in {
-    // TODO:
+    Copy.execute(vmContext, ops_(ToHeapVariable(0), 0 -> var_(StackVariable, 2))) & (
+      _.heap.getVariable(0)
+      ) match {
+      case Ok(Some(Pointer.ToInstruction(pointerName, destination))) =>
+        assert(pointerName == "hp0")
+        assert(destination.index == 0)
+        assert(destination.basicBlock.isDefined)
+        assert(destination.basicBlock.get.name == "foo")
+
+      case whatever =>
+        fail(s"unexpected result of 'copy %0 stk2': $whatever")
+    }
+  }
+
+  "copy" should "pass 'copy *var imm'" in {
+    // TODO
   }
 
   "copy" should "not pass 'copy _ imm'" in {
-    implicit val vmContext: VmContext = givenABareMinimalVmContext
     Copy.execute(vmContext, ops_(NoDestination, 0 -> imm_("u32", 123))) match {
       case Err(error@UnspecifiedDestinationOperand) =>
         executionContext.logger > error.toString
