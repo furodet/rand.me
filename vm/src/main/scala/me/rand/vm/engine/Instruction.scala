@@ -26,10 +26,8 @@
 package me.rand.vm.engine
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.Instruction.Operand.DestinationOperand.{NoDestination, ToHeapVariable, ToStackVariable}
 import me.rand.vm.engine.Instruction.Operand.{DestinationOperand, SourceOperand}
 import me.rand.vm.engine.Instruction.Operands
-import me.rand.vm.engine.Variable.Pointer
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError
 import me.rand.vm.main.{ExecutionContext, VmError}
 
@@ -65,6 +63,8 @@ object Instruction {
 
       case class ToStackVariable(variableIndex: Int) extends DestinationOperand
 
+      case class Redirections(pointer: Variable, nrRedirections: Int) extends DestinationOperand
+
     }
 
   }
@@ -75,18 +75,6 @@ object Instruction {
 
     def addSource(operandIndexAndValue: (Int, SourceOperand)): Operands =
       new Operands(destination, sources = sources + operandIndexAndValue)
-
-    def fetchDestination: Pointer.ToVariable OrElse IllegalEncodingError =
-      destination match {
-        case NoDestination =>
-          Err(IllegalEncodingError.UnspecifiedDestinationOperand)
-
-        case ToHeapVariable(index) =>
-          Ok(Variable.Pointer.ToVariable.InTheHeap("<undef>", index))
-
-        case ToStackVariable(index) =>
-          Ok(Variable.Pointer.ToVariable.InTheStack("<undef>", index))
-      }
 
     def fetchSource(operandId: Int): SourceOperand OrElse IllegalEncodingError =
       sources.get(operandId) match {

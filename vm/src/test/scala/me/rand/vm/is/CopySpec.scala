@@ -120,8 +120,19 @@ class CopySpec extends BaseIsSpec {
     }
   }
 
-  "copy" should "pass 'copy *var imm'" in {
-    // TODO
+  "copy" should "pass 'copy **var imm'" in {
+    Copy.execute(vmContext, ops_(red_(HeapVariable, 2, 2), 0 -> imm_("u32", 12345))) & (
+      _.stack.getVariable(0)
+      ) match {
+      case Ok(Some(Scalar(variableName, value))) =>
+        assert(variableName == "stk0")
+        assert(value.data.toInt == 12345)
+        assert(value.vmType.isUnsigned)
+        assert(value.vmType.byteLen == 4)
+
+      case whatever =>
+        fail(s"unexpected result of 'copy **(&&stk0) 12345': $whatever")
+    }
   }
 
   "copy" should "not pass 'copy _ imm'" in {

@@ -51,6 +51,8 @@ object Variable {
 
     sealed trait ToVariable extends Pointer {
       def index: Int
+
+      def getContainingVarSet(vmContext: VmContext): VarSet
     }
 
     object ToVariable {
@@ -59,12 +61,16 @@ object Variable {
         override def rename(newName: String): Variable = copy(name = newName)
 
         override def getValueString: String = s"HEAP[$index]"
+
+        override def getContainingVarSet(vmContext: VmContext): VarSet = vmContext.heap
       }
 
       case class InTheStack(name: String, index: Int) extends ToVariable {
         override def rename(newName: String): Variable = copy(name = newName)
 
         override def getValueString: String = s"STACK[$index]"
+
+        override def getContainingVarSet(vmContext: VmContext): VarSet = vmContext.stack
       }
 
     }

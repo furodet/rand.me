@@ -112,8 +112,12 @@ object VmError {
           }
         }
 
-        case class InvalidRedirection(operandId: Int) extends IllegalEncodingError {
+        case class InvalidIndirection(operandId: Int) extends IllegalEncodingError {
           override def toString: String = s"source operand #$operandId redirects to an unexpected type of variable"
+        }
+
+        case object InvalidRedirection extends IllegalEncodingError {
+          override def toString: String = "destination operand redirects to an unexpected type of variable"
         }
 
         case object IllegalDestinationPointer extends IllegalEncodingError {

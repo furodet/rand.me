@@ -26,7 +26,8 @@
 package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.Instruction.Operand.SourceOperand
+import me.rand.vm.engine.Instruction.Operand.DestinationOperand.{NoDestination, Redirections, ToStackVariable}
+import me.rand.vm.engine.Instruction.Operand.{DestinationOperand, SourceOperand}
 import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.engine.Variable._
 import me.rand.vm.engine._
@@ -62,17 +63,8 @@ object InstructionHelpers {
   private def fetchIndirections(variable: Variable, nrIndirections: Int, operandId: Int)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
     if (nrIndirections == 0) Ok(variable)
     else variable match {
-      case Pointer.ToVariable.InTheHeap(pointerName, variableIndex) =>
-        fetchTargetVariable(vmContext.heap, pointerName, variableIndex) match {
-          case err@Err(_) =>
-            err
-
-          case Ok(target) =>
-            fetchIndirections(target, nrIndirections - 1, operandId)
-        }
-
-      case Pointer.ToVariable.InTheStack(pointerName, variableIndex) =>
-        fetchTargetVariable(vmContext.stack, pointerName, variableIndex) match {
+      case pointer: Pointer.ToVariable =>
+        fetchTargetVariable(pointer.getContainingVarSet(vmContext), pointer.name, pointer.index) match {
           case err@Err(_) =>
             err
 
@@ -81,19 +73,16 @@ object InstructionHelpers {
         }
 
       case _: Scalar =>
-        Err(InvalidRedirection(operandId))
+        Err(InvalidIndirection(operandId))
 
       case _: Pointer.ToInstruction =>
-        Err(InvalidRedirection(operandId))
+        Err(InvalidIndirection(operandId))
     }
 
   private[is] def updateDestination(pointer: Pointer, variable: Variable)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
     pointer match {
-      case Pointer.ToVariable.InTheStack(pointerName, variableIndex) =>
-        updateDestination(vmContext.stack, pointerName, variableIndex, variable)
-
-      case Pointer.ToVariable.InTheHeap(pointerName, variableIndex) =>
-        updateDestination(vmContext.heap, pointerName, variableIndex, variable)
+      case ptr: Pointer.ToVariable =>
+        updateDestination(ptr.getContainingVarSet(vmContext), ptr.name, ptr.index, variable)
 
       case _: Pointer.ToInstruction =>
         Err(IllegalDestinationPointer)
@@ -119,5 +108,38 @@ object InstructionHelpers {
 
       case Ok(Some(variable)) =>
         Ok(variable)
+    }
+
+  private[is] def fetchDestination(operands: Operands)(implicit vmContext: VmContext): Pointer.ToVariable OrElse IllegalEncodingError =
+    operands.destination match {
+      case DestinationOperand.ToHeapVariable(index) =>
+        Ok(Variable.Pointer.ToVariable.InTheHeap("<undef>", index))
+
+      case ToStackVariable(index) =>
+        Ok(Variable.Pointer.ToVariable.InTheStack("<undef>", index))
+
+      case Redirections(pointer, nrRedirections) =>
+        fetchRedirections(pointer, nrRedirections)
+
+      case NoDestination =>
+        Err(IllegalEncodingError.UnspecifiedDestinationOperand)
+    }
+
+  @tailrec
+  private def fetchRedirections(pointer: Variable, nrRedirections: Int)(implicit vmContext: VmContext): Pointer.ToVariable OrElse IllegalEncodingError =
+    pointer match {
+      case ptr: Pointer.ToVariable =>
+        if (nrRedirections == 1)
+          Ok(ptr)
+        else fetchTargetVariable(ptr.getContainingVarSet(vmContext), ptr.name, ptr.index) match {
+          case Err(error) =>
+            Err(error)
+
+          case Ok(nextPointer) =>
+            fetchRedirections(nextPointer, nrRedirections - 1)
+        }
+
+      case _ =>
+        Err(InvalidRedirection)
     }
 }

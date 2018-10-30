@@ -29,6 +29,7 @@ import java.io.PrintWriter
 
 import me.rand.commons.idioms.Logger._
 import me.rand.commons.idioms.Status._
+import me.rand.vm.engine.Instruction.Operand.DestinationOperand.Redirections
 import me.rand.vm.engine.Instruction.Operand.SourceOperand.Indirections
 import me.rand.vm.engine.Instruction.Operand.{DestinationOperand, SourceOperand}
 import me.rand.vm.engine.Instruction.{Operands, OperandsBuilder}
@@ -147,10 +148,19 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
         fail(s"could not create variable: $error")
     }
 
-  protected def ind_(sourceLocation: VariableLocation, sourceIndex: Int, nrIndirections: Int)(implicit vmContext: VmContext): SourceOperand.Indirections =
+  protected def ind_(sourceLocation: VariableLocation, sourceIndex: Int, nrIndirections: Int)(implicit vmContext: VmContext): Indirections =
     fetchVariable(sourceLocation, sourceIndex) match {
       case Ok(pointer) =>
         Indirections(pointer, nrIndirections)
+
+      case Err(error) =>
+        fail(s"could not create indirection: $error")
+    }
+
+  protected def red_(destinationLocation: VariableLocation, destinationIndex: Int, nrIndirections: Int)(implicit vmContext: VmContext): Redirections =
+    fetchVariable(destinationLocation, destinationIndex) match {
+      case Ok(pointer) =>
+        Redirections(pointer, nrIndirections)
 
       case Err(error) =>
         fail(s"could not create indirection: $error")

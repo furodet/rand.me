@@ -30,11 +30,13 @@ import me.rand.vm.engine.{Instruction, VmContext}
 import me.rand.vm.main.{ExecutionContext, VmError}
 
 object Copy extends Instruction {
-  override def execute(vmContext: VmContext, operands: Instruction.Operands)(implicit executionContext: ExecutionContext): VmContext OrElse VmError =
+  override def execute(vmContext: VmContext, operands: Instruction.Operands)(implicit executionContext: ExecutionContext): VmContext OrElse VmError = {
+    implicit val c: VmContext = vmContext
     for {
-      source <- InstructionHelpers.fetchImmediateOrVariable(0, operands)(vmContext)
-      destination <- operands.fetchDestination
-      update <- InstructionHelpers.updateDestination(destination, source)(vmContext)
+      source <- InstructionHelpers.fetchImmediateOrVariable(0, operands)
+      destination <- InstructionHelpers.fetchDestination(operands)
+      update <- InstructionHelpers.updateDestination(destination, source)
       _ = executionContext.logger ~> s"${update.name} := ${update.getValueString}"
     } yield vmContext
+  }
 }
