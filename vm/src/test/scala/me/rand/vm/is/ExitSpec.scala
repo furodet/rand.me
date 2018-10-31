@@ -26,7 +26,7 @@
 package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.Instruction.Operand.DestinationOperand._
+import me.rand.vm.dsl.EmbeddedAsm._
 import me.rand.vm.engine.VmContext
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError.UnspecifiedSourceOperand
 import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.NotAnImmediateOperand
@@ -34,7 +34,10 @@ import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.NotAnImmedia
 class ExitSpec extends BaseIsSpec {
   "exit" should "pass 'exit imm'" in {
     implicit val vmContext: VmContext = givenAnEmptyVmContext
-    Exit.execute(vmContext, ops_(NoDestination, 0 -> imm_("u8", 42))) match {
+    (for {
+      command <- <<(Exit) - (42 / 'u8) >> ()
+      context <- command.execute(vmContext)
+    } yield context) match {
       case Ok(newContext) =>
         assert(newContext.exitCode.getOrElse(-1) == 42)
 
@@ -45,29 +48,38 @@ class ExitSpec extends BaseIsSpec {
 
   "exit" should "fail 'exit'" in {
     implicit val vmContext: VmContext = givenAnEmptyVmContext
-    Exit.execute(vmContext, ops_(NoDestination)) match {
+    (for {
+      command <- <<(Exit) >> ()
+      context <- command.execute(vmContext)
+    } yield context) match {
       case Err(err: UnspecifiedSourceOperand) =>
         executionContext.logger > err.toString
 
       case whatever =>
-        fail(s"unexpected result of 'exit' with no operand: $whatever")
+        fail(s"unexpected result of 'exit': $whatever")
     }
   }
 
-  "exit" should "fail 'exit var'" in {
+  "exit" should "fail 'exit %0'" in {
     implicit val vmContext: VmContext = givenAnEmptyVmContext
-    Exit.execute(vmContext, ops_(NoDestination, 0 -> var_(HeapVariable, 0))) match {
+    (for {
+      command <- <<(Exit) - -%(0) >> ()
+      context <- command.execute(vmContext)
+    } yield context) match {
       case Err(err: NotAnImmediateOperand) =>
         executionContext.logger > err.toString
 
       case whatever =>
-        fail(s"unexpected result of 'exit V': $whatever")
+        fail(s"unexpected result of 'exit %0': $whatever")
     }
   }
 
-  "exit" should "fail 'exit *ptr'" in {
+  "exit" should "fail 'exit *%2'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
-    Exit.execute(vmContext, ops_(NoDestination, 0 -> ind_(HeapVariable, 2, 2))) match {
+    (for {
+      command <- <<(Exit) - -*(-%(2)) >> ()
+      context <- command.execute(vmContext)
+    } yield context) match {
       case Err(err: NotAnImmediateOperand) =>
         executionContext.logger > err.toString
 

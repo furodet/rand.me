@@ -45,9 +45,17 @@ object Instruction {
 
     object SourceOperand {
 
-      case class ToVariable(variable: Variable) extends SourceOperand
+      sealed trait SourceVariable extends SourceOperand
 
-      case class Indirections(pointer: Variable, nrIndirections: Int) extends SourceOperand
+      object SourceVariable {
+
+        case class InTheHeap(index: Int) extends SourceOperand.SourceVariable
+
+        case class InTheStack(index: Int) extends SourceOperand.SourceVariable
+
+      }
+
+      case class Indirect(pointer: SourceOperand.SourceVariable, depth: Int) extends SourceOperand
 
       case class Immediate(value: VmWord) extends SourceOperand
 
@@ -59,11 +67,17 @@ object Instruction {
 
       object NoDestination extends DestinationOperand
 
-      case class ToHeapVariable(variableIndex: Int) extends DestinationOperand
+      sealed trait TargetVariable extends DestinationOperand
 
-      case class ToStackVariable(variableIndex: Int) extends DestinationOperand
+      object TargetVariable {
 
-      case class Redirections(pointer: Variable, nrRedirections: Int) extends DestinationOperand
+        case class InTheHeap(variableIndex: Int) extends DestinationOperand.TargetVariable
+
+        case class InTheStack(variableIndex: Int) extends DestinationOperand.TargetVariable
+
+      }
+
+      case class Redirect(pointer: DestinationOperand.TargetVariable, depth: Int) extends DestinationOperand
 
     }
 

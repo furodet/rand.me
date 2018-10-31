@@ -28,6 +28,7 @@ package me.rand.vm.engine
 import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.engine.VmProgram.{BasicBlock, Counter, InstructionInstance}
+import me.rand.vm.main.{ExecutionContext, VmError}
 import me.rand.vm.main.VmError.VmContextError
 import me.rand.vm.main.VmError.VmContextError.{NoSuchBasicBlock, ProgramCounterOutOfBlock, ProgramCounterOutOfBounds}
 
@@ -69,7 +70,10 @@ class VmProgram(val basicBlocks: Map[String, BasicBlock], val pc: Counter) {
 object VmProgram {
   def empty: VmProgram = new VmProgram(Map.empty, Counter.reset)
 
-  class InstructionInstance(val instruction: Instruction, val operands: Operands)
+  class InstructionInstance(val instruction: Instruction, val operands: Operands) {
+    def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError =
+      instruction.execute(vmContext, operands)
+  }
 
   class BasicBlock(val name: String, val instructions: Array[InstructionInstance])
 

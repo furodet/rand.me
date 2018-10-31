@@ -91,7 +91,7 @@ object VmError {
         override def toString: String = s"operand #$operandId is neither an immediate nor a scalar variable"
       }
 
-      case class NotAnImmediateOrScalarVariableOperandAfterRedirections(operandId: Int) extends VmFetchOperandError {
+      case class NotAnImmediateOrScalarVariableOperandAfterRedirect(operandId: Int) extends VmFetchOperandError {
         override def toString: String = s"operand #$operandId redirects to neither an immediate nor a scalar variable"
       }
 
@@ -99,7 +99,7 @@ object VmError {
 
       object InvalidPointerValue {
 
-        case class InvalidTargetReference(pointerName: String, variableIndex: Int, cause: Option[VmError]) extends InvalidPointerValue {
+        case class InvalidTargetReference(pointerName: Option[String], variableIndex: Int, cause: Option[VmError]) extends InvalidPointerValue {
           override def toString: String = {
             val explanation = cause match {
               case Some(error) =>
@@ -108,15 +108,29 @@ object VmError {
               case None =>
                 "value not set"
             }
-            s"pointer [$pointerName=$variableIndex] is invalid: $explanation"
+
+            s"pointer [${pointerName.getOrElse("<undef>")}=$variableIndex] is invalid: $explanation"
           }
         }
 
-        case class InvalidIndirection(operandId: Int) extends IllegalEncodingError {
+        case class InvalidSourceReference(varSetName: String, variableIndex: Int, cause: Option[VmError]) extends InvalidPointerValue {
+          override def toString: String = {
+            val explanation = cause match {
+              case Some(error) =>
+                error.toString
+
+              case None =>
+                "value not set"
+            }
+            s"pointer [$varSetName=$variableIndex] is invalid: $explanation"
+          }
+        }
+
+        case class InvalidIndirect(operandId: Int) extends IllegalEncodingError {
           override def toString: String = s"source operand #$operandId redirects to an unexpected type of variable"
         }
 
-        case object InvalidRedirection extends IllegalEncodingError {
+        case object InvalidRedirect extends IllegalEncodingError {
           override def toString: String = "destination operand redirects to an unexpected type of variable"
         }
 
@@ -159,6 +173,18 @@ object VmError {
   case class IncompatibleInstructionSetVersion(v0: InstructionSetVersion) extends VmError {
     override def toString: String =
       s"instruction set version $v0 is incompatible with current version ${InstructionSetVersion.current}"
+  }
+
+  // Embedded asm errors
+
+  sealed trait SyntaxError extends VmError
+
+  object SyntaxError {
+
+    case class InvalidTypeDefinition(typeString: String, cause: VmError) extends SyntaxError {
+      override def toString: String = s"invalid type definition '$typeString': $cause"
+    }
+
   }
 
 }

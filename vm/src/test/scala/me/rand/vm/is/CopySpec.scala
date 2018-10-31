@@ -26,18 +26,20 @@
 package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.Instruction.Operand.DestinationOperand._
+import me.rand.vm.dsl.EmbeddedAsm._
 import me.rand.vm.engine.Variable.{Pointer, Scalar}
 import me.rand.vm.engine.VmContext
-import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError.UnspecifiedDestinationOperand
+import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError.{UnspecifiedDestinationOperand, UnspecifiedSourceOperand}
 
 class CopySpec extends BaseIsSpec {
-  private implicit val vmContext: VmContext = givenABareMinimalVmContext
 
-  "copy" should "pass 'copy var imm'" in {
-    Copy.execute(vmContext, ops_(ToHeapVariable(0), 0 -> imm_("u32", 123))) & (
-      _.heap.getVariable(0)
-      ) match {
+  "copy" should "pass 'copy %0 123:u32'" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    (for {
+      command <- <<(Copy) - %-(0) - (123 / 'u32) >> ()
+      context <- command.execute(vmContext)
+      result <- context.heap.getVariable(0)
+    } yield result) match {
       case Ok(Some(Scalar(variableName, value))) =>
         assert(variableName == "hp0")
         assert(value.data.toInt == 123)
@@ -45,70 +47,67 @@ class CopySpec extends BaseIsSpec {
         assert(value.vmType.byteLen == 4)
 
       case whatever =>
-        fail(s"unexpected result of 'copy %0 123': $whatever")
+        fail(s"unexpected result of 'copy %0 123:u32': $whatever")
     }
   }
 
-  "copy" should "pass 'copy var var'" in {
-    Copy.execute(vmContext, ops_(ToHeapVariable(0), 0 -> var_(StackVariable, 0))) & (
-      _.heap.getVariable(0)
-      ) match {
+  "copy" should "pass 'copy %%1 %0'" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    (for {
+      command <- <<(Copy) - %%-(0) - -%(0) >> ()
+      context <- command.execute(vmContext)
+      result <- context.stack.getVariable(0)
+    } yield result) match {
       case Ok(Some(Scalar(variableName, value))) =>
-        assert(variableName == "hp0")
-        assert(value.data.toInt == 0x12345678)
+        assert(variableName == "stk0")
+        assert(value.data.toInt == 87654321)
         assert(value.vmType.isUnsigned)
         assert(value.vmType.byteLen == 4)
 
       case whatever =>
-        fail(s"unexpected result of 'copy %0 stk0': $whatever")
+        fail(s"unexpected result of 'copy %%1 %0': $whatever")
     }
   }
 
-  "copy" should "pass 'copy var stack_ptr'" in {
-    Copy.execute(vmContext, ops_(ToHeapVariable(0), 0 -> var_(HeapVariable, 1))) & (
-      _.heap.getVariable(0)
-      ) match {
+  "copy" should "pass 'copy %0 %1 (pointer to stack)'" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    (for {
+      command <- <<(Copy) - %-(0) - -%(1) >> ()
+      context <- command.execute(vmContext)
+      result <- context.heap.getVariable(0)
+    } yield result) match {
       case Ok(Some(Pointer.ToVariable.InTheStack(pointerName, variableIndex))) =>
         assert(pointerName == "hp0")
         assert(variableIndex == 0)
 
       case whatever =>
-        fail(s"unexpected result of 'copy %0 stk1': $whatever")
+        fail(s"unexpected result of 'copy %0 %1 (pointer to stack)': $whatever")
     }
   }
 
-  "copy" should "pass 'copy var heap_ptr'" in {
-    Copy.execute(vmContext, ops_(ToHeapVariable(0), 0 -> var_(StackVariable, 1))) & (
-      _.heap.getVariable(0)
-      ) match {
+  "copy" should "pass 'copy %0 %%1 (pointer to heap)'" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    (for {
+      command <- <<(Copy) - %-(0) - -%%(1) >> ()
+      context <- command.execute(vmContext)
+      result <- context.heap.getVariable(0)
+    } yield result) match {
       case Ok(Some(Pointer.ToVariable.InTheHeap(pointerName, variableIndex))) =>
         assert(pointerName == "hp0")
         assert(variableIndex == 0)
 
       case whatever =>
-        fail(s"unexpected result of 'copy %0 hp1': $whatever")
+        fail(s"unexpected result of 'copy %0 %%1 (pointer to heap)': $whatever")
     }
   }
 
-  "copy" should "pass 'copy var **ptr'" in {
-    Copy.execute(vmContext, ops_(ToHeapVariable(0), 0 -> ind_(HeapVariable, 2, 2))) & (
-      _.heap.getVariable(0)
-      ) match {
-      case Ok(Some(Scalar(name, value))) =>
-        assert(name == "hp0")
-        assert(value.data.toInt == 0x12345678)
-        assert(value.vmType.isUnsigned)
-        assert(value.vmType.byteLen == 4)
-
-      case whatever =>
-        fail(s"unexpected result of 'copy %0 **hp2': $whatever")
-    }
-  }
-
-  "copy" should "pass 'copy var inst_ptr'" in {
-    Copy.execute(vmContext, ops_(ToHeapVariable(0), 0 -> var_(StackVariable, 2))) & (
-      _.heap.getVariable(0)
-      ) match {
+  "copy" should "pass 'copy %0 %%2 (pointer to instruction)'" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    (for {
+      command <- <<(Copy) - %-(0) - -%%(2) >> ()
+      context <- command.execute(vmContext)
+      result <- context.heap.getVariable(0)
+    } yield result) match {
       case Ok(Some(Pointer.ToInstruction(pointerName, destination))) =>
         assert(pointerName == "hp0")
         assert(destination.index == 0)
@@ -116,14 +115,35 @@ class CopySpec extends BaseIsSpec {
         assert(destination.basicBlock.get.name == "foo")
 
       case whatever =>
-        fail(s"unexpected result of 'copy %0 stk2': $whatever")
+        fail(s"unexpected result of 'copy %0 %%2 (pointer to instruction)': $whatever")
     }
   }
 
-  "copy" should "pass 'copy **var imm'" in {
-    Copy.execute(vmContext, ops_(red_(HeapVariable, 2, 2), 0 -> imm_("u32", 12345))) & (
-      _.stack.getVariable(0)
-      ) match {
+  "copy" should "pass 'copy %%0 **%2'" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    (for {
+      command <- <<(Copy) - %%-(0) - -*.*(-%(2)) >> ()
+      context <- command.execute(vmContext)
+      result <- context.stack.getVariable(0)
+    } yield result) match {
+      case Ok(Some(Scalar(name, value))) =>
+        assert(name == "stk0")
+        assert(value.data.toInt == 12345678)
+        assert(value.vmType.isUnsigned)
+        assert(value.vmType.byteLen == 4)
+
+      case whatever =>
+        fail(s"unexpected result of 'copy %%0 **%2': $whatever")
+    }
+  }
+
+  "copy" should "pass 'copy **%2 12345:u32'" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    (for {
+      command <- <<(Copy) - *.*-(%-(2)) - 12345 / 'u32 >> ()
+      context <- command.execute(vmContext)
+      result <- context.stack.getVariable(0)
+    } yield result) match {
       case Ok(Some(Scalar(variableName, value))) =>
         assert(variableName == "stk0")
         assert(value.data.toInt == 12345)
@@ -131,12 +151,16 @@ class CopySpec extends BaseIsSpec {
         assert(value.vmType.byteLen == 4)
 
       case whatever =>
-        fail(s"unexpected result of 'copy **(&&stk0) 12345': $whatever")
+        fail(s"unexpected result of 'copy **%2 12345:u32': $whatever")
     }
   }
 
-  "copy" should "not pass 'copy _ imm'" in {
-    Copy.execute(vmContext, ops_(NoDestination, 0 -> imm_("u32", 123))) match {
+  "copy" should "not pass 'copy _ 123'" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    (for {
+      command <- <<(Copy) - 123 / 'u32 >> ()
+      context <- command.execute(vmContext)
+    } yield context) match {
       case Err(error@UnspecifiedDestinationOperand) =>
         executionContext.logger > error.toString
 
@@ -145,12 +169,19 @@ class CopySpec extends BaseIsSpec {
     }
   }
 
-  "copy" should "not pass 'copy var <undef>'" in {
-    // TODO:
+  "copy" should "not pass 'copy %0 _'" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    (for {
+      command <- <<(Copy) - %-(0) >> ()
+      context <- command.execute(vmContext)
+    } yield context) match {
+      case Err(error@UnspecifiedSourceOperand(0)) =>
+        executionContext.logger > error.toString
+
+      case whatever =>
+        fail(s"unexpected result of 'copy %0 _': $whatever")
+    }
   }
 
-  "copy" should "not pass 'copy <undef> var'" in {
-    // TODO:
-  }
-
+  // TODO &... operands, to fetch a variable reference
 }

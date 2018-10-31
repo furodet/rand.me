@@ -170,7 +170,7 @@ class StatusTest extends FlatSpec {
     def okIfHello(string: String): String OrElse Int =
       if (string == "hello") Ok("aloha") else Err(66)
 
-    okIfHello("hello") & { x => Err(77) } match {
+    okIfHello("hello") & { _ => Err(77) } match {
       case Err(77) =>
         succeed
 

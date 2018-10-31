@@ -29,10 +29,8 @@ import java.io.PrintWriter
 
 import me.rand.commons.idioms.Logger._
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.Instruction.Operand.DestinationOperand.Redirections
-import me.rand.vm.engine.Instruction.Operand.SourceOperand.Indirections
-import me.rand.vm.engine.Instruction.Operand.{DestinationOperand, SourceOperand}
-import me.rand.vm.engine.Instruction.{Operands, OperandsBuilder}
+import me.rand.vm.engine.Instruction.Operand.SourceOperand
+import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.engine.VmProgram.BasicBlockBuilder.aBasicBlockCalled
 import me.rand.vm.engine.VmProgram.{Counter, InstructionInstance}
 import me.rand.vm.engine.{Variable, VmContext, VmProgram, VmWord}
@@ -105,16 +103,16 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
         //  +---------------------------+
         //
         // So that we have:
-        //   **(&&stk0) = *(&stk0) = stk0 = 0x12345678
-        //    *(hp0) = hp0 = 0xabcdef0
+        //   **(&&stk0) = *(&stk0) = stk0 = 12345678
+        //    *(hp0) = hp0 = 87654321
         val fooBasicBlock = aBasicBlockCalled("foo")
           .+(new InstructionInstance(Exit, Operands.none.addSource(0 -> imm_("u8", 123))))
           .build
         (for {
-          _ <- c.stack.putVariable(0, createScalarVariable("stk0", "u32", 0x12345678))
+          _ <- c.stack.putVariable(0, createScalarVariable("stk0", "u32", 12345678))
           _ <- c.stack.putVariable(1, Variable.Pointer.ToVariable.InTheHeap("&hp0", 0))
           _ <- c.stack.putVariable(2, Variable.Pointer.ToInstruction("stk2", Counter.atTheBeginningOf(fooBasicBlock)))
-          _ <- c.heap.putVariable(0, createScalarVariable("hp0", "u32", 0xabcdef0))
+          _ <- c.heap.putVariable(0, createScalarVariable("hp0", "u32", 87654321))
           _ <- c.heap.putVariable(1, Variable.Pointer.ToVariable.InTheStack("&stk0", 0))
           _ <- c.heap.putVariable(2, Variable.Pointer.ToVariable.InTheHeap("&&stk0", 1))
         } yield c.setProgram(VmProgram.empty.++(fooBasicBlock))) match {
@@ -128,58 +126,8 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
         fail(s"could not create VM context: $error")
     }
 
-  protected def ops_(destination: DestinationOperand, sources: (Int, SourceOperand)*): Operands = {
-    val builder = sources.foldLeft(OperandsBuilder.none) {
-      (operands, eachSourceOperand) =>
-        operands + eachSourceOperand
-    }
-    (builder + destination).build
-  }
-
-  protected def imm_(typeString: String, value: Int)(implicit vmContext: VmContext): SourceOperand.Immediate =
+  private def imm_(typeString: String, value: Int)(implicit vmContext: VmContext): SourceOperand.Immediate =
     SourceOperand.Immediate(createVmWord(typeString, value, vmContext))
-
-  protected def var_(location: VariableLocation, varIndex: Int)(implicit vmContext: VmContext): SourceOperand.ToVariable =
-    fetchVariable(location, varIndex) match {
-      case Ok(variable) =>
-        SourceOperand.ToVariable(variable)
-
-      case Err(error) =>
-        fail(s"could not create variable: $error")
-    }
-
-  protected def ind_(sourceLocation: VariableLocation, sourceIndex: Int, nrIndirections: Int)(implicit vmContext: VmContext): Indirections =
-    fetchVariable(sourceLocation, sourceIndex) match {
-      case Ok(pointer) =>
-        Indirections(pointer, nrIndirections)
-
-      case Err(error) =>
-        fail(s"could not create indirection: $error")
-    }
-
-  protected def red_(destinationLocation: VariableLocation, destinationIndex: Int, nrIndirections: Int)(implicit vmContext: VmContext): Redirections =
-    fetchVariable(destinationLocation, destinationIndex) match {
-      case Ok(pointer) =>
-        Redirections(pointer, nrIndirections)
-
-      case Err(error) =>
-        fail(s"could not create indirection: $error")
-    }
-
-  private def fetchVariable(location: VariableLocation, index: Int)(implicit vmContext: VmContext) =
-    (location match {
-      case HeapVariable =>
-        vmContext.heap.getVariable(index)
-
-      case StackVariable =>
-        vmContext.stack.getVariable(index)
-    }) & {
-      case None =>
-        fail("could not create variable: not defined yet")
-
-      case Some(variable) =>
-        Ok(variable)
-    }
 
   private def createScalarVariable(name: String, typeString: String, value: Int)(implicit vmContext: VmContext): Variable.Scalar =
     Variable.Scalar(name, createVmWord(typeString, value, vmContext))
