@@ -196,6 +196,14 @@ object VmError {
         }
     }
 
+    case class NotADestinationOperand(operandString: String) extends SyntaxError {
+      override def toString: String = s"not a destination operand '$operandString'"
+    }
+
+    case class NotASourceOperand(operandString: String) extends SyntaxError {
+      override def toString: String = s"not a source operand '$operandString'"
+    }
+
   }
 
 }

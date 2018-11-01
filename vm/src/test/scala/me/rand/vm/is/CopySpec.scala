@@ -26,17 +26,18 @@
 package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.dsl.EmbeddedAsm._
+import me.rand.vm.dsl.AbstractAsmInstructionBuilder._
+import me.rand.vm.dsl.AbstractAsmOperandBuilder._
 import me.rand.vm.engine.Variable.{Pointer, Scalar}
 import me.rand.vm.engine.VmContext
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError.{UnspecifiedDestinationOperand, UnspecifiedSourceOperand}
 
 class CopySpec extends BaseIsSpec {
 
-  "copy" should "pass 'copy %0 123:u32'" in {
+  "copy" should "pass 'copy 123:u32 > %0'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- <<(Copy) - %-(0) - (123 / 'u32) >> ()
+      command <- Copy < 123 / 'u32 > %(0)
       context <- command.execute(vmContext)
       result <- context.heap.getVariable(0)
     } yield result) match {
@@ -47,14 +48,14 @@ class CopySpec extends BaseIsSpec {
         assert(value.vmType.byteLen == 4)
 
       case whatever =>
-        fail(s"unexpected result of 'copy %0 123:u32': $whatever")
+        fail(s"unexpected result of 'copy 123:u32 > %0': $whatever")
     }
   }
 
-  "copy" should "pass 'copy %%1 %0'" in {
+  "copy" should "pass 'copy %0 > $0'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- <<(Copy) - %%-(0) - -%(0) >> ()
+      command <- Copy < %(0) > $(0)
       context <- command.execute(vmContext)
       result <- context.stack.getVariable(0)
     } yield result) match {
@@ -65,14 +66,14 @@ class CopySpec extends BaseIsSpec {
         assert(value.vmType.byteLen == 4)
 
       case whatever =>
-        fail(s"unexpected result of 'copy %%1 %0': $whatever")
+        fail(s"unexpected result of 'copy %0 > $$0': $whatever")
     }
   }
 
-  "copy" should "pass 'copy %0 %1 (pointer to stack)'" in {
+  "copy" should "pass 'copy %1 > %0 (pointer to stack)'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- <<(Copy) - %-(0) - -%(1) >> ()
+      command <- Copy < %(1) > %(0)
       context <- command.execute(vmContext)
       result <- context.heap.getVariable(0)
     } yield result) match {
@@ -81,14 +82,14 @@ class CopySpec extends BaseIsSpec {
         assert(variableIndex == 0)
 
       case whatever =>
-        fail(s"unexpected result of 'copy %0 %1 (pointer to stack)': $whatever")
+        fail(s"unexpected result of 'copy %1 > %0 (pointer to stack)': $whatever")
     }
   }
 
-  "copy" should "pass 'copy %0 %%1 (pointer to heap)'" in {
+  "copy" should "pass 'copy $1 > %0 (pointer to heap)'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- <<(Copy) - %-(0) - -%%(1) >> ()
+      command <- Copy < $(1) > %(0)
       context <- command.execute(vmContext)
       result <- context.heap.getVariable(0)
     } yield result) match {
@@ -97,14 +98,14 @@ class CopySpec extends BaseIsSpec {
         assert(variableIndex == 0)
 
       case whatever =>
-        fail(s"unexpected result of 'copy %0 %%1 (pointer to heap)': $whatever")
+        fail(s"unexpected result of 'copy $$1 > %0 (pointer to heap)': $whatever")
     }
   }
 
-  "copy" should "pass 'copy %0 %%2 (pointer to instruction)'" in {
+  "copy" should "pass 'copy $2 > %0 (pointer to instruction)'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- <<(Copy) - %-(0) - -%%(2) >> ()
+      command <- Copy < $(2) > %(0)
       context <- command.execute(vmContext)
       result <- context.heap.getVariable(0)
     } yield result) match {
@@ -115,14 +116,14 @@ class CopySpec extends BaseIsSpec {
         assert(destination.basicBlock.get.name == "foo")
 
       case whatever =>
-        fail(s"unexpected result of 'copy %0 %%2 (pointer to instruction)': $whatever")
+        fail(s"unexpected result of 'copy $$2 > %0 (pointer to instruction)': $whatever")
     }
   }
 
-  "copy" should "pass 'copy %%0 **%2'" in {
+  "copy" should "pass 'copy **%2 > $0'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- <<(Copy) - %%-(0) - -*.*(-%(2)) >> ()
+      command <- Copy < *.*(%(2)) > $(0)
       context <- command.execute(vmContext)
       result <- context.stack.getVariable(0)
     } yield result) match {
@@ -133,14 +134,14 @@ class CopySpec extends BaseIsSpec {
         assert(value.vmType.byteLen == 4)
 
       case whatever =>
-        fail(s"unexpected result of 'copy %%0 **%2': $whatever")
+        fail(s"unexpected result of 'copy **%2 $$0': $whatever")
     }
   }
 
-  "copy" should "pass 'copy **%2 12345:u32'" in {
+  "copy" should "pass 'copy 12345:u32 > **%2'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- <<(Copy) - *.*-(%-(2)) - 12345 / 'u32 >> ()
+      command <- Copy < 12345 / 'u32 > *.*(%(2))
       context <- command.execute(vmContext)
       result <- context.stack.getVariable(0)
     } yield result) match {
@@ -151,14 +152,14 @@ class CopySpec extends BaseIsSpec {
         assert(value.vmType.byteLen == 4)
 
       case whatever =>
-        fail(s"unexpected result of 'copy **%2 12345:u32': $whatever")
+        fail(s"unexpected result of 'copy 12345:u32 > **%2': $whatever")
     }
   }
 
-  "copy" should "pass 'copy %%2 &%0'" in {
+  "copy" should "pass 'copy &%0 > $2'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- <<(Copy) - %%-(2) - -&(-%(0)) >> ()
+      command <- Copy < &(%(0)) > $(2)
       context <- command.execute(vmContext)
       result <- context.stack.getVariable(2)
     } yield result) match {
@@ -167,28 +168,28 @@ class CopySpec extends BaseIsSpec {
         assert(referenceIndex == 0)
 
       case whatever =>
-        fail(s"unexpected result of 'copy %%2 &%0': $whatever")
+        fail(s"unexpected result of 'copy &%0 > $$2': $whatever")
     }
   }
 
-  "copy" should "not pass 'copy _ 123'" in {
+  "copy" should "not pass 'copy 123 > _'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- <<(Copy) - 123 / 'u32 >> ()
+      command <- Copy < 123 / 'u32 > ()
       context <- command.execute(vmContext)
     } yield context) match {
       case Err(error@UnspecifiedDestinationOperand) =>
         executionContext.logger > error.toString
 
       case whatever =>
-        fail(s"unexpected result of 'copy _ 123': $whatever")
+        fail(s"unexpected result of 'copy 123 > _': $whatever")
     }
   }
 
-  "copy" should "not pass 'copy %0 _'" in {
+  "copy" should "not pass 'copy _ > %0'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- <<(Copy) - %-(0) >> ()
+      command <- Copy < () > %(0)
       context <- command.execute(vmContext)
     } yield context) match {
       case Err(error@UnspecifiedSourceOperand(0)) =>

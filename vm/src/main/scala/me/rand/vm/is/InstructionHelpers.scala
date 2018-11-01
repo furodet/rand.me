@@ -26,7 +26,7 @@
 package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.Instruction.Operand.{DestinationOperand, Source}
+import me.rand.vm.engine.Instruction.Operand.{Destination, Source}
 import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.engine.Variable._
 import me.rand.vm.engine._
@@ -151,27 +151,27 @@ object InstructionHelpers {
 
   private[is] def fetchDestination(operands: Operands)(implicit vmContext: VmContext): Pointer.ToVariable OrElse IllegalEncodingError =
     operands.destination match {
-      case target: DestinationOperand.TargetVariable =>
+      case target: Destination.Variable =>
         fetchDestinationVariableOperand(target)
 
-      case DestinationOperand.Redirect(pointer, depth) =>
+      case Destination.Redirect(pointer, depth) =>
         for {
           firstPointer <- fetchDestinationVariableOperand(pointer)
           redirected <- fetchRedirect(firstPointer, depth)
         } yield redirected
 
-      case DestinationOperand.NoDestination =>
+      case Destination.NoDestination =>
         Err(IllegalEncodingError.UnspecifiedDestinationOperand)
     }
 
-  private def fetchDestinationVariableOperand(operand: DestinationOperand.TargetVariable)(implicit vmContext: VmContext): Pointer.ToVariable OrElse IllegalEncodingError =
+  private def fetchDestinationVariableOperand(operand: Destination.Variable)(implicit vmContext: VmContext): Pointer.ToVariable OrElse IllegalEncodingError =
     operand match {
-      case DestinationOperand.TargetVariable.InTheHeap(heapIndex) =>
+      case Destination.Variable.InTheHeap(heapIndex) =>
         fetchTargetVariable(vmContext.heap, None, heapIndex) && (
           v => Variable.Pointer.ToVariable.InTheHeap(s"&${v.name}", heapIndex)
           )
 
-      case DestinationOperand.TargetVariable.InTheStack(stackIndex) =>
+      case Destination.Variable.InTheStack(stackIndex) =>
         fetchTargetVariable(vmContext.stack, None, stackIndex) && (
           v => Variable.Pointer.ToVariable.InTheStack(s"&${v.name}", stackIndex)
           )

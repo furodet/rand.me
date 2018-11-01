@@ -26,7 +26,7 @@
 package me.rand.vm.engine
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.Instruction.Operand.{DestinationOperand, Source}
+import me.rand.vm.engine.Instruction.Operand.{Destination, Source}
 import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError
 import me.rand.vm.main.{ExecutionContext, VmError}
@@ -72,30 +72,30 @@ object Instruction {
 
     }
 
-    sealed trait DestinationOperand
+    sealed trait Destination
 
-    object DestinationOperand {
+    object Destination {
 
-      object NoDestination extends DestinationOperand
+      object NoDestination extends Destination
 
-      sealed trait TargetVariable extends DestinationOperand
+      sealed trait Variable extends Destination
 
-      object TargetVariable {
+      object Variable {
 
-        case class InTheHeap(variableIndex: Int) extends DestinationOperand.TargetVariable
+        case class InTheHeap(variableIndex: Int) extends Destination.Variable
 
-        case class InTheStack(variableIndex: Int) extends DestinationOperand.TargetVariable
+        case class InTheStack(variableIndex: Int) extends Destination.Variable
 
       }
 
-      case class Redirect(pointer: DestinationOperand.TargetVariable, depth: Int) extends DestinationOperand
+      case class Redirect(pointer: Destination.Variable, depth: Int) extends Destination
 
     }
 
   }
 
-  class Operands(val destination: DestinationOperand, val sources: Map[Int, Source]) {
-    def setDestination(destinationOperand: DestinationOperand): Operands =
+  class Operands(val destination: Destination, val sources: Map[Int, Source]) {
+    def setDestination(destinationOperand: Destination): Operands =
       new Operands(destination = destinationOperand, sources)
 
     def addSource(operandIndexAndValue: (Int, Source)): Operands =
@@ -112,11 +112,11 @@ object Instruction {
   }
 
   object Operands {
-    def none = new Operands(DestinationOperand.NoDestination, Map.empty)
+    def none = new Operands(Destination.NoDestination, Map.empty)
   }
 
   class OperandsBuilder(operands: Operands) {
-    def +(destination: DestinationOperand): OperandsBuilder =
+    def +(destination: Destination): OperandsBuilder =
       new OperandsBuilder(new Operands(destination, operands.sources))
 
     def +(source: (Int, Source)): OperandsBuilder =
