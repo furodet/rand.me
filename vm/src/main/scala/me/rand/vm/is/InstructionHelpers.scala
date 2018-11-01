@@ -26,7 +26,7 @@
 package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.Instruction.Operand.{DestinationOperand, SourceOperand}
+import me.rand.vm.engine.Instruction.Operand.{DestinationOperand, Source}
 import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.engine.Variable._
 import me.rand.vm.engine._
@@ -39,7 +39,7 @@ import scala.annotation.tailrec
 object InstructionHelpers {
   private[is] def fetchImmediateOperandValue(operandId: Int, operands: Operands): VmWord OrElse IllegalEncodingError =
     operands.fetchSource(operandId) & {
-      case SourceOperand.Immediate(v) =>
+      case Source.Immediate(v) =>
         Ok(v)
 
       case _ =>
@@ -48,39 +48,39 @@ object InstructionHelpers {
 
   private[is] def fetchImmediateOrVariable(operandId: Int, operands: Operands)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
     operands.fetchSource(operandId) & {
-      case SourceOperand.Immediate(value) =>
+      case Source.Immediate(value) =>
         Ok(Scalar("imm", value))
 
-      case variableOperand: SourceOperand.SourceVariable =>
+      case variableOperand: Source.Variable =>
         fetchSourceVariableOperand(variableOperand)
 
-      case SourceOperand.Indirect(pointer, depth) =>
+      case Source.Indirect(pointer, depth) =>
         for {
           pointerVariable <- fetchSourceVariableOperand(pointer)
           afterIndirect <- fetchIndirect(pointerVariable, depth, operandId)
         } yield afterIndirect
 
-      case referenceOperand: SourceOperand.Reference =>
+      case referenceOperand: Source.Reference =>
         fetchReferenceVariableOperand(referenceOperand)
     }
 
-  private def fetchSourceVariableOperand(operand: SourceOperand.SourceVariable)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
+  private def fetchSourceVariableOperand(operand: Source.Variable)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
     operand match {
-      case SourceOperand.SourceVariable.InTheHeap(heapIndex) =>
+      case Source.Variable.InTheHeap(heapIndex) =>
         fetchSourceVariable("heap", vmContext.heap, heapIndex)
 
-      case SourceOperand.SourceVariable.InTheStack(stackIndex) =>
+      case Source.Variable.InTheStack(stackIndex) =>
         fetchSourceVariable("stack", vmContext.stack, stackIndex)
     }
 
-  private def fetchReferenceVariableOperand(reference: SourceOperand.Reference)(implicit vmContext: VmContext): Variable.Pointer OrElse IllegalEncodingError =
+  private def fetchReferenceVariableOperand(reference: Source.Reference)(implicit vmContext: VmContext): Variable.Pointer OrElse IllegalEncodingError =
     reference match {
-      case SourceOperand.Reference.InTheHeap(heapIndex) =>
+      case Source.Reference.InTheHeap(heapIndex) =>
         fetchSourceVariable("heap", vmContext.heap, heapIndex) && (
           referenced => Variable.Pointer.ToVariable.InTheHeap(referenced.name, heapIndex)
           )
 
-      case SourceOperand.Reference.InTheStack(stackIndex) =>
+      case Source.Reference.InTheStack(stackIndex) =>
         fetchSourceVariable("stack", vmContext.heap, stackIndex) && (
           referenced => Variable.Pointer.ToVariable.InTheStack(referenced.name, stackIndex)
           )

@@ -112,3 +112,32 @@ Construction of a program consists of:
   * Build the basic blocks with builders' `build` function
   * Register the basic blocks to a program, with the `++` method
   * Registering the program to the virtual machine context, thanks to `setProgram`
+
+**Instructions and operands**
+
+Every instruction is an object extending `Instruction` to provide an `execute` function that:
+  * Fetches the supplied operands within the execution context and translates them to variable. For example:
+    * Operand `%1` is fetched as *heap variable number 1*
+    * If no such type of variable is expected by the instruction, the fetching stage returns an error
+    * If no such variable is found, the fetching stage returns an error
+  * Executes some operations that update the execution context
+
+A list of operands, along with the instruction to execute is an `InstructionInstance`. Such an
+object is built by an assembler to create a program. The virtual machine's core execution engine
+simply fetches each instruction and operands from an `InstructionInstance` and calls `execute`
+accordingly.
+
+Operands can be:
+  * `Instruction.Operand.Source`: a source operand, read by the instruction:
+    * `Immediate`: a scalar value
+    * `Variable.InTheHeap`: the value of a heap variable
+    * `Variable.InTheStack`: the value of a stack variable
+    * `Reference.InTheHeap`: a `Variable.Pointer.InTheHeap` referencing a variable
+    * `Reference.InTheStack`: a `Variable.Pointer.InTheStack` referencing a variable
+    * `Indirect`: the variable pointed by a series of indirections (e.g. `**pointer`)
+  * `Instruction.Operand.Destination`: a destination operand, modified by the instruction:
+    * `NoDestination`: for fruitless operations
+    * `TargetVariable.InTheHeap`: a pointer to a heap variable
+    * `TargetVariable.InTheStack`: a pointer to a stack variable
+    * `Redirect`: a series of pointers redirecting to a variable (e.g. `**pointer`)
+

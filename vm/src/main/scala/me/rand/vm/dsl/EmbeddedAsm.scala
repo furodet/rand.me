@@ -27,7 +27,7 @@ package me.rand.vm.dsl
 
 import me.rand.commons.idioms.Status._
 import me.rand.vm.dsl.EmbeddedAsm.VariableLocation.{HeapVariable, StackVariable}
-import me.rand.vm.engine.Instruction.Operand.{DestinationOperand, SourceOperand}
+import me.rand.vm.engine.Instruction.Operand.{DestinationOperand, Source}
 import me.rand.vm.engine.Instruction.{Operand, Operands}
 import me.rand.vm.engine.VmProgram.InstructionInstance
 import me.rand.vm.engine.{Instruction, VmContext, VmTypes, VmWord}
@@ -49,7 +49,7 @@ object EmbeddedAsm {
   // fails, define intermediate builders, which are "tryForEach" when the expression
   // is complete.
   sealed trait AsmSourceOperandBuilder {
-    def build: Operand.SourceOperand OrElse SyntaxError
+    def build: Operand.Source OrElse SyntaxError
   }
 
   sealed trait AsmDestinationOperandBuilder {
@@ -75,10 +75,10 @@ object EmbeddedAsm {
       case class Scalar(value: BigInt) {
         def /(typeString: Symbol): AsmSourceOperandBuilder =
           new AsmSourceOperandBuilder {
-            override def build: OrElse[SourceOperand, SyntaxError] =
+            override def build: OrElse[Source, SyntaxError] =
               anyVmType.valueOf(typeString.name) match {
                 case Ok(machineType) =>
-                  Ok(SourceOperand.Immediate(new VmWord(machineType, value)))
+                  Ok(Source.Immediate(new VmWord(machineType, value)))
 
                 case Err(vmError) =>
                   Err(SyntaxError.InvalidTypeDefinition(typeString.name, vmError))
@@ -87,13 +87,13 @@ object EmbeddedAsm {
       }
 
       case class Variable(location: VariableLocation, index: Int) extends AsmSourceOperandBuilder {
-        override def build: SourceOperand.SourceVariable OrElse SyntaxError =
+        override def build: Source.Variable OrElse SyntaxError =
           location match {
             case HeapVariable =>
-              Ok(Operand.SourceOperand.SourceVariable.InTheHeap(index))
+              Ok(Operand.Source.Variable.InTheHeap(index))
 
             case StackVariable =>
-              Ok(Operand.SourceOperand.SourceVariable.InTheStack(index))
+              Ok(Operand.Source.Variable.InTheStack(index))
           }
       }
 
@@ -102,19 +102,19 @@ object EmbeddedAsm {
 
         def *(variable: AsmOperandBuilder.In.Variable): AsmSourceOperandBuilder =
           new AsmSourceOperandBuilder {
-            def build: SourceOperand OrElse SyntaxError =
-              variable.build && (v => SourceOperand.Indirect(v, depth + 1))
+            def build: Source OrElse SyntaxError =
+              variable.build && (v => Source.Indirect(v, depth + 1))
           }
       }
 
       case class Reference(variable: AsmOperandBuilder.In.Variable) extends AsmSourceOperandBuilder {
-        override def build: SourceOperand OrElse SyntaxError =
+        override def build: Source OrElse SyntaxError =
           variable.build match {
-            case Ok(SourceOperand.SourceVariable.InTheHeap(index)) =>
-              Ok(SourceOperand.Reference.InTheHeap(index))
+            case Ok(Source.Variable.InTheHeap(index)) =>
+              Ok(Source.Reference.InTheHeap(index))
 
-            case Ok(SourceOperand.SourceVariable.InTheStack(index)) =>
-              Ok(SourceOperand.Reference.InTheStack(index))
+            case Ok(Source.Variable.InTheStack(index)) =>
+              Ok(Source.Reference.InTheStack(index))
 
             case Ok(anyOtherKindOfOperand) =>
               Err(SyntaxError.InvalidReferenceDefinition(None))

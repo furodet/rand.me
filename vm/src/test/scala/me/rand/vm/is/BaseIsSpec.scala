@@ -29,7 +29,7 @@ import java.io.PrintWriter
 
 import me.rand.commons.idioms.Logger._
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.Instruction.Operand.SourceOperand
+import me.rand.vm.engine.Instruction.Operand.Source
 import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.engine.VmProgram.BasicBlockBuilder.aBasicBlockCalled
 import me.rand.vm.engine.VmProgram.{Counter, InstructionInstance}
@@ -126,8 +126,8 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
         fail(s"could not create VM context: $error")
     }
 
-  private def imm_(typeString: String, value: Int)(implicit vmContext: VmContext): SourceOperand.Immediate =
-    SourceOperand.Immediate(createVmWord(typeString, value, vmContext))
+  private def imm_(typeString: String, value: Int)(implicit vmContext: VmContext): Source.Immediate =
+    Source.Immediate(createVmWord(typeString, value, vmContext))
 
   private def createScalarVariable(name: String, typeString: String, value: Int)(implicit vmContext: VmContext): Variable.Scalar =
     Variable.Scalar(name, createVmWord(typeString, value, vmContext))

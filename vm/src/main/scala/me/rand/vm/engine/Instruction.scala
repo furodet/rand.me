@@ -26,7 +26,7 @@
 package me.rand.vm.engine
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.Instruction.Operand.{DestinationOperand, SourceOperand}
+import me.rand.vm.engine.Instruction.Operand.{DestinationOperand, Source}
 import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError
 import me.rand.vm.main.{ExecutionContext, VmError}
@@ -41,33 +41,33 @@ object Instruction {
 
   object Operand {
 
-    sealed trait SourceOperand extends Operand
+    sealed trait Source extends Operand
 
-    object SourceOperand {
+    object Source {
 
-      sealed trait SourceVariable extends SourceOperand
+      sealed trait Variable extends Source
 
-      object SourceVariable {
+      object Variable {
 
-        case class InTheHeap(index: Int) extends SourceOperand.SourceVariable
+        case class InTheHeap(index: Int) extends Source.Variable
 
-        case class InTheStack(index: Int) extends SourceOperand.SourceVariable
+        case class InTheStack(index: Int) extends Source.Variable
 
       }
 
-      case class Indirect(pointer: SourceOperand.SourceVariable, depth: Int) extends SourceOperand
+      case class Indirect(pointer: Source.Variable, depth: Int) extends Source
 
-      sealed trait Reference extends SourceOperand
+      sealed trait Reference extends Source
 
       object Reference {
 
-        case class InTheHeap(index: Int) extends SourceOperand.Reference
+        case class InTheHeap(index: Int) extends Source.Reference
 
-        case class InTheStack(index: Int) extends SourceOperand.Reference
+        case class InTheStack(index: Int) extends Source.Reference
 
       }
 
-      case class Immediate(value: VmWord) extends SourceOperand
+      case class Immediate(value: VmWord) extends Source
 
     }
 
@@ -93,14 +93,14 @@ object Instruction {
 
   }
 
-  class Operands(val destination: DestinationOperand, val sources: Map[Int, SourceOperand]) {
+  class Operands(val destination: DestinationOperand, val sources: Map[Int, Source]) {
     def setDestination(destinationOperand: DestinationOperand): Operands =
       new Operands(destination = destinationOperand, sources)
 
-    def addSource(operandIndexAndValue: (Int, SourceOperand)): Operands =
+    def addSource(operandIndexAndValue: (Int, Source)): Operands =
       new Operands(destination, sources = sources + operandIndexAndValue)
 
-    def fetchSource(operandId: Int): SourceOperand OrElse IllegalEncodingError =
+    def fetchSource(operandId: Int): Source OrElse IllegalEncodingError =
       sources.get(operandId) match {
         case None =>
           Err(IllegalEncodingError.UnspecifiedSourceOperand(operandId))
@@ -118,7 +118,7 @@ object Instruction {
     def +(destination: DestinationOperand): OperandsBuilder =
       new OperandsBuilder(new Operands(destination, operands.sources))
 
-    def +(source: (Int, SourceOperand)): OperandsBuilder =
+    def +(source: (Int, Source)): OperandsBuilder =
       new OperandsBuilder(new Operands(operands.destination, operands.sources + source))
 
     def build: Operands = operands
