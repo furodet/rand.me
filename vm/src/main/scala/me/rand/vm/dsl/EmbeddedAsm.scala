@@ -107,6 +107,23 @@ object EmbeddedAsm {
           }
       }
 
+      case class Reference(variable: AsmOperandBuilder.In.Variable) extends AsmSourceOperandBuilder {
+        override def build: SourceOperand OrElse SyntaxError =
+          variable.build match {
+            case Ok(SourceOperand.SourceVariable.InTheHeap(index)) =>
+              Ok(SourceOperand.Reference.InTheHeap(index))
+
+            case Ok(SourceOperand.SourceVariable.InTheStack(index)) =>
+              Ok(SourceOperand.Reference.InTheStack(index))
+
+            case Ok(anyOtherKindOfOperand) =>
+              Err(SyntaxError.InvalidReferenceDefinition(None))
+
+            case Err(somethingWrong) =>
+              Err(SyntaxError.InvalidReferenceDefinition(Some(somethingWrong)))
+          }
+      }
+
     }
 
     object Out {
@@ -177,6 +194,9 @@ object EmbeddedAsm {
 
   def -*(variable: AsmOperandBuilder.In.Variable): AsmSourceOperandBuilder =
     AsmOperandBuilder.In.Indirect(0).*(variable)
+
+  def -&(variable: AsmOperandBuilder.In.Variable): AsmSourceOperandBuilder =
+    AsmOperandBuilder.In.Reference(variable)
 
   def * : AsmOperandBuilder.Out.Redirect = AsmOperandBuilder.Out.Redirect(1)
 

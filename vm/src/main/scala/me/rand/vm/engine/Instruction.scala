@@ -57,6 +57,16 @@ object Instruction {
 
       case class Indirect(pointer: SourceOperand.SourceVariable, depth: Int) extends SourceOperand
 
+      sealed trait Reference extends SourceOperand
+
+      object Reference {
+
+        case class InTheHeap(index: Int) extends SourceOperand.Reference
+
+        case class InTheStack(index: Int) extends SourceOperand.Reference
+
+      }
+
       case class Immediate(value: VmWord) extends SourceOperand
 
     }

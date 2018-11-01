@@ -59,6 +59,9 @@ object InstructionHelpers {
           pointerVariable <- fetchSourceVariableOperand(pointer)
           afterIndirect <- fetchIndirect(pointerVariable, depth, operandId)
         } yield afterIndirect
+
+      case referenceOperand: SourceOperand.Reference =>
+        fetchReferenceVariableOperand(referenceOperand)
     }
 
   private def fetchSourceVariableOperand(operand: SourceOperand.SourceVariable)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
@@ -68,6 +71,19 @@ object InstructionHelpers {
 
       case SourceOperand.SourceVariable.InTheStack(stackIndex) =>
         fetchSourceVariable("stack", vmContext.stack, stackIndex)
+    }
+
+  private def fetchReferenceVariableOperand(reference: SourceOperand.Reference)(implicit vmContext: VmContext): Variable.Pointer OrElse IllegalEncodingError =
+    reference match {
+      case SourceOperand.Reference.InTheHeap(heapIndex) =>
+        fetchSourceVariable("heap", vmContext.heap, heapIndex) && (
+          referenced => Variable.Pointer.ToVariable.InTheHeap(referenced.name, heapIndex)
+          )
+
+      case SourceOperand.Reference.InTheStack(stackIndex) =>
+        fetchSourceVariable("stack", vmContext.heap, stackIndex) && (
+          referenced => Variable.Pointer.ToVariable.InTheStack(referenced.name, stackIndex)
+          )
     }
 
   @tailrec

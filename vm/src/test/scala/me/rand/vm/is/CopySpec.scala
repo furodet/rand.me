@@ -155,6 +155,22 @@ class CopySpec extends BaseIsSpec {
     }
   }
 
+  "copy" should "pass 'copy %%2 &%0'" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    (for {
+      command <- <<(Copy) - %%-(2) - -&(-%(0)) >> ()
+      context <- command.execute(vmContext)
+      result <- context.stack.getVariable(2)
+    } yield result) match {
+      case Ok(Some(Pointer.ToVariable.InTheHeap(pointerName, referenceIndex))) =>
+        assert(pointerName == "stk2")
+        assert(referenceIndex == 0)
+
+      case whatever =>
+        fail(s"unexpected result of 'copy %%2 &%0': $whatever")
+    }
+  }
+
   "copy" should "not pass 'copy _ 123'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
@@ -182,6 +198,4 @@ class CopySpec extends BaseIsSpec {
         fail(s"unexpected result of 'copy %0 _': $whatever")
     }
   }
-
-  // TODO &... operands, to fetch a variable reference
 }

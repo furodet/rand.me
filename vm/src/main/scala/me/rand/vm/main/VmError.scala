@@ -185,6 +185,17 @@ object VmError {
       override def toString: String = s"invalid type definition '$typeString': $cause"
     }
 
+    case class InvalidReferenceDefinition(maybeCause: Option[VmError]) extends SyntaxError {
+      override def toString: String =
+        maybeCause match {
+          case None =>
+            "variable reference does not apply to the type of source variable"
+
+          case Some(cause) =>
+            s"variable reference does not apply to the type of source variable: $cause"
+        }
+    }
+
   }
 
 }
