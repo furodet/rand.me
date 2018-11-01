@@ -31,6 +31,7 @@ import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError
 import me.rand.vm.main.{ExecutionContext, VmError}
 
+// Documentation: doc/vmarchitecture.md
 trait Instruction {
   def execute(vmContext: VmContext, operands: Operands)(implicit executionContext: ExecutionContext): VmContext OrElse VmError
 }
