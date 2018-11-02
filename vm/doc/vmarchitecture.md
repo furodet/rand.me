@@ -124,8 +124,8 @@ Every instruction is an object extending `Instruction` to provide an `execute` f
 
 A list of operands, along with the instruction to execute is an `InstructionInstance`. Such an
 object is built by an assembler to create a program. The virtual machine's core execution engine
-simply fetches each instruction and operands from an `InstructionInstance` and calls `execute`
-accordingly.
+(`VmRunner`) simply fetches each instruction and operands from an `InstructionInstance` and calls
+`execute` accordingly.
 
 Operands can be:
   * `Instruction.Operand.Source`: a source operand, read by the instruction:
