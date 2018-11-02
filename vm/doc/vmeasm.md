@@ -33,7 +33,7 @@ Where:
 
 `OPERANDS_IN` is:
  * either `()` for instructions that have no input operands
- * or `(X)` ()or simply `X`) for instructions that have only one operand `X`
+ * or `(X)` (or simply `X`) for instructions that have only one operand `X`
  * or `(X,Y,...)` for instructions with multiple operands `X`, `Y`...
 
 `OPERAND_OUT` is:
