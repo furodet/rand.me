@@ -33,6 +33,10 @@ import scala.annotation.tailrec
 
 // Documentation: doc/vmarchitecture.md
 class VmTypes(val typeMap: Map[String, VmType]) {
+  // Whatever the virtual machine is, there are always "minimal types" representing
+  // one byte signed and unsigned.
+  lazy val minUnsignedType: VmType = select(1, isSigned = true).get
+
   def valueOf(s: String): VmType OrElse InvalidVmTypeString =
     typeMap.get(s) match {
       case None =>

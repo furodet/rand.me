@@ -91,7 +91,7 @@ object Variable {
     def aScalarCalled(name: String) = new ScalarBuilder(name)
 
     class Partial(name: String, varType: VmType) {
-      def setTo(value: BigInt): Scalar = Scalar(name, new VmWord(varType, value))
+      def setTo(value: BigInt): Scalar = Scalar(name, VmWord.ofType(varType).withValue(value))
 
       def setTo(longValue: Long): Scalar = setTo(BigInt(longValue))
     }

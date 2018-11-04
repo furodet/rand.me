@@ -23,19 +23,30 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.vm.engine
+package me.rand.vm.is
 
-import me.rand.vm.engine.VmTypes.VmType
+import me.rand.commons.idioms.Status._
+import me.rand.vm.alu.Comparator
+import me.rand.vm.engine.{Instruction, VmContext, VmWord}
+import me.rand.vm.main.{ExecutionContext, VmError}
 
-class VmWord(val vmType: VmType, val data: BigInt) {
-  override def toString: String = s"$data:$vmType"
-}
-
-object VmWord {
-
-  class VmWordBuilder(val vmType: VmType) {
-    def withValue(data: BigInt): VmWord = new VmWord(vmType, data)
+class Compare(compare: Comparator) extends Instruction {
+  override def execute(vmContext: VmContext, operands: Instruction.Operands)(implicit executionContext: ExecutionContext): OrElse[VmContext, VmError] = {
+    implicit val c: VmContext = vmContext
+    for {
+      op1 <- InstructionHelpers.fetchImmediateOrVariable(0, operands)
+      op2 <- InstructionHelpers.fetchImmediateOrVariable(1, operands)
+      destination <- InstructionHelpers.fetchDestination(operands)
+      result <- compare.execute(op1, op2)
+      update <- InstructionHelpers.updateDestination(destination, booleanToVmWord(result))
+      _ = executionContext.logger ~> s"${destination.name} := ${op1.getValueString} $compare ${op2.getValueString} = ${update.getValueString}"
+    } yield vmContext
   }
 
-  def ofType(vmType: VmType) = new VmWordBuilder(vmType)
+  private def booleanToVmWord(b: Boolean)(implicit vmContext: VmContext) =
+    VmWord.ofType(vmContext.vmTypes.minUnsignedType).withValue(BigInt(if (b) 1 else 0))
+}
+
+object Compare {
+  def apply(compare: Comparator): Compare = new Compare(compare)
 }

@@ -26,8 +26,8 @@
 package me.rand.vm.dsl
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.{Instruction, VmContext, VmTypes, VmWord}
 import me.rand.vm.engine.Instruction.Operand
+import me.rand.vm.engine.{Instruction, VmContext, VmTypes, VmWord}
 import me.rand.vm.main.VmError
 import me.rand.vm.main.VmError.SyntaxError
 
@@ -61,7 +61,7 @@ object AbstractAsmOperandBuilder {
         override def toSourceOperand: Operand.Source.Immediate OrElse VmError.SyntaxError =
           anyVmType.valueOf(typeSymbol.name) match {
             case Ok(machineType) =>
-              Ok(Operand.Source.Immediate(new VmWord(machineType, value)))
+              Ok(Operand.Source.Immediate(VmWord.ofType(machineType).withValue(value)))
 
             case Err(vmError) =>
               Err(SyntaxError.InvalidTypeDefinition(typeSymbol.name, vmError))

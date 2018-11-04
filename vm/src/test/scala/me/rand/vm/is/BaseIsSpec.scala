@@ -134,7 +134,7 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
 
   private def createVmWord(typeString: String, value: Int, vmContext: VmContext): VmWord =
     vmContext.vmTypes.valueOf(typeString) && {
-      t => new VmWord(t, BigInt(value))
+      t => VmWord.ofType(t).withValue(BigInt(value))
     } match {
       case Err(error) =>
         fail(s"could not create value of type '$typeString': $error")

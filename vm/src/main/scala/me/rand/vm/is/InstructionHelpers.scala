@@ -106,6 +106,16 @@ object InstructionHelpers {
         Err(InvalidIndirect(operandId))
     }
 
+  private[is] def updateDestination(pointer: Pointer, value: VmWord)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
+    pointer match {
+      case ptr: Pointer.ToVariable =>
+        updateDestination(ptr.getContainingVarSet(vmContext), ptr.name, ptr.index, Variable.Scalar("<undef>", value))
+
+
+      case _: Pointer.ToInstruction =>
+        Err(IllegalDestinationPointer)
+    }
+
   private[is] def updateDestination(pointer: Pointer, variable: Variable)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
     pointer match {
       case ptr: Pointer.ToVariable =>

@@ -25,6 +25,7 @@
  */
 package me.rand.vm.main
 
+import me.rand.vm.engine.Variable
 import me.rand.vm.is.InstructionSetVersion
 
 sealed trait VmError
@@ -138,6 +139,16 @@ object VmError {
           override def toString: String = "destination is neither a heap nor a stack variable"
         }
 
+      }
+
+    }
+
+    sealed trait AluError extends VmExecutionError
+
+    object AluError {
+
+      case class InconsistentTypesForComparison(compare: String, x: Variable, y: Variable) extends AluError {
+        override def toString: String = s"could perform comparison '$compare' with variables '$x' and '$y': inconsistent types"
       }
 
     }
