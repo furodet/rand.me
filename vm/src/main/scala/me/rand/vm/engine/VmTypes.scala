@@ -74,6 +74,20 @@ object VmTypes {
 
     val name: String = if (isSigned) s"s$bitLen" else s"u$bitLen"
 
+    def hasSameByteLenAs(other: VmType): Boolean = byteLen ==
+      other.byteLen
+
+    def hasSameSignAs(other: VmType): Boolean =
+      isSigned == other.isSigned
+
+    def <=>(other: VmType): Boolean = hasSameByteLenAs(other) && hasSameSignAs(other)
+
+    def <~>(other: VmType): Boolean = hasSameByteLenAs(other) && !hasSameSignAs(other)
+
+    def <(other: VmType): Boolean = byteLen < other.byteLen
+
+    def >(other: VmType): Boolean = byteLen > other.byteLen
+
     override def toString: String = name
   }
 

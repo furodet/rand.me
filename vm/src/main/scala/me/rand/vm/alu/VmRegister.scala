@@ -23,22 +23,51 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.vm.engine
+package me.rand.vm.alu
 
-import me.rand.vm.alu.VmRegister
 import me.rand.vm.engine.VmTypes.VmType
 
-class VmWord(val data: VmRegister) {
-  override def toString: String = s"$data:$vmType"
+trait VmRegister {
+  def vmType: VmType
 
-  def vmType: VmType = data.vmType
+  private[alu] def operations: VmRegisterOperations[VmRegister]
+
+  def toInt: Int
 }
 
-object VmWord {
+trait VmRegisterOperations[T <: VmRegister] {
+  def build(vmType: VmType, value: BigInt): T
 
-  class VmWordBuilder(val vmType: VmType) {
-    def withValue(data: BigInt): VmWord = new VmWord(VmRegister.normalize(vmType, data))
-  }
+  // Bit-flip
+  def bitFlip(x: T): T
 
-  def ofType(vmType: VmType) = new VmWordBuilder(vmType)
+  def addImmediate(x: T, value: Int): T
+
+  def and(x: T, y: T): T
+
+  def or(x: T, y: T): T
+
+  def xor(x: T, y: T): T
+
+  def neg(x: T): T = addImmediate(bitFlip(x), 1)
+
+  def add(x: T, y: T): T
+
+  def sub(x: T, y: T): T = add(x, neg(y))
+
+  def isEqualToZero(x: T): Boolean
+
+  def isGreaterOrEqualToZero(x: T): Boolean
+
+  def isGreaterThanZero(x: T): Boolean
+
+  def isLowerOrEqualToZero(x: T): Boolean = !isGreaterThanZero(x)
+
+  def isLowerThanZero(x: T): Boolean = !isGreaterOrEqualToZero(x)
+}
+
+object VmRegister {
+  def normalize(vmType: VmType, value: BigInt): VmRegister =
+  // TODO: to speed up processing, use specific types of VmRegister for given lengths (e.g. longs for x32...)
+    LargeNumberOperations.build(vmType, value)
 }

@@ -61,7 +61,7 @@ class CopySpec extends BaseIsSpec {
     } yield result) match {
       case Ok(Some(Scalar(variableName, value))) =>
         assert(variableName == "stk0")
-        assert(value.data.toInt == 87654321)
+        assert(value.data.toInt == 0x87654321)
         assert(value.vmType.isUnsigned)
         assert(value.vmType.byteLen == 4)
 
@@ -129,7 +129,7 @@ class CopySpec extends BaseIsSpec {
     } yield result) match {
       case Ok(Some(Scalar(name, value))) =>
         assert(name == "stk0")
-        assert(value.data.toInt == 12345678)
+        assert(value.data.toInt == 0x12345678)
         assert(value.vmType.isUnsigned)
         assert(value.vmType.byteLen == 4)
 

@@ -59,43 +59,32 @@ object Comparator {
 
   object ?≠ extends Comparator {
     override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError =
-      (op1, op2) match {
-        case (Variable.Scalar(_, x), Variable.Scalar(_, y)) =>
-          Ok(!areWordsEqual(x, y))
-
-        case (Variable.Pointer.ToVariable.InTheHeap(_, x), Variable.Pointer.ToVariable.InTheHeap(_, y)) =>
-          Ok(x != y)
-
-        case (Variable.Pointer.ToVariable.InTheStack(_, x), Variable.Pointer.ToVariable.InTheStack(_, y)) =>
-          Ok(x != y)
-
-        case (Variable.Pointer.ToInstruction(_, x), Variable.Pointer.ToInstruction(_, y)) =>
-          Ok((x.basicBlock != y.basicBlock) || (x.index != y.index))
-
-        case (x: Variable, y: Variable) =>
-          Err(AluError.InconsistentTypesForComparison("?=", x, y))
-      }
+      ?=.execute(op1, op2) && (areEqual => !areEqual)
 
     override def toString: String = "?≠"
   }
 
   object ?< extends Comparator {
     override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError = ???
+
     override def toString: String = "?<"
   }
 
   object ?> extends Comparator {
     override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError = ???
+
     override def toString: String = "?>"
   }
 
   object ?≤ extends Comparator {
     override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError = ???
+
     override def toString: String = "?≤"
   }
 
   object ?≥ extends Comparator {
     override def execute(op1: Variable, op2: Variable): OrElse[Boolean, AluError] = ???
+
     override def toString: String = "?≥"
   }
 

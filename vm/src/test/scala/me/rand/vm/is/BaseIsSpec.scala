@@ -103,16 +103,16 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
         //  +---------------------------+
         //
         // So that we have:
-        //   **(&&stk0) = *(&stk0) = stk0 = 12345678
-        //    *(hp0) = hp0 = 87654321
+        //   **(&&stk0) = *(&stk0) = stk0 = 0x12345678
+        //    *(hp0) = hp0 = 0x87654321
         val fooBasicBlock = aBasicBlockCalled("foo")
           .+(new InstructionInstance(Exit, Operands.none.addSource(0 -> imm_("u8", 123))))
           .build
         (for {
-          _ <- c.stack.putVariable(0, createScalarVariable("stk0", "u32", 12345678))
+          _ <- c.stack.putVariable(0, createScalarVariable("stk0", "u32", 0x12345678))
           _ <- c.stack.putVariable(1, Variable.Pointer.ToVariable.InTheHeap("&hp0", 0))
           _ <- c.stack.putVariable(2, Variable.Pointer.ToInstruction("stk2", Counter.atTheBeginningOf(fooBasicBlock)))
-          _ <- c.heap.putVariable(0, createScalarVariable("hp0", "u32", 87654321))
+          _ <- c.heap.putVariable(0, createScalarVariable("hp0", "u32", 0x87654321))
           _ <- c.heap.putVariable(1, Variable.Pointer.ToVariable.InTheStack("&stk0", 0))
           _ <- c.heap.putVariable(2, Variable.Pointer.ToVariable.InTheHeap("&&stk0", 1))
         } yield c.setProgram(VmProgram.empty.++(fooBasicBlock))) match {
