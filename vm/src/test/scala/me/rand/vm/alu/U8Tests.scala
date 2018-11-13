@@ -53,6 +53,21 @@ class U8Tests extends FlatSpec {
     }
   }
 
+  "ALU" should "successfully increment u8" in {
+    def assertIncrement(value: Int, expectedIncrementedValue: Int) = {
+      val x = u8(value)
+      val minusX = Alu.increment(x)
+      assert(minusX.vmType.byteLen == 1)
+      assert(minusX.vmType.isUnsigned)
+      assert(minusX.toInt == expectedIncrementedValue)
+    }
+
+    for (x <- 0 to 254) {
+      assertIncrement(x, x + 1)
+    }
+    assertIncrement(255, 0)
+  }
+
   "ALU" should "successfully negate u8" in {
     def assertNegate(value: Int, expectedNegateValue: Int) = {
       val x = u8(value)

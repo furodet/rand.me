@@ -29,8 +29,8 @@ object Alu {
   def bitFlip(x: VmRegister): VmRegister =
     x.operations.bitFlip(x)
 
-  def addByte(x: VmRegister, value: Byte): VmRegister =
-    x.operations.addByte(x, value)
+  def increment(x: VmRegister): VmRegister =
+    x.operations.increment(x)
 
   def and(x: VmRegister, y: VmRegister): VmRegister = {
     val (ex, ey, ops) = equalize(x, y)

@@ -112,8 +112,8 @@ case object LargeNumberOperations extends VmRegisterOperations[LargeNumber] {
     LargeNumber(x.vmType, result)
   }
 
-  override def addByte(x: LargeNumber, value: Byte): LargeNumber = {
-    val result = x.value.foldLeft((ListBuffer.empty[Byte], value.toInt)) {
+  override def increment(x: LargeNumber): LargeNumber = {
+    val result = x.value.foldLeft((ListBuffer.empty[Byte], 1)) {
       case ((list, carry), eachByte) =>
         val sum = eachByte.toInt + carry
         list += (sum & 0xff).toByte

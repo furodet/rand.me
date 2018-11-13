@@ -41,7 +41,7 @@ trait VmRegisterOperations[T <: VmRegister] {
   // Bit-flip
   def bitFlip(x: T): T
 
-  def addByte(x: T, value: Byte): T
+  def increment(x: T): T
 
   def and(x: T, y: T): T
 
@@ -49,7 +49,7 @@ trait VmRegisterOperations[T <: VmRegister] {
 
   def xor(x: T, y: T): T
 
-  def neg(x: T): T = addByte(bitFlip(x), 1)
+  def neg(x: T): T = increment(bitFlip(x))
 
   def add(x: T, y: T): T
 
