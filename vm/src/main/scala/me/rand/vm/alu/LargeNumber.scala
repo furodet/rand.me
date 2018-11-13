@@ -43,7 +43,7 @@ case class LargeNumber(vmType: VmType, value: Array[Byte]) extends VmRegister {
   }
 
   private def getByteNumberOrElse(byteNr: Int, otherwise: Byte): Int =
-    if (byteNr < value.length) value(byteNr) & 0xff else otherwise
+    if (byteNr < value.length) value(byteNr) & 0xff else otherwise.toInt
 
   private[alu] def mostSignificantByte: Byte =
     value(vmType.byteLen - 1)

@@ -84,4 +84,34 @@ class S8Tests extends FlatSpec {
     // Try it in C...
     assertNegate(-128, -128)
   }
+
+  "ALU" should "successfully or s8" in {
+    def assertOr(value1: Int, value2: Int, expectedOrValue: Int) = {
+      val x = s8(value1)
+      val y = s8(value2)
+      val orXY = Alu.or(x, y)
+      assert(orXY.vmType.byteLen == 1)
+      assert(orXY.vmType.isSigned)
+      assert(orXY.toInt == expectedOrValue)
+    }
+
+    for (x <- -128 to 127)
+      for (y <- -128 to 127)
+        assertOr(x, y, x | y)
+  }
+
+  "ALU" should "successfully xor s8" in {
+    def assertAnd(value1: Int, value2: Int, expectedXorValue: Int) = {
+      val x = s8(value1)
+      val y = s8(value2)
+      val xorXY = Alu.xor(x, y)
+      assert(xorXY.vmType.byteLen == 1)
+      assert(xorXY.vmType.isSigned)
+      assert(xorXY.toInt == expectedXorValue)
+    }
+
+    for (x <- -128 to 127)
+      for (y <- -128 to 127)
+        assertAnd(x, y, x ^ y)
+  }
 }
