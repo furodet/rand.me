@@ -57,7 +57,7 @@ object Alu {
 
   def sub(x: VmRegister, y: VmRegister): VmRegister = {
     val (ex, ey, ops) = equalize(x, y)
-    ops.add(ex, ey)
+    ops.sub(ex, ey)
   }
 
   def isEqual(x: VmRegister, y: VmRegister): Boolean = {

@@ -35,17 +35,14 @@ class U8Tests extends FlatSpec {
 
   "u8" should "return valid toInt" in {
     for (x <- 0 to 255) {
-      assert(u8(x).toInt == x)
+      verify(u8(x), x)
     }
   }
 
   "ALU" should "successfully bitflip u8" in {
     def assertBitFlip(value: Int, expectedBitFlipValue: Int) = {
       val x = u8(value)
-      val tildaX = Alu.bitFlip(x)
-      assert(tildaX.vmType.byteLen == 1)
-      assert(tildaX.vmType.isUnsigned)
-      assert(tildaX.toInt == expectedBitFlipValue)
+      verify(Alu.bitFlip(x), expectedBitFlipValue)
     }
 
     for (x <- 0 to 255) {
@@ -56,10 +53,7 @@ class U8Tests extends FlatSpec {
   "ALU" should "successfully increment u8" in {
     def assertIncrement(value: Int, expectedIncrementedValue: Int) = {
       val x = u8(value)
-      val minusX = Alu.increment(x)
-      assert(minusX.vmType.byteLen == 1)
-      assert(minusX.vmType.isUnsigned)
-      assert(minusX.toInt == expectedIncrementedValue)
+      verify(Alu.increment(x), expectedIncrementedValue)
     }
 
     for (x <- 0 to 254) {
@@ -71,10 +65,7 @@ class U8Tests extends FlatSpec {
   "ALU" should "successfully negate u8" in {
     def assertNegate(value: Int, expectedNegateValue: Int) = {
       val x = u8(value)
-      val minusX = Alu.neg(x)
-      assert(minusX.vmType.byteLen == 1)
-      assert(minusX.vmType.isUnsigned)
-      assert(minusX.toInt == expectedNegateValue)
+      verify(Alu.neg(x), expectedNegateValue)
     }
 
     assertNegate(0, 0)
@@ -87,10 +78,7 @@ class U8Tests extends FlatSpec {
     def assertAnd(value1: Int, value2: Int, expectedAndValue: Int) = {
       val x = u8(value1)
       val y = u8(value2)
-      val andXY = Alu.and(x, y)
-      assert(andXY.vmType.byteLen == 1)
-      assert(andXY.vmType.isUnsigned)
-      assert(andXY.toInt == expectedAndValue)
+      verify(Alu.and(x, y), expectedAndValue)
     }
 
     for (x <- 0 to 255)
@@ -102,10 +90,7 @@ class U8Tests extends FlatSpec {
     def assertOr(value1: Int, value2: Int, expectedOrValue: Int) = {
       val x = u8(value1)
       val y = u8(value2)
-      val orXY = Alu.or(x, y)
-      assert(orXY.vmType.byteLen == 1)
-      assert(orXY.vmType.isUnsigned)
-      assert(orXY.toInt == expectedOrValue)
+      verify(Alu.or(x, y), expectedOrValue)
     }
 
     for (x <- 0 to 255)
@@ -117,10 +102,7 @@ class U8Tests extends FlatSpec {
     def assertXor(value1: Int, value2: Int, expectedXorValue: Int) = {
       val x = u8(value1)
       val y = u8(value2)
-      val xorXY = Alu.xor(x, y)
-      assert(xorXY.vmType.byteLen == 1)
-      assert(xorXY.vmType.isUnsigned)
-      assert(xorXY.toInt == expectedXorValue)
+      verify(Alu.xor(x, y), expectedXorValue)
     }
 
     for (x <- 0 to 255)
@@ -128,4 +110,40 @@ class U8Tests extends FlatSpec {
         assertXor(x, y, x ^ y)
   }
 
+  "ALU" should "successfully add u8" in {
+    def assertAdd(value1: Int, value2: Int, expectedAddValue: Int) = {
+      val x = u8(value1)
+      val y = u8(value2)
+      verify(Alu.add(x, y), expectedAddValue)
+    }
+
+    for (x <- 0 to 255)
+      for (y <- 0 to 255)
+        assertAdd(x, y, x + y)
+  }
+
+  "ALU" should "successfully sub u8" in {
+    def assertSub(value1: Int, value2: Int, expectedSubValue: Int) = {
+      val x = u8(value1)
+      val y = u8(value2)
+      verify(Alu.sub(x, y), expectedSubValue)
+    }
+
+    for (x <- 0 to 255)
+      for (y <- 0 to 255)
+        assertSub(x, y, x - y)
+  }
+
+  private def verify(x: VmRegister, expected: Int) = {
+    assertIsU8(x)
+    assertValueIs(x, expected)
+  }
+
+  private def assertIsU8(x: VmRegister) = {
+    assert(x.vmType.byteLen == 1)
+    assert(x.vmType.isUnsigned)
+  }
+
+  private def assertValueIs(x: VmRegister, expected: Int) =
+    assert(x.toInt == (expected & 0xff))
 }
