@@ -25,49 +25,46 @@
  */
 package me.rand.vm.alu
 
-import me.rand.vm.engine.VmTypes.VmType
+import me.rand.vm.engine.VmTypes
+import org.scalatest.FlatSpec
 
-trait VmRegister {
-  def vmType: VmType
+class U8Tests extends FlatSpec {
+  private val u8 = VmTypes.forMachineWordByteLength(1).select(1, isSigned = false).get
 
-  private[alu] def operations: VmRegisterOperations[VmRegister]
+  private def u8(value: Int): VmRegister = VmRegister.normalize(u8, value)
 
-  def toInt: Int
-}
+  "u8" should "return valid toInt" in {
+    for (x <- 0 to 255) {
+      assert(u8(x).toInt == x)
+    }
+  }
 
-trait VmRegisterOperations[T <: VmRegister] {
-  def build(vmType: VmType, value: BigInt): T
+  "ALU" should "successfully bitflip u8" in {
+    def assertBitFlip(value: Int, expectedBitFlipValue: Int) = {
+      val x = u8(value)
+      val tildaX = Alu.bitFlip(x)
+      assert(tildaX.vmType.byteLen == 1)
+      assert(tildaX.vmType.isUnsigned)
+      assert(tildaX.toInt == expectedBitFlipValue)
+    }
 
-  // Bit-flip
-  def bitFlip(x: T): T
+    for (x <- 0 to 255) {
+      assertBitFlip(x, 255 - x)
+    }
+  }
 
-  def addByte(x: T, value: Byte): T
+  "ALU" should "successfully negate u8" in {
+    def assertNegate(value: Int, expectedNegateValue: Int) = {
+      val x = u8(value)
+      val minusX = Alu.neg(x)
+      assert(minusX.vmType.byteLen == 1)
+      assert(minusX.vmType.isUnsigned)
+      assert(minusX.toInt == expectedNegateValue)
+    }
 
-  def and(x: T, y: T): T
-
-  def or(x: T, y: T): T
-
-  def xor(x: T, y: T): T
-
-  def neg(x: T): T = addByte(bitFlip(x), 1)
-
-  def add(x: T, y: T): T
-
-  def sub(x: T, y: T): T = add(x, neg(y))
-
-  def isEqualToZero(x: T): Boolean
-
-  def isGreaterOrEqualToZero(x: T): Boolean
-
-  def isGreaterThanZero(x: T): Boolean
-
-  def isLowerOrEqualToZero(x: T): Boolean = !isGreaterThanZero(x)
-
-  def isLowerThanZero(x: T): Boolean = !isGreaterOrEqualToZero(x)
-}
-
-object VmRegister {
-  def normalize(vmType: VmType, value: BigInt): VmRegister =
-  // TODO: to speed up processing, use specific types of VmRegister for given lengths (e.g. longs for x32...)
-    LargeNumberOperations.build(vmType, value)
+    assertNegate(0, 0)
+    for (x <- 1 to 255) {
+      assertNegate(x, 256 - x)
+    }
+  }
 }

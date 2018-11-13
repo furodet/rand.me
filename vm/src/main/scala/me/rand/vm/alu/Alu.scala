@@ -25,12 +25,12 @@
  */
 package me.rand.vm.alu
 
-class Alu {
+object Alu {
   def bitFlip(x: VmRegister): VmRegister =
     x.operations.bitFlip(x)
 
-  def addImmediate(x: VmRegister, value: Int): VmRegister =
-    x.operations.addImmediate(x, value)
+  def addByte(x: VmRegister, value: Byte): VmRegister =
+    x.operations.addByte(x, value)
 
   def and(x: VmRegister, y: VmRegister): VmRegister = {
     val (ex, ey, ops) = equalize(x, y)

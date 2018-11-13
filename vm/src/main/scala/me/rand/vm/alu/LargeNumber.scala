@@ -44,7 +44,8 @@ case class LargeNumber(vmType: VmType, value: Array[Byte]) extends VmRegister {
   private def getByteNumberOrZero(byteNr: Int): Int =
     if (byteNr < value.length) value(byteNr) & 0xff else 0
 
-  private[alu] def mostSignificantByte: Byte = value(value.length - 1)
+  private[alu] def mostSignificantByte: Byte =
+    value(vmType.byteLen - 1)
 
   private[alu] def mostSignificantBitIsSet: Boolean =
     (mostSignificantByte & 0x80.toByte) == 0x80
@@ -75,10 +76,10 @@ case object LargeNumberOperations extends VmRegisterOperations[LargeNumber] {
     val data = if (signExtend) {
       val valueIsNegative = (truncated(0) & 0x80) == 0x80
       val padValue = if (valueIsNegative) 0xff.toByte else 0.toByte
-      val extendByteArray = Array.fill[Byte](byteLen + 1)(padValue)
+      val extendByteArray = Array.fill[Byte](byteLen)(padValue)
       copyBigEndian(truncated, extendByteArray)
     } else {
-      val extendByteArray = Array.fill[Byte](byteLen + 1)(0.toByte)
+      val extendByteArray = Array.fill[Byte](byteLen)(0.toByte)
       copyBigEndian(truncated, extendByteArray)
     }
     // Switch to little endian, to simplify specific operations.
@@ -111,8 +112,8 @@ case object LargeNumberOperations extends VmRegisterOperations[LargeNumber] {
     LargeNumber(x.vmType, result)
   }
 
-  override def addImmediate(x: LargeNumber, value: Int): LargeNumber = {
-    val result = x.value.foldLeft((ListBuffer.empty[Byte], 0)) {
+  override def addByte(x: LargeNumber, value: Byte): LargeNumber = {
+    val result = x.value.foldLeft((ListBuffer.empty[Byte], value.toInt)) {
       case ((list, carry), eachByte) =>
         val sum = eachByte.toInt + carry
         list += (sum & 0xff).toByte
