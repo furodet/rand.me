@@ -34,21 +34,22 @@ case class LargeNumber(vmType: VmType, value: Array[Byte]) extends VmRegister {
     LargeNumberOperations.asInstanceOf[VmRegisterOperations[VmRegister]]
 
   override def toInt: Int = {
-    val i0 = getByteNumberOrZero(0)
-    val i1 = getByteNumberOrZero(1)
-    val i2 = getByteNumberOrZero(2)
-    val i3 = getByteNumberOrZero(3)
+    val pad = if (vmType.isUnsigned || !mostSignificantBitIsSet) 0.toByte else 0xff.toByte
+    val i0 = getByteNumberOrElse(0, pad)
+    val i1 = getByteNumberOrElse(1, pad)
+    val i2 = getByteNumberOrElse(2, pad)
+    val i3 = getByteNumberOrElse(3, pad)
     (i3 << 24) | (i2 << 16) | (i1 << 8) | i0
   }
 
-  private def getByteNumberOrZero(byteNr: Int): Int =
-    if (byteNr < value.length) value(byteNr) & 0xff else 0
+  private def getByteNumberOrElse(byteNr: Int, otherwise: Byte): Int =
+    if (byteNr < value.length) value(byteNr) & 0xff else otherwise
 
   private[alu] def mostSignificantByte: Byte =
     value(vmType.byteLen - 1)
 
   private[alu] def mostSignificantBitIsSet: Boolean =
-    (mostSignificantByte & 0x80.toByte) == 0x80
+    (mostSignificantByte & 0x80.toByte) == 0x80.toByte
 
   override def toString: String =
     value.reverse.map {
