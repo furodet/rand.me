@@ -26,7 +26,7 @@
 package me.rand.vm.alu
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.{Variable, VmWord}
+import me.rand.vm.engine.Variable
 import me.rand.vm.main.VmError.VmExecutionError.AluError
 
 sealed trait Comparator {
@@ -39,7 +39,7 @@ object Comparator {
     override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError =
       (op1, op2) match {
         case (Variable.Scalar(_, x), Variable.Scalar(_, y)) =>
-          Ok(areWordsEqual(x, y))
+          Ok(Alu.isEqual(x.data, y.data))
 
         case (Variable.Pointer.ToVariable.InTheHeap(_, x), Variable.Pointer.ToVariable.InTheHeap(_, y)) =>
           Ok(x == y)
@@ -59,13 +59,14 @@ object Comparator {
 
   object ?≠ extends Comparator {
     override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError =
-      ?=.execute(op1, op2) && (areEqual => !areEqual)
+      ?=.execute(op1, op2) && (!_)
 
     override def toString: String = "?≠"
   }
 
   object ?< extends Comparator {
-    override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError = ???
+    override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError =
+      ?≥.execute(op1, op2) && (!_)
 
     override def toString: String = "?<"
   }
@@ -77,7 +78,8 @@ object Comparator {
   }
 
   object ?≤ extends Comparator {
-    override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError = ???
+    override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError =
+      ?>.execute(op1, op2) && (!_)
 
     override def toString: String = "?≤"
   }
@@ -88,6 +90,4 @@ object Comparator {
     override def toString: String = "?≥"
   }
 
-  private def areWordsEqual(word1: VmWord, word2: VmWord): Boolean =
-    ???
 }
