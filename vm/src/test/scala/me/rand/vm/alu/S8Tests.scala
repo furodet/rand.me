@@ -136,6 +136,42 @@ class S8Tests extends FlatSpec {
         assertSub(x, y, x - y)
   }
 
+  "ALU" should "successfully test equal s8" in {
+    def assertIsEqual(value1: Int, value2: Int, expectedEqualValue: Boolean) = {
+      val x = s8(value1)
+      val y = s8(value2)
+      assert(Alu.isEqual(x, y) == expectedEqualValue)
+    }
+
+    for (x <- -128 to 127)
+      for (y <- -128 to 127)
+        assertIsEqual(x, y, x == y)
+  }
+
+  "ALU" should "successfully test greater than s8" in {
+    def assertIsGreaterThan(value1: Int, value2: Int, expectedGreaterThanValue: Boolean) = {
+      val x = s8(value1)
+      val y = s8(value2)
+      assert(Alu.isGreater(x, y) == expectedGreaterThanValue)
+    }
+
+    for (x <- -128 to 127)
+      for (y <- -128 to 127)
+        assertIsGreaterThan(x, y, x > y)
+  }
+
+  "ALU" should "successfully test greater or equal s8" in {
+    def assertIsGreaterOrEqual(value1: Int, value2: Int, expectedGreaterOrEqualValue: Boolean) = {
+      val x = s8(value1)
+      val y = s8(value2)
+      assert(Alu.isGreaterOrEqual(x, y) == expectedGreaterOrEqualValue)
+    }
+
+    for (x <- -128 to 127)
+      for (y <- -128 to 127)
+        assertIsGreaterOrEqual(x, y, x >= y)
+  }
+
   private def verify(x: VmRegister, expected: Int) = {
     assertIsS8(x)
     assertValueIs(x, expected)

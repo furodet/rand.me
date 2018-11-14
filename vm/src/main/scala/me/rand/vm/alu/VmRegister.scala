@@ -55,15 +55,11 @@ trait VmRegisterOperations[T <: VmRegister] {
 
   def sub(x: T, y: T): T = add(x, neg(y))
 
-  def isEqualToZero(x: T): Boolean
+  def isEqual(x: T, y: T): Boolean
 
-  def isGreaterOrEqualToZero(x: T): Boolean
+  def isGreater(x: T, y: T): Boolean
 
-  def isGreaterThanZero(x: T): Boolean
-
-  def isLowerOrEqualToZero(x: T): Boolean = !isGreaterThanZero(x)
-
-  def isLowerThanZero(x: T): Boolean = !isGreaterOrEqualToZero(x)
+  def isGreaterOrEqual(x: T, y: T): Boolean
 }
 
 object VmRegister {

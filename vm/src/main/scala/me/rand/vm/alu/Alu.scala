@@ -62,12 +62,17 @@ object Alu {
 
   def isEqual(x: VmRegister, y: VmRegister): Boolean = {
     val (ex, ey, ops) = equalize(x, y)
-    ops.isEqualToZero(ops.sub(ex, ey))
+    ops.isEqual(ex, ey)
   }
 
-  def isLowerThan(x: VmRegister, y: VmRegister): Boolean = {
+  def isGreater(x: VmRegister, y: VmRegister): Boolean = {
     val (ex, ey, ops) = equalize(x, y)
-    ops.isLowerThanZero(sub(ex, ey))
+    ops.isGreater(ex, ey)
+  }
+
+  def isGreaterOrEqual(x: VmRegister, y: VmRegister): Boolean = {
+    val (ex, ey, ops) = equalize(x, y)
+    ops.isGreaterOrEqual(ex, ey)
   }
 
   private def equalize(x: VmRegister, y: VmRegister): (VmRegister, VmRegister, VmRegisterOperations[VmRegister]) =

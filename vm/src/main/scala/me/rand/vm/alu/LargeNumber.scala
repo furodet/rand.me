@@ -142,19 +142,43 @@ case object LargeNumberOperations extends VmRegisterOperations[LargeNumber] {
     LargeNumber(x.vmType, z)
   }
 
-  override def isEqualToZero(x: LargeNumber): Boolean =
-    x.value.collectFirst {
-      case xx =>
-        xx != 0
-    }.isEmpty
+  override def isEqual(x: LargeNumber, y: LargeNumber): Boolean =
+    !x.value.zip(y.value).exists { case (xx, yy) => xx != yy }
 
-  override def isGreaterOrEqualToZero(x: LargeNumber): Boolean =
-    if (x.vmType.isUnsigned) true
-    else !x.mostSignificantBitIsSet
+  override def isGreater(x: LargeNumber, y: LargeNumber): Boolean =
+    if (x.vmType.isUnsigned) unsignedIsGreaterOrElse(x, y, ifEqual = false)
+    else signedIsGreaterOrElse(x, y, ifEqual = false)
 
-  override def isGreaterThanZero(x: LargeNumber): Boolean =
-    if (x.vmType.isUnsigned) !isEqualToZero(x)
-    else !x.mostSignificantBitIsSet && !isEqualToZero(x)
+  override def isGreaterOrEqual(x: LargeNumber, y: LargeNumber): Boolean =
+    if (x.vmType.isUnsigned) unsignedIsGreaterOrElse(x, y, ifEqual = true)
+    else signedIsGreaterOrElse(x, y, ifEqual = true)
+
+  private def unsignedIsGreaterOrElse(x: LargeNumber, y: LargeNumber, ifEqual: Boolean): Boolean = {
+    x.value.zip(y.value).foreach {
+      case (eachByteX, eachByteY) =>
+        (eachByteX.toInt & 0xff, eachByteY.toInt & 0xff) match {
+          case (greater, lower) if greater > lower =>
+            return true
+          case (lower, greater) if lower < greater =>
+            return false
+          case _ =>
+          // The two current bytes for equal, check next if any
+        }
+    }
+    ifEqual
+  }
+
+  private def signedIsGreaterOrElse(x: LargeNumber, y: LargeNumber, ifEqual: Boolean): Boolean = {
+    x.value.zip(y.value).foreach {
+      case (greater, lower) if greater > lower =>
+        return true
+      case (lower, greater) if lower < greater =>
+        return false
+      case _ =>
+      // The two current bytes are equal, check next, if any
+    }
+    ifEqual
+  }
 
   private def __(x: LargeNumber, y: LargeNumber)(f: (Byte, Byte) => Byte): LargeNumber = {
     val z = x.value.zip(y.value).map {
