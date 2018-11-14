@@ -26,6 +26,9 @@
 package me.rand.vm.alu
 
 object Alu {
+  def sizeof(x: VmRegister): Int =
+    x.vmType.byteLen
+
   def bitFlip(x: VmRegister): VmRegister =
     x.operations.bitFlip(x)
 

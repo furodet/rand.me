@@ -38,7 +38,6 @@ trait VmRegister {
 trait VmRegisterOperations[T <: VmRegister] {
   def build(vmType: VmType, value: BigInt): T
 
-  // Bit-flip
   def bitFlip(x: T): T
 
   def increment(x: T): T

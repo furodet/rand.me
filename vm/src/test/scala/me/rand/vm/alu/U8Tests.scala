@@ -176,7 +176,7 @@ class U8Tests extends FlatSpec {
   }
 
   private def assertIsU8(x: VmRegister) = {
-    assert(x.vmType.byteLen == 1)
+    assert(Alu.sizeof(x) == 1)
     assert(x.vmType.isUnsigned)
   }
 

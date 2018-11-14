@@ -178,7 +178,7 @@ class S8Tests extends FlatSpec {
   }
 
   private def assertIsS8(x: VmRegister) = {
-    assert(x.vmType.byteLen == 1)
+    assert(Alu.sizeof(x) == 1)
     assert(x.vmType.isSigned)
   }
 
