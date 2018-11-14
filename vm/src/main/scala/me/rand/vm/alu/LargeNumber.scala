@@ -118,7 +118,7 @@ case object LargeNumberOperations extends VmRegisterOperations[LargeNumber] {
       case ((list, carry), eachByte) =>
         val sum = eachByte.toInt + carry
         list += (sum & 0xff).toByte
-        (list, (sum & 0x100) >>> 8)
+        (list, if (eachByte == -1) 1 else 0)
     }._1.toArray
     LargeNumber(x.vmType, result)
   }
@@ -135,7 +135,7 @@ case object LargeNumberOperations extends VmRegisterOperations[LargeNumber] {
   override def add(x: LargeNumber, y: LargeNumber): LargeNumber = {
     val z = x.value.zip(y.value).foldLeft((ListBuffer.empty[Byte], 0)) {
       case ((list, carry), (xx, yy)) =>
-        val sum = xx + yy + carry
+        val sum = (xx & 0xff) + (yy & 0xff) + carry
         list += (sum & 0xff).toByte
         (list, (sum >>> 8) & 1)
     }._1.toArray
@@ -154,7 +154,7 @@ case object LargeNumberOperations extends VmRegisterOperations[LargeNumber] {
     else signedIsGreaterOrElse(x, y, ifEqual = true)
 
   private def unsignedIsGreaterOrElse(x: LargeNumber, y: LargeNumber, ifEqual: Boolean): Boolean = {
-    x.value.zip(y.value).foreach {
+    x.value.reverse.zip(y.value.reverse).foreach {
       case (eachByteX, eachByteY) =>
         (eachByteX.toInt & 0xff, eachByteY.toInt & 0xff) match {
           case (greater, lower) if greater > lower =>
@@ -169,7 +169,7 @@ case object LargeNumberOperations extends VmRegisterOperations[LargeNumber] {
   }
 
   private def signedIsGreaterOrElse(x: LargeNumber, y: LargeNumber, ifEqual: Boolean): Boolean = {
-    x.value.zip(y.value).foreach {
+    x.value.reverse.zip(y.value.reverse).foreach {
       case (greater, lower) if greater > lower =>
         return true
       case (lower, greater) if lower < greater =>
