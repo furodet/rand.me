@@ -154,7 +154,35 @@ case object LargeNumberOperations extends VmRegisterOperations[LargeNumber] {
     else signedIsGreaterOrElse(x, y, ifEqual = true)
 
   private def unsignedIsGreaterOrElse(x: LargeNumber, y: LargeNumber, ifEqual: Boolean): Boolean = {
-    x.value.reverse.zip(y.value.reverse).foreach {
+    (x.mostSignificantByte.toInt & 0xff, y.mostSignificantByte.toInt & 0xff) match {
+      case (greater, lower) if greater > lower =>
+        return true
+
+      case (lower, greater) if lower < greater =>
+        return false
+
+      case _ =>
+      // Need to check next bytes
+    }
+    isGreaterOrElseForLeastSignificantBytes(x, y, ifEqual)
+  }
+
+  private def signedIsGreaterOrElse(x: LargeNumber, y: LargeNumber, ifEqual: Boolean): Boolean = {
+    (x.mostSignificantByte, y.mostSignificantByte) match {
+      case (greater, lower) if greater > lower =>
+        return true
+
+      case (lower, greater) if lower < greater =>
+        return false
+
+      case _ =>
+      // Need to check next bytes
+    }
+    isGreaterOrElseForLeastSignificantBytes(x, y, ifEqual)
+  }
+
+  private def isGreaterOrElseForLeastSignificantBytes(x: LargeNumber, y: LargeNumber, ifEqual: Boolean): Boolean = {
+    x.value.reverse.tail.zip(y.value.reverse.tail).foreach {
       case (eachByteX, eachByteY) =>
         (eachByteX.toInt & 0xff, eachByteY.toInt & 0xff) match {
           case (greater, lower) if greater > lower =>
@@ -162,20 +190,8 @@ case object LargeNumberOperations extends VmRegisterOperations[LargeNumber] {
           case (lower, greater) if lower < greater =>
             return false
           case _ =>
-          // The two current bytes for equal, check next if any
+          // The two current bytes are equal, check next, if any
         }
-    }
-    ifEqual
-  }
-
-  private def signedIsGreaterOrElse(x: LargeNumber, y: LargeNumber, ifEqual: Boolean): Boolean = {
-    x.value.reverse.zip(y.value.reverse).foreach {
-      case (greater, lower) if greater > lower =>
-        return true
-      case (lower, greater) if lower < greater =>
-        return false
-      case _ =>
-      // The two current bytes are equal, check next, if any
     }
     ifEqual
   }
