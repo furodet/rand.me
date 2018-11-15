@@ -31,61 +31,69 @@ import me.rand.vm.main.VmError.VmExecutionError.AluError
 
 sealed trait Comparator {
   def execute(op1: Variable, op2: Variable): Boolean OrElse AluError
+
+  protected def standardComparator(op1: Variable, op2: Variable,
+                                   comparisonName: String,
+                                   aluCompareOperation: (VmRegister, VmRegister) => Boolean,
+                                   intCompareOperation: (Int, Int) => Boolean): Boolean OrElse AluError =
+    (op1, op2) match {
+      case (Variable.Scalar(_, x), Variable.Scalar(_, y)) =>
+        Ok(aluCompareOperation(x.data, y.data))
+
+      case (Variable.Pointer.ToVariable.InTheHeap(_, x), Variable.Pointer.ToVariable.InTheHeap(_, y)) =>
+        Ok(intCompareOperation(x, y))
+
+      case (Variable.Pointer.ToVariable.InTheStack(_, x), Variable.Pointer.ToVariable.InTheStack(_, y)) =>
+        Ok(intCompareOperation(x, y))
+
+      case (Variable.Pointer.ToInstruction(_, x), Variable.Pointer.ToInstruction(_, y)) =>
+        Ok((x.basicBlock == y.basicBlock) && intCompareOperation(x.index, y.index))
+
+      case (x: Variable, y: Variable) =>
+        Err(AluError.InconsistentTypesForComparison(comparisonName, x, y))
+    }
 }
 
 object Comparator {
 
   object ?= extends Comparator {
     override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError =
-      (op1, op2) match {
-        case (Variable.Scalar(_, x), Variable.Scalar(_, y)) =>
-          Ok(Alu.isEqual(x.data, y.data))
-
-        case (Variable.Pointer.ToVariable.InTheHeap(_, x), Variable.Pointer.ToVariable.InTheHeap(_, y)) =>
-          Ok(x == y)
-
-        case (Variable.Pointer.ToVariable.InTheStack(_, x), Variable.Pointer.ToVariable.InTheStack(_, y)) =>
-          Ok(x == y)
-
-        case (Variable.Pointer.ToInstruction(_, x), Variable.Pointer.ToInstruction(_, y)) =>
-          Ok((x.basicBlock == y.basicBlock) && (x.index == y.index))
-
-        case (x: Variable, y: Variable) =>
-          Err(AluError.InconsistentTypesForComparison("?=", x, y))
-      }
+      standardComparator(op1, op2, toString, Alu.isEqual, _ == _)
 
     override def toString: String = "?="
   }
 
   object ?≠ extends Comparator {
     override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError =
-      ?=.execute(op1, op2) && (!_)
+      standardComparator(op1, op2, toString, Alu.isNotEqual, _ != _)
 
     override def toString: String = "?≠"
   }
 
   object ?< extends Comparator {
     override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError =
-      ?≥.execute(op1, op2) && (!_)
+      standardComparator(op1, op2, toString, Alu.isLower, _ < _)
 
     override def toString: String = "?<"
   }
 
   object ?> extends Comparator {
-    override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError = ???
+    override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError =
+      standardComparator(op1, op2, toString, Alu.isGreater, _ > _)
 
     override def toString: String = "?>"
   }
 
   object ?≤ extends Comparator {
     override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError =
-      ?>.execute(op1, op2) && (!_)
+      standardComparator(op1, op2, toString, Alu.isLowerOrEqual, _ < _)
 
     override def toString: String = "?≤"
   }
 
   object ?≥ extends Comparator {
-    override def execute(op1: Variable, op2: Variable): OrElse[Boolean, AluError] = ???
+    override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError =
+      standardComparator(op1, op2, toString, Alu.isGreaterOrEqual, _ >= _)
 
     override def toString: String = "?≥"
   }
