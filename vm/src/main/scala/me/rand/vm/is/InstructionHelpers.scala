@@ -109,7 +109,7 @@ object InstructionHelpers {
   private[is] def updateDestination(pointer: Pointer, value: VmWord)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
     pointer match {
       case ptr: Pointer.ToVariable =>
-        updateDestination(ptr.getContainingVarSet(vmContext), ptr.name, ptr.index, Variable.Scalar("<undef>", value))
+        updateDestination(ptr.getContainingVarSet(vmContext), ptr.name, ptr.index, Variable.Scalar.anonymous(value))
 
 
       case _: Pointer.ToInstruction =>

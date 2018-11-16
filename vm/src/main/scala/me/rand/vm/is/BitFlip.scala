@@ -26,24 +26,23 @@
 package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.alu.Comparator
-import me.rand.vm.engine.Variable.Scalar
-import me.rand.vm.engine.{Variable, VmContext, VmWord}
+import me.rand.vm.alu.Alu
+import me.rand.vm.engine.Variable
+import me.rand.vm.engine.Variable.{Pointer, Scalar}
 import me.rand.vm.main.VmError
+import me.rand.vm.main.VmError.VmExecutionError.InconsistentOperandTypeError
 
-class Compare(compare: Comparator) extends StandardDyadicInstruction {
-  private def booleanToVmWord(b: Boolean)(implicit vmContext: VmContext) =
-    VmWord.ofType(vmContext.vmTypes.minUnsignedType).withValue(BigInt(if (b) 1 else 0))
+object BitFlip extends StandardMonadicInstruction {
+  override def executeOperation(x: Variable): Variable OrElse VmError =
+    x match {
+      case Scalar(_, value) =>
+        val result = Alu.bitFlip(value.data)
+        val asVariable = Scalar.anonymous(result)
+        Ok(asVariable)
 
-  override def executeOperation(x: Variable, y: Variable)(implicit vmContext: VmContext): Variable OrElse VmError =
-    for {
-      result <- compare.execute(x, y)
-      asWord = booleanToVmWord(result)
-    } yield Scalar.anonymous(asWord)
+      case _: Pointer =>
+        Err(InconsistentOperandTypeError.ForOperation("~", x.name))
+    }
 
-  override def operationName: String = compare.toString
-}
-
-object Compare {
-  def apply(compare: Comparator): Compare = new Compare(compare)
+  override def operationName: String = "~"
 }

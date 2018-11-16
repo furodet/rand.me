@@ -25,25 +25,25 @@
  */
 package me.rand.vm.is
 
-import me.rand.commons.idioms.Status._
-import me.rand.vm.alu.Comparator
-import me.rand.vm.engine.Variable.Scalar
-import me.rand.vm.engine.{Variable, VmContext, VmWord}
-import me.rand.vm.main.VmError
+import me.rand.commons.idioms.Status.OrElse
+import me.rand.vm.engine.Instruction.Operands
+import me.rand.vm.engine.{Instruction, Variable, VmContext}
+import me.rand.vm.main.{ExecutionContext, VmError}
 
-class Compare(compare: Comparator) extends StandardDyadicInstruction {
-  private def booleanToVmWord(b: Boolean)(implicit vmContext: VmContext) =
-    VmWord.ofType(vmContext.vmTypes.minUnsignedType).withValue(BigInt(if (b) 1 else 0))
+private[is] trait StandardDyadicInstruction extends Instruction {
+  def executeOperation(x: Variable, y: Variable)(implicit vmContext: VmContext): Variable OrElse VmError
 
-  override def executeOperation(x: Variable, y: Variable)(implicit vmContext: VmContext): Variable OrElse VmError =
+  def operationName: String
+
+  def execute(vmContext: VmContext, operands: Operands)(implicit executionContext: ExecutionContext): VmContext OrElse VmError = {
+    implicit val context: VmContext = vmContext
     for {
-      result <- compare.execute(x, y)
-      asWord = booleanToVmWord(result)
-    } yield Scalar.anonymous(asWord)
-
-  override def operationName: String = compare.toString
-}
-
-object Compare {
-  def apply(compare: Comparator): Compare = new Compare(compare)
+      op1 <- InstructionHelpers.fetchImmediateOrVariable(0, operands)
+      op2 <- InstructionHelpers.fetchImmediateOrVariable(1, operands)
+      destination <- InstructionHelpers.fetchDestination(operands)
+      result <- executeOperation(op1, op2)
+      update <- InstructionHelpers.updateDestination(destination, result)
+      _ = executionContext.logger ~> s"${destination.name} := ${op1.getValueString} $operationName ${op2.getValueString} = ${update.getValueString}"
+    } yield vmContext
+  }
 }

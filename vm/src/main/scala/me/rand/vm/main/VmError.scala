@@ -143,6 +143,17 @@ object VmError {
 
     }
 
+    sealed trait InconsistentOperandTypeError extends IllegalEncodingError
+
+    object InconsistentOperandTypeError {
+
+      case class ForOperation(operationName: String, operandName: String) extends InconsistentOperandTypeError {
+        override def toString: String =
+          s"operand '$operandName' type is inconsistent for operation $operationName"
+      }
+
+    }
+
     sealed trait AluError extends VmExecutionError
 
     object AluError {

@@ -25,6 +25,7 @@
  */
 package me.rand.vm.engine
 
+import me.rand.vm.alu.VmRegister
 import me.rand.vm.engine.Variable.ScalarBuilder.Partial
 import me.rand.vm.engine.VmTypes.VmType
 
@@ -43,6 +44,12 @@ object Variable {
     override def rename(newName: String): Variable = copy(name = newName)
 
     override def getValueString: String = value.toString
+  }
+
+  object Scalar {
+    def anonymous(value: VmWord) = Scalar("<undef>", value)
+
+    def anonymous(value: VmRegister): Scalar = anonymous(new VmWord(value))
   }
 
   sealed trait Pointer extends Variable
