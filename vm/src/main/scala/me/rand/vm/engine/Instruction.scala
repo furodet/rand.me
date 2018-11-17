@@ -26,6 +26,7 @@
 package me.rand.vm.engine
 
 import me.rand.commons.idioms.Status._
+import me.rand.vm.alu.VmRegister
 import me.rand.vm.engine.Instruction.Operand.{Destination, Source}
 import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError
@@ -68,7 +69,7 @@ object Instruction {
 
       }
 
-      case class Immediate(value: VmWord) extends Source
+      case class Immediate(value: VmRegister) extends Source
 
     }
 

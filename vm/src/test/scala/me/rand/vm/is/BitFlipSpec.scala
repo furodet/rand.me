@@ -42,7 +42,7 @@ class BitFlipSpec extends BaseIsSpec {
     } yield result) match {
       case Ok(Some(Scalar(variableName, value))) =>
         assert(variableName == "hp0")
-        assert(value.data.toInt == 0)
+        assert(value.toInt == 0)
         assert(value.vmType.isUnsigned)
         assert(value.vmType.byteLen == 4)
 

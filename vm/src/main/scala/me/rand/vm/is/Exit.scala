@@ -33,7 +33,7 @@ object Exit extends Instruction {
   override def execute(vmContext: VmContext, operands: Instruction.Operands)(implicit executionContext: ExecutionContext): VmContext OrElse VmError =
     InstructionHelpers.fetchImmediateOperandValue(0, operands) && {
       code =>
-        executionContext.logger ~> s"exit ${code.data.toInt}"
-        vmContext.halt(code.data.toInt)
+        executionContext.logger ~> s"exit ${code.toInt}"
+        vmContext.halt(code.toInt)
     }
 }

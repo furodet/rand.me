@@ -36,7 +36,7 @@ object BitFlip extends StandardMonadicInstruction {
   override def executeOperation(x: Variable): Variable OrElse VmError =
     x match {
       case Scalar(_, value) =>
-        val result = Alu.bitFlip(value.data)
+        val result = Alu.bitFlip(value)
         val asVariable = Scalar.anonymous(result)
         Ok(asVariable)
 

@@ -66,4 +66,10 @@ object VmRegister {
   def normalize(vmType: VmType, value: NormalizedNumber): VmRegister =
   // TODO: to speed up processing, use specific types of VmRegister for given lengths (e.g. longs for x32...)
     LargeNumberOperations.build(vmType, value.asBigEndianByteArray)
+
+  class VmRegisterBuilder(vmType: VmType) {
+    def withValue(data: NormalizedNumber): VmRegister = normalize(vmType, data)
+  }
+
+  def ofType(vmType: VmType): VmRegisterBuilder = new VmRegisterBuilder(vmType)
 }

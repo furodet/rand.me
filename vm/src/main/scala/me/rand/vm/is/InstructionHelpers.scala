@@ -26,6 +26,7 @@
 package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
+import me.rand.vm.alu.VmRegister
 import me.rand.vm.engine.Instruction.Operand.{Destination, Source}
 import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.engine.Variable._
@@ -37,7 +38,7 @@ import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.NotAnImmedia
 import scala.annotation.tailrec
 
 object InstructionHelpers {
-  private[is] def fetchImmediateOperandValue(operandId: Int, operands: Operands): VmWord OrElse IllegalEncodingError =
+  private[is] def fetchImmediateOperandValue(operandId: Int, operands: Operands): VmRegister OrElse IllegalEncodingError =
     operands.fetchSource(operandId) & {
       case Source.Immediate(v) =>
         Ok(v)
@@ -106,7 +107,7 @@ object InstructionHelpers {
         Err(InvalidIndirect(operandId))
     }
 
-  private[is] def updateDestination(pointer: Pointer, value: VmWord)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
+  private[is] def updateDestination(pointer: Pointer, value: VmRegister)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
     pointer match {
       case ptr: Pointer.ToVariable =>
         updateDestination(ptr.getContainingVarSet(vmContext), ptr.name, ptr.index, Variable.Scalar.anonymous(value))

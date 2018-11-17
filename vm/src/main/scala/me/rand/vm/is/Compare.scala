@@ -27,14 +27,14 @@ package me.rand.vm.is
 
 import me.rand.commons.idioms.NormalizedNumber._
 import me.rand.commons.idioms.Status._
-import me.rand.vm.alu.Comparator
+import me.rand.vm.alu.{Comparator, VmRegister}
 import me.rand.vm.engine.Variable.Scalar
-import me.rand.vm.engine.{Variable, VmContext, VmWord}
+import me.rand.vm.engine.{Variable, VmContext}
 import me.rand.vm.main.VmError
 
 class Compare(compare: Comparator) extends StandardDyadicInstruction {
   private def booleanToVmWord(b: Boolean)(implicit vmContext: VmContext) =
-    VmWord.ofType(vmContext.vmTypes.minUnsignedType)
+    VmRegister.ofType(vmContext.vmTypes.minUnsignedType)
       .withValue(if (b) 1 else 0)
 
   override def executeOperation(x: Variable, y: Variable)(implicit vmContext: VmContext): Variable OrElse VmError =

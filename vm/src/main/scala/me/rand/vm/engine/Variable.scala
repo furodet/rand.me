@@ -38,16 +38,14 @@ sealed trait Variable {
 
 object Variable {
 
-  case class Scalar(name: String, value: VmWord) extends Variable {
+  case class Scalar(name: String, value: VmRegister) extends Variable {
     override def rename(newName: String): Variable = copy(name = newName)
 
     override def getValueString: String = value.toString
   }
 
   object Scalar {
-    def anonymous(value: VmWord) = Scalar("<undef>", value)
-
-    def anonymous(value: VmRegister): Scalar = anonymous(new VmWord(value))
+    def anonymous(value: VmRegister) = Scalar("<undef>", value)
   }
 
   sealed trait Pointer extends Variable

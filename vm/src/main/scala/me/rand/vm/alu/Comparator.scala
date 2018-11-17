@@ -38,7 +38,7 @@ sealed trait Comparator {
                                    intCompareOperation: (Int, Int) => Boolean): Boolean OrElse AluError =
     (op1, op2) match {
       case (Variable.Scalar(_, x), Variable.Scalar(_, y)) =>
-        Ok(aluCompareOperation(x.data, y.data))
+        Ok(aluCompareOperation(x, y))
 
       case (Variable.Pointer.ToVariable.InTheHeap(_, x), Variable.Pointer.ToVariable.InTheHeap(_, y)) =>
         Ok(intCompareOperation(x, y))

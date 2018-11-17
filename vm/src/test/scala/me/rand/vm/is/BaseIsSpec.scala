@@ -30,11 +30,12 @@ import java.io.PrintWriter
 import me.rand.commons.idioms.Logger._
 import me.rand.commons.idioms.NormalizedNumber._
 import me.rand.commons.idioms.Status._
+import me.rand.vm.alu.VmRegister
 import me.rand.vm.engine.Instruction.Operand.Source
 import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.engine.VmProgram.BasicBlockBuilder.aBasicBlockCalled
 import me.rand.vm.engine.VmProgram.{Counter, InstructionInstance}
-import me.rand.vm.engine.{Variable, VmContext, VmProgram, VmWord}
+import me.rand.vm.engine.{Variable, VmContext, VmProgram}
 import me.rand.vm.main.ExecutionContext
 import org.scalatest._
 
@@ -128,14 +129,14 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
     }
 
   private def imm_(typeString: String, value: Int)(implicit vmContext: VmContext): Source.Immediate =
-    Source.Immediate(createVmWord(typeString, value, vmContext))
+    Source.Immediate(createVmRegister(typeString, value, vmContext))
 
   private def createScalarVariable(name: String, typeString: String, value: Int)(implicit vmContext: VmContext): Variable.Scalar =
-    Variable.Scalar(name, createVmWord(typeString, value, vmContext))
+    Variable.Scalar(name, createVmRegister(typeString, value, vmContext))
 
-  private def createVmWord(typeString: String, value: Int, vmContext: VmContext): VmWord =
+  private def createVmRegister(typeString: String, value: Int, vmContext: VmContext): VmRegister =
     vmContext.vmTypes.valueOf(typeString) && {
-      t => VmWord.ofType(t).withValue(value)
+      t => VmRegister.ofType(t).withValue(value)
     } match {
       case Err(error) =>
         fail(s"could not create value of type '$typeString': $error")
