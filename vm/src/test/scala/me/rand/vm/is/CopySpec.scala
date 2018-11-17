@@ -25,6 +25,7 @@
  */
 package me.rand.vm.is
 
+import me.rand.commons.idioms.NormalizedNumber._
 import me.rand.commons.idioms.Status._
 import me.rand.vm.dsl.AbstractAsmInstructionBuilder._
 import me.rand.vm.dsl.AbstractAsmOperandBuilder._
@@ -37,7 +38,7 @@ class CopySpec extends BaseIsSpec {
   "copy" should "pass 'copy 123:u32 > %0'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- Copy < 123 / 'u32 > %(0)
+      command <- Copy < !!(123, 'u32) > %(0)
       context <- command.execute(vmContext)
       result <- context.heap.getVariable(0)
     } yield result) match {
@@ -141,7 +142,7 @@ class CopySpec extends BaseIsSpec {
   "copy" should "pass 'copy 12345:u32 > **%2'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- Copy < 12345 / 'u32 > *.*(%(2))
+      command <- Copy < !!(12345, 'u32) > *.*(%(2))
       context <- command.execute(vmContext)
       result <- context.stack.getVariable(0)
     } yield result) match {
@@ -175,7 +176,7 @@ class CopySpec extends BaseIsSpec {
   "copy" should "not pass 'copy 123 > _'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- Copy < 123 / 'u32 > ()
+      command <- Copy < !!(123, 'u32) > ()
       context <- command.execute(vmContext)
     } yield context) match {
       case Err(error@UnspecifiedDestinationOperand) =>

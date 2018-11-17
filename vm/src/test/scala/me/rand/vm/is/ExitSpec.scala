@@ -25,9 +25,10 @@
  */
 package me.rand.vm.is
 
+import me.rand.commons.idioms.NormalizedNumber._
 import me.rand.commons.idioms.Status._
-import me.rand.vm.dsl.AbstractAsmOperandBuilder._
 import me.rand.vm.dsl.AbstractAsmInstructionBuilder._
+import me.rand.vm.dsl.AbstractAsmOperandBuilder._
 import me.rand.vm.engine.VmContext
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError.UnspecifiedSourceOperand
 import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.NotAnImmediateOperand
@@ -36,7 +37,7 @@ class ExitSpec extends BaseIsSpec {
   "exit" should "pass 'exit imm'" in {
     implicit val vmContext: VmContext = givenAnEmptyVmContext
     (for {
-      command <- Exit < (42 / 'u8) > ()
+      command <- Exit < !!(42, 'u8) > ()
       context <- command.execute(vmContext)
     } yield context) match {
       case Ok(newContext) =>

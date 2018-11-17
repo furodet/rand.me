@@ -25,6 +25,7 @@
  */
 package me.rand.vm.is
 
+import me.rand.commons.idioms.NormalizedNumber._
 import me.rand.commons.idioms.Status._
 import me.rand.vm.dsl.AbstractAsmInstructionBuilder._
 import me.rand.vm.dsl.AbstractAsmOperandBuilder._
@@ -35,7 +36,7 @@ class BitFlipSpec extends BaseIsSpec {
   "bitflip" should "pass -1:u32 > %0" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- BitFlip < 0xffffffff / 'u32 > %(0)
+      command <- BitFlip < !!(-1, 'u32) > %(0)
       context <- command.execute(vmContext)
       result <- context.heap.getVariable(0)
     } yield result) match {

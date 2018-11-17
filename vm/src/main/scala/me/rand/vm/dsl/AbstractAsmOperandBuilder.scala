@@ -25,15 +25,12 @@
  */
 package me.rand.vm.dsl
 
-import java.nio.ByteBuffer
-
+import me.rand.commons.idioms.NormalizedNumber
 import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.Instruction.Operand
 import me.rand.vm.engine.{Instruction, VmContext, VmTypes, VmWord}
 import me.rand.vm.main.VmError
 import me.rand.vm.main.VmError.SyntaxError
-
-import scala.language.implicitConversions
 
 // Documentation: doc/vmeasm.md
 sealed trait AbstractAsmOperandBuilder {
@@ -54,46 +51,23 @@ object AbstractAsmOperandBuilder {
 
   }
 
-  class AbstractAsmScalarBuilder(value: Array[Byte]) {
-    // Need to forge a specific set of VM types to understand type strings.
-    private val anyVmType = VmTypes.forMachineWordByteLength(VmContext.maximumByteSizeAllowed)
+  // Need to forge a specific set of VM types to understand type strings.
+  private lazy val anyVmType = VmTypes.forMachineWordByteLength(VmContext.maximumByteSizeAllowed)
 
-    def /(typeSymbol: Symbol): AbstractAsmOperandBuilder =
-      new AbstractAsmOperandBuilder {
-        override def toSourceOperand: Operand.Source.Immediate OrElse VmError.SyntaxError =
-          anyVmType.valueOf(typeSymbol.name) match {
-            case Ok(machineType) =>
-              Ok(Operand.Source.Immediate(VmWord.ofType(machineType).withValue(value)))
+  def !!(value: NormalizedNumber, typeSymbol: Symbol): AbstractAsmOperandBuilder =
+    new AbstractAsmOperandBuilder {
+      override def toSourceOperand: Operand.Source.Immediate OrElse VmError.SyntaxError =
+        anyVmType.valueOf(typeSymbol.name) match {
+          case Ok(machineType) =>
+            Ok(Operand.Source.Immediate(VmWord.ofType(machineType).withValue(value)))
 
-            case Err(vmError) =>
-              Err(SyntaxError.InvalidTypeDefinition(typeSymbol.name, vmError))
-          }
+          case Err(vmError) =>
+            Err(SyntaxError.InvalidTypeDefinition(typeSymbol.name, vmError))
+        }
 
-        override def toDestinationOperand: Operand.Destination OrElse VmError.SyntaxError =
-          Err(SyntaxError.NotADestinationOperand(s"${value.toString} / ${typeSymbol.name}"))
-      }
-  }
-
-  // Example: 8/'u16
-  // Need to redefine for every elementary type, otherwise compiler will
-  // get confused.
-  implicit def CharToScalarOperandBuilder(value: Char): AbstractAsmOperandBuilder.AbstractAsmScalarBuilder =
-    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(ByteBuffer.allocate(1).put(value.toByte).array())
-
-  implicit def ByteToScalarOperandBuilder(value: Byte): AbstractAsmOperandBuilder.AbstractAsmScalarBuilder =
-    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(ByteBuffer.allocate(1).put(value).array())
-
-  implicit def ShortToScalarOperandBuilder(value: Short): AbstractAsmOperandBuilder.AbstractAsmScalarBuilder =
-    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(ByteBuffer.allocate(2).putShort(value).array())
-
-  implicit def IntToScalarOperandBuilder(value: Int): AbstractAsmOperandBuilder.AbstractAsmScalarBuilder =
-    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(ByteBuffer.allocate(4).putInt(value).array())
-
-  implicit def LongToScalarOperandBuilder(value: Long): AbstractAsmOperandBuilder.AbstractAsmScalarBuilder =
-    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(ByteBuffer.allocate(8).putLong(value).array())
-
-  implicit def BigIntToScalarOperandBuilder(value: BigInt): AbstractAsmOperandBuilder.AbstractAsmScalarBuilder =
-    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(value.toByteArray)
+      override def toDestinationOperand: Operand.Destination OrElse VmError.SyntaxError =
+        Err(SyntaxError.NotADestinationOperand(s"${value.toString} / ${typeSymbol.name}"))
+    }
 
   class AbstractAsmVariableBuilder(location: AbstractAsmVariableLocation, val index: Int) extends AbstractAsmOperandBuilder {
     override def toSourceOperand: Operand.Source.Variable OrElse SyntaxError =

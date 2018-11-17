@@ -25,6 +25,7 @@
  */
 package me.rand.vm.engine
 
+import me.rand.commons.idioms.NormalizedNumber
 import me.rand.vm.alu.VmRegister
 import me.rand.vm.engine.VmTypes.VmType
 
@@ -37,7 +38,7 @@ class VmWord(val data: VmRegister) {
 object VmWord {
 
   class VmWordBuilder(val vmType: VmType) {
-    def withValue(data: Array[Byte]): VmWord = new VmWord(VmRegister.normalize(vmType, data))
+    def withValue(data: NormalizedNumber): VmWord = new VmWord(VmRegister.normalize(vmType, data))
   }
 
   def ofType(vmType: VmType) = new VmWordBuilder(vmType)

@@ -25,6 +25,7 @@
  */
 package me.rand.vm.engine
 
+import me.rand.commons.idioms.NormalizedNumber._
 import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.engine.Variable.Scalar
@@ -410,9 +411,7 @@ class VmContextTest extends FlatSpec {
   }
 
   private def aVariable(c: VmContext) = {
-    Scalar("x",
-      VmWord.ofType(c.vmTypes.select(1, isSigned = true).get)
-        .withValue(Array(0, 0, 0, 0, 0, 0, 0, 0)))
+    Scalar("x", VmWord.ofType(c.vmTypes.select(1, isSigned = true).get).withValue(0L))
   }
 
   private def givenAValidVmContext(action: VmContext => Unit): Unit =
