@@ -85,16 +85,6 @@ class VmContextTest extends FlatSpec {
     }
   }
 
-  "VM profile" should "not be created from invalid specification (byte len is not a power of two)" in {
-    VmProfile.fromString("bl:3:heap:10") match {
-      case Err(VmProfileStringError.NotAPowerOfTwo(3, "bl")) =>
-        ok()
-
-      case whatever =>
-        fail(s"unexpected result from profile with illegal string: $whatever")
-    }
-  }
-
   "VM profile" should "not be created from invalid specification (invalid varsetsize)" in {
     VmProfile.fromString("bl:1:heap:-1") match {
       case Err(VmProfileStringError.NotAPositiveNumber(_, "heap")) =>
@@ -128,7 +118,7 @@ class VmContextTest extends FlatSpec {
   "VM context" should "properly initialize for 64-bits machine" in {
     VmContext.usingProfileString(s"bl:8:heap:${VmContext.maximumNumberOfVariablesInHeap}") match {
       case Ok(vmContext) =>
-        assertThatVmTypesMapExactly(vmContext.vmTypes, 1, 2, 4, 8)
+        assertThatVmTypesMapExactly(vmContext.vmTypes, 1, 2, 3, 4, 5, 6, 7, 8)
 
       case whatever =>
         fail(s"unexpected result from profile/64-bits: $whatever")

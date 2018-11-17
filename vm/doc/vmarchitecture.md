@@ -27,7 +27,6 @@ The profile string has the following form:
 
 Where:
   * `BYTELEN` is the machine word length, as desribed in *Virtual machine types*
-    * It must be a power of two
   * `HEAPSIZE` is the number of variables in the heap
     * It must be strictly greater than 0
 

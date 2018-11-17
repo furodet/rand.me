@@ -66,7 +66,6 @@ object VmContext {
         case "bl" :: bl :: "heap" :: hsz :: Nil =>
           for {
             byteLen <- readPositiveIntOrElse(profile, bl, maximumByteSizeAllowed, "bl")
-            _ <- verifyThatNumberIsAPowerOfTwo(byteLen, "bl")
             heapSize <- readPositiveIntOrElse(profile, hsz, maximumNumberOfVariablesInHeap, "heap")
           } yield new VmProfile(byteLen, heapSize)
 
@@ -92,9 +91,6 @@ object VmContext {
         case _: IllegalArgumentException =>
           Err(VmProfileStringError.NotAPositiveNumber(profile, fieldName))
       }
-
-    private def verifyThatNumberIsAPowerOfTwo(value: Int, fieldName: String): Unit OrElse VmProfileStringError =
-      if (((value - 1) & value) == 0) Ok(()) else Err(VmProfileStringError.NotAPowerOfTwo(value, fieldName))
   }
 
   def usingProfile(vmProfile: VmProfile): VmContext = {

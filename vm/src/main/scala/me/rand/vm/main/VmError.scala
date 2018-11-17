@@ -185,11 +185,6 @@ object VmError {
         s"profile value '$fieldName' exceeds maximum allowed ($maxValue)"
     }
 
-    case class NotAPowerOfTwo(value: Int, fieldName: String) extends VmProfileStringError {
-      override def toString: String =
-        s"profile value '$fieldName'=$value is not a power of two"
-    }
-
   }
 
   case class IncompatibleInstructionSetVersion(v0: InstructionSetVersion) extends VmError {

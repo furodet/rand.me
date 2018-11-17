@@ -105,7 +105,7 @@ object VmTypes {
         val unsignedType = new VmType(byteLen, _unsigned)
         val signedType = new VmType(byteLen, _signed)
         val newVmTypes = (vmTypes + (unsignedType.name -> unsignedType)) + (signedType.name -> signedType)
-        buildAndRegisterSignedAndUnsignedVmType(2 * byteLen, newVmTypes)
+        buildAndRegisterSignedAndUnsignedVmType(byteLen + 1, newVmTypes)
       }
   }
 
