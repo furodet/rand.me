@@ -26,8 +26,6 @@
 package me.rand.vm.engine
 
 import me.rand.vm.alu.VmRegister
-import me.rand.vm.engine.Variable.ScalarBuilder.Partial
-import me.rand.vm.engine.VmTypes.VmType
 
 // Documentation: doc/vmarchitecture.md
 sealed trait Variable {
@@ -86,21 +84,6 @@ object Variable {
       override def rename(newName: String): Variable = copy(name = newName)
 
       override def getValueString: String = s"PC[${value.toString}]"
-    }
-
-  }
-
-  class ScalarBuilder(name: String) {
-    def ofType(varType: VmType): Partial = new Partial(name, varType)
-  }
-
-  object ScalarBuilder {
-    def aScalarCalled(name: String) = new ScalarBuilder(name)
-
-    class Partial(name: String, varType: VmType) {
-      def setTo(value: BigInt): Scalar = Scalar(name, VmWord.ofType(varType).withValue(value))
-
-      def setTo(longValue: Long): Scalar = setTo(BigInt(longValue))
     }
 
   }

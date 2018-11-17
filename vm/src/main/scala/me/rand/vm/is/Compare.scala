@@ -33,7 +33,8 @@ import me.rand.vm.main.VmError
 
 class Compare(compare: Comparator) extends StandardDyadicInstruction {
   private def booleanToVmWord(b: Boolean)(implicit vmContext: VmContext) =
-    VmWord.ofType(vmContext.vmTypes.minUnsignedType).withValue(BigInt(if (b) 1 else 0))
+    VmWord.ofType(vmContext.vmTypes.minUnsignedType)
+      .withValue(if (b) Array(1) else Array(0))
 
   override def executeOperation(x: Variable, y: Variable)(implicit vmContext: VmContext): Variable OrElse VmError =
     for {

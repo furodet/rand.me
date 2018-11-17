@@ -26,6 +26,7 @@
 package me.rand.vm.is
 
 import java.io.PrintWriter
+import java.nio.ByteBuffer
 
 import me.rand.commons.idioms.Logger._
 import me.rand.commons.idioms.Status._
@@ -134,7 +135,7 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
 
   private def createVmWord(typeString: String, value: Int, vmContext: VmContext): VmWord =
     vmContext.vmTypes.valueOf(typeString) && {
-      t => VmWord.ofType(t).withValue(BigInt(value))
+      t => VmWord.ofType(t).withValue(ByteBuffer.allocate(4).putInt(value).array())
     } match {
       case Err(error) =>
         fail(s"could not create value of type '$typeString': $error")

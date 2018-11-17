@@ -27,7 +27,7 @@ package me.rand.vm.engine
 
 import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.Instruction.Operands
-import me.rand.vm.engine.Variable.ScalarBuilder.aScalarCalled
+import me.rand.vm.engine.Variable.Scalar
 import me.rand.vm.engine.VmContext.VmProfile
 import me.rand.vm.engine.VmProgram.InstructionInstance
 import me.rand.vm.engine.VmTypes.VmType
@@ -409,8 +409,11 @@ class VmContextTest extends FlatSpec {
     }
   }
 
-  private def aVariable(c: VmContext) =
-    aScalarCalled("x").ofType(c.vmTypes.select(1, isSigned = true).get).setTo(0)
+  private def aVariable(c: VmContext) = {
+    Scalar("x",
+      VmWord.ofType(c.vmTypes.select(1, isSigned = true).get)
+        .withValue(Array(0, 0, 0, 0, 0, 0, 0, 0)))
+  }
 
   private def givenAValidVmContext(action: VmContext => Unit): Unit =
     VmContext.usingProfileString(s"bl:1:heap:$aStandardHeapSize") match {

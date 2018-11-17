@@ -59,7 +59,7 @@ case class LargeNumber(vmType: VmType, value: Array[Byte]) extends VmRegister {
 }
 
 case object LargeNumberOperations extends VmRegisterOperations[LargeNumber] {
-  private def build(vmType: VmType, value: Array[Byte]): LargeNumber = {
+  override def build(vmType: VmType, value: Array[Byte]): LargeNumber = {
     def copyBigEndian(source: Array[Byte], destination: Array[Byte]): Array[Byte] = {
       // Example:
       // 0  1  2  3       0  1  2  3  4  5  6  7    0  1  2  3  4  5  6  7
@@ -86,9 +86,6 @@ case object LargeNumberOperations extends VmRegisterOperations[LargeNumber] {
     // Switch to little endian, to simplify specific operations.
     LargeNumber(vmType, data.reverse)
   }
-
-  override def build(vmType: VmType, value: BigInt): LargeNumber =
-    build(vmType, value.toByteArray)
 
   def equalize(x: LargeNumber, y: LargeNumber): (LargeNumber, LargeNumber, VmRegisterOperations[LargeNumber]) =
     (x.vmType, x.vmType) match {

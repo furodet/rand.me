@@ -25,6 +25,8 @@
  */
 package me.rand.vm.dsl
 
+import java.nio.ByteBuffer
+
 import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.Instruction.Operand
 import me.rand.vm.engine.{Instruction, VmContext, VmTypes, VmWord}
@@ -52,7 +54,7 @@ object AbstractAsmOperandBuilder {
 
   }
 
-  class AbstractAsmScalarBuilder(value: BigInt) {
+  class AbstractAsmScalarBuilder(value: Array[Byte]) {
     // Need to forge a specific set of VM types to understand type strings.
     private val anyVmType = VmTypes.forMachineWordByteLength(VmContext.maximumByteSizeAllowed)
 
@@ -68,7 +70,7 @@ object AbstractAsmOperandBuilder {
           }
 
         override def toDestinationOperand: Operand.Destination OrElse VmError.SyntaxError =
-          Err(SyntaxError.NotADestinationOperand(s"${value.toString()} / ${typeSymbol.name}"))
+          Err(SyntaxError.NotADestinationOperand(s"${value.toString} / ${typeSymbol.name}"))
       }
   }
 
@@ -76,22 +78,22 @@ object AbstractAsmOperandBuilder {
   // Need to redefine for every elementary type, otherwise compiler will
   // get confused.
   implicit def CharToScalarOperandBuilder(value: Char): AbstractAsmOperandBuilder.AbstractAsmScalarBuilder =
-    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(BigInt(value.toInt))
+    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(ByteBuffer.allocate(1).put(value.toByte).array())
 
   implicit def ByteToScalarOperandBuilder(value: Byte): AbstractAsmOperandBuilder.AbstractAsmScalarBuilder =
-    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(BigInt(value.toInt))
+    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(ByteBuffer.allocate(1).put(value).array())
 
   implicit def ShortToScalarOperandBuilder(value: Short): AbstractAsmOperandBuilder.AbstractAsmScalarBuilder =
-    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(BigInt(value.toInt))
+    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(ByteBuffer.allocate(2).putShort(value).array())
 
   implicit def IntToScalarOperandBuilder(value: Int): AbstractAsmOperandBuilder.AbstractAsmScalarBuilder =
-    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(BigInt(value))
+    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(ByteBuffer.allocate(4).putInt(value).array())
 
   implicit def LongToScalarOperandBuilder(value: Long): AbstractAsmOperandBuilder.AbstractAsmScalarBuilder =
-    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(BigInt(value))
+    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(ByteBuffer.allocate(8).putLong(value).array())
 
   implicit def BigIntToScalarOperandBuilder(value: BigInt): AbstractAsmOperandBuilder.AbstractAsmScalarBuilder =
-    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(value)
+    new AbstractAsmOperandBuilder.AbstractAsmScalarBuilder(value.toByteArray)
 
   class AbstractAsmVariableBuilder(location: AbstractAsmVariableLocation, val index: Int) extends AbstractAsmOperandBuilder {
     override def toSourceOperand: Operand.Source.Variable OrElse SyntaxError =

@@ -23,22 +23,30 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.vm.engine
+package me.rand.vm.is
 
-import me.rand.vm.alu.VmRegister
-import me.rand.vm.engine.VmTypes.VmType
+import me.rand.commons.idioms.Status._
+import me.rand.vm.dsl.AbstractAsmInstructionBuilder._
+import me.rand.vm.dsl.AbstractAsmOperandBuilder._
+import me.rand.vm.engine.Variable.Scalar
+import me.rand.vm.engine.VmContext
 
-class VmWord(val data: VmRegister) {
-  override def toString: String = s"$data:$vmType"
+class BitFlipSpec extends BaseIsSpec {
+  "bitflip" should "pass -1:u32 > %0" in {
+    implicit val vmContext: VmContext = givenABareMinimalVmContext
+    (for {
+      command <- BitFlip < 0xffffffff / 'u32 > %(0)
+      context <- command.execute(vmContext)
+      result <- context.heap.getVariable(0)
+    } yield result) match {
+      case Ok(Some(Scalar(variableName, value))) =>
+        assert(variableName == "hp0")
+        assert(value.data.toInt == 0)
+        assert(value.vmType.isUnsigned)
+        assert(value.vmType.byteLen == 4)
 
-  def vmType: VmType = data.vmType
-}
-
-object VmWord {
-
-  class VmWordBuilder(val vmType: VmType) {
-    def withValue(data: Array[Byte]): VmWord = new VmWord(VmRegister.normalize(vmType, data))
+      case whatever =>
+        fail(s"unexpected result of 'bitflip -1:u32 > %0': $whatever")
+    }
   }
-
-  def ofType(vmType: VmType) = new VmWordBuilder(vmType)
 }

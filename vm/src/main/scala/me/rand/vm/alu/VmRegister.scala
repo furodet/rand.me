@@ -25,6 +25,8 @@
  */
 package me.rand.vm.alu
 
+import java.nio.ByteBuffer
+
 import me.rand.vm.engine.VmTypes.VmType
 
 trait VmRegister {
@@ -36,7 +38,7 @@ trait VmRegister {
 }
 
 trait VmRegisterOperations[T <: VmRegister] {
-  def build(vmType: VmType, value: BigInt): T
+  def build(vmType: VmType, value: Array[Byte]): T
 
   def bitFlip(x: T): T
 
@@ -62,7 +64,19 @@ trait VmRegisterOperations[T <: VmRegister] {
 }
 
 object VmRegister {
-  def normalize(vmType: VmType, value: BigInt): VmRegister =
+  def normalize(vmType: VmType, value: Array[Byte]): VmRegister =
   // TODO: to speed up processing, use specific types of VmRegister for given lengths (e.g. longs for x32...)
     LargeNumberOperations.build(vmType, value)
+
+  def normalize(vmType: VmType, value: Long): VmRegister =
+    normalize(vmType, ByteBuffer.allocate(8).putLong(value).array())
+
+  def normalize(vmType: VmType, value: Int): VmRegister =
+    normalize(vmType, ByteBuffer.allocate(4).putInt(value).array())
+
+  def normalize(vmType: VmType, value: Short): VmRegister =
+    normalize(vmType, ByteBuffer.allocate(2).putShort(value).array())
+
+  def normalize(vmType: VmType, value: Byte): VmRegister =
+    normalize(vmType, ByteBuffer.allocate(1).put(value).array())
 }
