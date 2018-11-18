@@ -25,27 +25,20 @@
  */
 package me.rand.vm.is
 
-import me.rand.commons.idioms.Status._
-import me.rand.vm.alu.Alu
-import me.rand.vm.engine.{Instruction, Variable}
+import me.rand.vm.alu.Comparator
+import me.rand.vm.engine.Instruction
 
-object BitFlip {
-  lazy val shortName = "~"
-
-  private[is] def apply(): Instruction =
-    Instruction.called(shortName)
-      .|(
-        Instruction.Monadic(classOf[Variable.Scalar]).withComputeFunction {
-          (x, _, ecx) =>
-            val result = Alu.bitFlip(x.value)
-            ecx.logger ~> s"$shortName $x => $result"
-            Ok(Variable.Scalar.anonymous(result))
-        }.withUpdateFunction {
-          (result, out, vmx, ecx) =>
-            for {
-              update <- InstructionHelpers.updateDestination(out, result)(vmx)
-              _ = if (update.isDefined) ecx.logger ~> s"${update.get.name} := ${update.get.getValueString}"
-            } yield vmx
-        }
-      )
+object InstructionSet {
+  lazy val map: Map[String, Instruction] =
+    Map(
+      BitFlip.shortName -> BitFlip(),
+      Comparator.?=.name -> Compare(Comparator.?=),
+      Comparator.?≠.name -> Compare(Comparator.?≠),
+      Comparator.?<.name -> Compare(Comparator.?<),
+      Comparator.?≤.name -> Compare(Comparator.?≤),
+      Comparator.?>.name -> Compare(Comparator.?>),
+      Comparator.?≥.name -> Compare(Comparator.?≥),
+      Copy.shortName -> Copy(),
+      Exit.shortName -> Exit()
+    )
 }

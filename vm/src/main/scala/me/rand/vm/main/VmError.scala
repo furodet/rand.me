@@ -74,27 +74,11 @@ object VmError {
         override def toString: String = "destination operand is not specified"
       }
 
-      case class UnspecifiedSourceOperand(operandId: Int) extends IllegalEncodingError {
-        override def toString: String = s"source operand #$operandId is not specified"
-      }
-
     }
 
     sealed trait VmFetchOperandError extends IllegalEncodingError
 
     object VmFetchOperandError {
-
-      case class NotAnImmediateOperand(operandId: Int) extends VmFetchOperandError {
-        override def toString: String = s"operand #$operandId is not an immediate"
-      }
-
-      case class NotAnImmediateOrScalarVariableOperand(operandId: Int) extends VmFetchOperandError {
-        override def toString: String = s"operand #$operandId is neither an immediate nor a scalar variable"
-      }
-
-      case class NotAnImmediateOrScalarVariableOperandAfterRedirect(operandId: Int) extends VmFetchOperandError {
-        override def toString: String = s"operand #$operandId redirects to neither an immediate nor a scalar variable"
-      }
 
       sealed trait InvalidPointerValue extends VmFetchOperandError
 
@@ -143,27 +127,6 @@ object VmError {
 
     }
 
-    sealed trait InconsistentOperandTypeError extends IllegalEncodingError
-
-    object InconsistentOperandTypeError {
-
-      case class ForOperation(operationName: String, operandName: String) extends InconsistentOperandTypeError {
-        override def toString: String =
-          s"operand '$operandName' type is inconsistent for operation $operationName"
-      }
-
-    }
-
-    sealed trait AluError extends VmExecutionError
-
-    object AluError {
-
-      case class InconsistentTypesForComparison(compare: String, x: Variable, y: Variable) extends AluError {
-        override def toString: String = s"could perform comparison '$compare' with variables '$x' and '$y': inconsistent types"
-      }
-
-    }
-
   }
 
   sealed trait VmProfileStringError extends VmError
@@ -202,23 +165,15 @@ object VmError {
       override def toString: String = s"invalid type definition '$typeString': $cause"
     }
 
-    case class InvalidReferenceDefinition(maybeCause: Option[VmError]) extends SyntaxError {
-      override def toString: String =
-        maybeCause match {
-          case None =>
-            "variable reference does not apply to the type of source variable"
-
-          case Some(cause) =>
-            s"variable reference does not apply to the type of source variable: $cause"
-        }
-    }
-
     case class NotADestinationOperand(operandString: String) extends SyntaxError {
       override def toString: String = s"not a destination operand '$operandString'"
     }
 
-    case class NotASourceOperand(operandString: String) extends SyntaxError {
-      override def toString: String = s"not a source operand '$operandString'"
+    case class NoMatchingProfile(instructionName: String, variables: Iterable[Variable]) extends SyntaxError {
+      private lazy val variableList = variables.map(v => v.name).mkString("(", ",", ")")
+
+      override def toString: String =
+        s"no matching profile found for instruction '$instructionName' with variables $variableList"
     }
 
   }

@@ -31,11 +31,9 @@ import me.rand.commons.idioms.Logger._
 import me.rand.commons.idioms.NormalizedNumber._
 import me.rand.commons.idioms.Status._
 import me.rand.vm.alu.VmRegister
-import me.rand.vm.engine.Instruction.Operand.Source
-import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.engine.VmProgram.BasicBlockBuilder.aBasicBlockCalled
 import me.rand.vm.engine.VmProgram.{Counter, InstructionInstance}
-import me.rand.vm.engine.{Variable, VmContext, VmProgram}
+import me.rand.vm.engine._
 import me.rand.vm.main.ExecutionContext
 import org.scalatest._
 
@@ -108,7 +106,7 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
         //   **(&&stk0) = *(&stk0) = stk0 = 0x12345678
         //    *(hp0) = hp0 = 0x87654321
         val fooBasicBlock = aBasicBlockCalled("foo")
-          .+(new InstructionInstance(Exit, Operands.none.addSource(0 -> imm_("u8", 123))))
+          .+(new InstructionInstance(InstructionSet.map(Exit.shortName), Operands.none.addSource(imm_("u8", 123))))
           .build
         (for {
           _ <- c.stack.putVariable(0, createScalarVariable("stk0", "u32", 0x12345678))
@@ -128,8 +126,8 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
         fail(s"could not create VM context: $error")
     }
 
-  private def imm_(typeString: String, value: Int)(implicit vmContext: VmContext): Source.Immediate =
-    Source.Immediate(createVmRegister(typeString, value, vmContext))
+  private def imm_(typeString: String, value: Int)(implicit vmContext: VmContext): Operand.Source.Immediate =
+    Operand.Source.Immediate(createVmRegister(typeString, value, vmContext))
 
   private def createScalarVariable(name: String, typeString: String, value: Int)(implicit vmContext: VmContext): Variable.Scalar =
     Variable.Scalar(name, createVmRegister(typeString, value, vmContext))

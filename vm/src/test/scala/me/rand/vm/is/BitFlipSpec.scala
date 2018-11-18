@@ -31,13 +31,15 @@ import me.rand.vm.dsl.AbstractAsmInstructionBuilder._
 import me.rand.vm.dsl.AbstractAsmOperandBuilder._
 import me.rand.vm.engine.Variable.Scalar
 import me.rand.vm.engine.VmContext
-import me.rand.vm.main.VmError.VmExecutionError.InconsistentOperandTypeError
+import me.rand.vm.main.VmError
 
 class BitFlipSpec extends BaseIsSpec {
+  private lazy val bitflip = InstructionSet.map(BitFlip.shortName)
+
   "bitflip" should "pass ~0xaaaaaaaa:u32 > %0" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- BitFlip < !!(0xaaaaaaaa, 'u32) > %(0)
+      command <- bitflip < !!(0xaaaaaaaa, 'u32) > %(0)
       context <- command.execute(vmContext)
       result <- context.heap.getVariable(0)
     } yield result) match {
@@ -55,7 +57,7 @@ class BitFlipSpec extends BaseIsSpec {
   "bitflip" should "pass ~%0 > $0" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- BitFlip < %(0) > $(0)
+      command <- bitflip < %(0) > $(0)
       context <- command.execute(vmContext)
       result <- context.stack.getVariable(0)
     } yield result) match {
@@ -72,7 +74,7 @@ class BitFlipSpec extends BaseIsSpec {
   "bitflip" should "pass ~$0 > %0" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- BitFlip < $(0) > %(0)
+      command <- bitflip < $(0) > %(0)
       context <- command.execute(vmContext)
       result <- context.heap.getVariable(0)
     } yield result) match {
@@ -89,7 +91,7 @@ class BitFlipSpec extends BaseIsSpec {
   "bitflip" should "pass '~**%2 > $0'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- BitFlip < *.*(%(2)) > %(0)
+      command <- bitflip < *.*(%(2)) > %(0)
       context <- command.execute(vmContext)
       result <- context.heap.getVariable(0)
     } yield result) match {
@@ -106,7 +108,7 @@ class BitFlipSpec extends BaseIsSpec {
   "copy" should "pass '~12345:u32 > **%2'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- BitFlip < !!(12345, 'u32) > *.*(%(2))
+      command <- bitflip < !!(12345, 'u32) > *.*(%(2))
       context <- command.execute(vmContext)
       result <- context.stack.getVariable(0)
     } yield result) match {
@@ -124,11 +126,11 @@ class BitFlipSpec extends BaseIsSpec {
   "bitflip" should "pass '~%1 > %0 (pointer to instruction)'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- BitFlip < %(1) > %(0)
+      command <- bitflip < %(1) > %(0)
       context <- command.execute(vmContext)
       result <- context.heap.getVariable(0)
     } yield result) match {
-      case Err(err: InconsistentOperandTypeError) =>
+      case Err(err: VmError.SyntaxError.NoMatchingProfile) =>
         println(err)
 
       case whatever =>

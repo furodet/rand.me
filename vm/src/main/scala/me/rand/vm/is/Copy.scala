@@ -26,17 +26,34 @@
 package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.{Instruction, VmContext}
+import me.rand.vm.engine.{Instruction, Variable, VmContext}
+import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError.UnspecifiedDestinationOperand
 import me.rand.vm.main.{ExecutionContext, VmError}
 
-object Copy extends Instruction {
-  override def execute(vmContext: VmContext, operands: Instruction.Operands)(implicit executionContext: ExecutionContext): VmContext OrElse VmError = {
-    implicit val c: VmContext = vmContext
-    for {
-      source <- InstructionHelpers.fetchImmediateOrVariable(0, operands)
-      destination <- InstructionHelpers.fetchDestination(operands)
-      update <- InstructionHelpers.updateDestination(destination, source)
-      _ = executionContext.logger ~> s"${update.name} := ${update.getValueString}"
-    } yield vmContext
+object Copy {
+  lazy val shortName = "copy"
+
+  private[is] def apply(): Instruction =
+    Instruction.called(shortName)
+      .|(Instruction.Monadic(classOf[Variable.Scalar]).withComputeFunction(logOperand).withUpdateFunction(doCopy))
+      .|(Instruction.Monadic(classOf[Variable.Pointer.ToVariable.InTheStack]).withComputeFunction(logOperand).withUpdateFunction(doCopy))
+      .|(Instruction.Monadic(classOf[Variable.Pointer.ToVariable.InTheHeap]).withComputeFunction(logOperand).withUpdateFunction(doCopy))
+      .|(Instruction.Monadic(classOf[Variable.Pointer.ToInstruction]).withComputeFunction(logOperand).withUpdateFunction(doCopy))
+
+  private def logOperand(x: Variable, vmContext: VmContext, executionContext: ExecutionContext): Variable OrElse VmError = {
+    executionContext.logger ~> s"$shortName $x"
+    Ok(x)
   }
+
+  private def doCopy(r: Variable, out: Option[Variable.Pointer], vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError =
+    out match {
+      case None =>
+        Err(UnspecifiedDestinationOperand)
+
+      case Some(output) =>
+        for {
+          update <- InstructionHelpers.updateDestination(output, r)(vmContext)
+          _ = executionContext.logger ~> s"${update.name} := ${update.getValueString}"
+        } yield vmContext
+    }
 }

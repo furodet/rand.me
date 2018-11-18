@@ -26,14 +26,23 @@
 package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
+import me.rand.vm.engine.Variable.Scalar
 import me.rand.vm.engine._
-import me.rand.vm.main.{ExecutionContext, VmError}
 
-object Exit extends Instruction {
-  override def execute(vmContext: VmContext, operands: Instruction.Operands)(implicit executionContext: ExecutionContext): VmContext OrElse VmError =
-    InstructionHelpers.fetchImmediateOperandValue(0, operands) && {
-      code =>
-        executionContext.logger ~> s"exit ${code.toInt}"
-        vmContext.halt(code.toInt)
-    }
+object Exit {
+  lazy val shortName = "exit"
+
+  private[is] def apply(): Instruction =
+    Instruction.called(shortName)
+      .|(
+        Instruction.Monadic(classOf[Scalar]).withComputeFunction {
+          (x, _, ecx) =>
+            ecx.logger ~> s"$shortName $x"
+            Ok(x)
+        }.withUpdateFunction {
+          (r, _, vmx, _) =>
+            // Can safely assume that result is a scalar
+            Ok(vmx.halt(r.asInstanceOf[Scalar].value.toInt))
+        }
+      )
 }

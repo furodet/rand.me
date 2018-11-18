@@ -26,95 +26,21 @@
 package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.alu.VmRegister
-import me.rand.vm.engine.Instruction.Operand.{Destination, Source}
-import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.engine.Variable._
 import me.rand.vm.engine._
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError
 import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue._
-import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.NotAnImmediateOperand
 
 import scala.annotation.tailrec
 
 object InstructionHelpers {
-  private[is] def fetchImmediateOperandValue(operandId: Int, operands: Operands): VmRegister OrElse IllegalEncodingError =
-    operands.fetchSource(operandId) & {
-      case Source.Immediate(v) =>
-        Ok(v)
+  private[is] def updateDestination(maybePointer: Option[Pointer], variable: Variable)(implicit vmContext: VmContext): Option[Variable] OrElse IllegalEncodingError =
+    maybePointer match {
+      case None =>
+        Ok(None)
 
-      case _ =>
-        Err(NotAnImmediateOperand(operandId))
-    }
-
-  private[is] def fetchImmediateOrVariable(operandId: Int, operands: Operands)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
-    operands.fetchSource(operandId) & {
-      case Source.Immediate(value) =>
-        Ok(Scalar("imm", value))
-
-      case variableOperand: Source.Variable =>
-        fetchSourceVariableOperand(variableOperand)
-
-      case Source.Indirect(pointer, depth) =>
-        for {
-          pointerVariable <- fetchSourceVariableOperand(pointer)
-          afterIndirect <- fetchIndirect(pointerVariable, depth, operandId)
-        } yield afterIndirect
-
-      case referenceOperand: Source.Reference =>
-        fetchReferenceVariableOperand(referenceOperand)
-    }
-
-  private def fetchSourceVariableOperand(operand: Source.Variable)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
-    operand match {
-      case Source.Variable.InTheHeap(heapIndex) =>
-        fetchSourceVariable("heap", vmContext.heap, heapIndex)
-
-      case Source.Variable.InTheStack(stackIndex) =>
-        fetchSourceVariable("stack", vmContext.stack, stackIndex)
-    }
-
-  private def fetchReferenceVariableOperand(reference: Source.Reference)(implicit vmContext: VmContext): Variable.Pointer OrElse IllegalEncodingError =
-    reference match {
-      case Source.Reference.InTheHeap(heapIndex) =>
-        fetchSourceVariable("heap", vmContext.heap, heapIndex) && (
-          referenced => Variable.Pointer.ToVariable.InTheHeap(referenced.name, heapIndex)
-          )
-
-      case Source.Reference.InTheStack(stackIndex) =>
-        fetchSourceVariable("stack", vmContext.heap, stackIndex) && (
-          referenced => Variable.Pointer.ToVariable.InTheStack(referenced.name, stackIndex)
-          )
-    }
-
-  @tailrec
-  private def fetchIndirect(variable: Variable, depth: Int, operandId: Int)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
-    if (depth == 0) Ok(variable)
-    else variable match {
-      case pointer: Pointer.ToVariable =>
-        fetchTargetVariable(pointer.getContainingVarSet(vmContext), Some(pointer.name), pointer.index) match {
-          case err@Err(_) =>
-            err
-
-          case Ok(target) =>
-            fetchIndirect(target, depth - 1, operandId)
-        }
-
-      case _: Scalar =>
-        Err(InvalidIndirect(operandId))
-
-      case _: Pointer.ToInstruction =>
-        Err(InvalidIndirect(operandId))
-    }
-
-  private[is] def updateDestination(pointer: Pointer, value: VmRegister)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
-    pointer match {
-      case ptr: Pointer.ToVariable =>
-        updateDestination(ptr.getContainingVarSet(vmContext), ptr.name, ptr.index, Variable.Scalar.anonymous(value))
-
-
-      case _: Pointer.ToInstruction =>
-        Err(IllegalDestinationPointer)
+      case Some(pointer) =>
+        updateDestination(pointer, variable) && (Some(_))
     }
 
   private[is] def updateDestination(pointer: Pointer, variable: Variable)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
@@ -146,46 +72,6 @@ object InstructionHelpers {
 
       case Ok(Some(variable)) =>
         Ok(variable)
-    }
-
-  private def fetchSourceVariable(sourceName: String, varSet: VarSet, variableIndex: Int): Variable OrElse IllegalEncodingError =
-    varSet.getVariable(variableIndex) match {
-      case Err(error) =>
-        Err(InvalidSourceReference(sourceName, variableIndex, Some(error)))
-
-      case Ok(None) =>
-        Err(InvalidSourceReference(sourceName, variableIndex, None))
-
-      case Ok(Some(variable)) =>
-        Ok(variable)
-    }
-
-  private[is] def fetchDestination(operands: Operands)(implicit vmContext: VmContext): Pointer.ToVariable OrElse IllegalEncodingError =
-    operands.destination match {
-      case target: Destination.Variable =>
-        fetchDestinationVariableOperand(target)
-
-      case Destination.Redirect(pointer, depth) =>
-        for {
-          firstPointer <- fetchDestinationVariableOperand(pointer)
-          redirected <- fetchRedirect(firstPointer, depth)
-        } yield redirected
-
-      case Destination.NoDestination =>
-        Err(IllegalEncodingError.UnspecifiedDestinationOperand)
-    }
-
-  private def fetchDestinationVariableOperand(operand: Destination.Variable)(implicit vmContext: VmContext): Pointer.ToVariable OrElse IllegalEncodingError =
-    operand match {
-      case Destination.Variable.InTheHeap(heapIndex) =>
-        fetchTargetVariable(vmContext.heap, None, heapIndex) && (
-          v => Variable.Pointer.ToVariable.InTheHeap(s"&${v.name}", heapIndex)
-          )
-
-      case Destination.Variable.InTheStack(stackIndex) =>
-        fetchTargetVariable(vmContext.stack, None, stackIndex) && (
-          v => Variable.Pointer.ToVariable.InTheStack(s"&${v.name}", stackIndex)
-          )
     }
 
   @tailrec

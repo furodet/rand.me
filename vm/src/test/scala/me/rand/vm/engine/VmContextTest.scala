@@ -28,12 +28,11 @@ package me.rand.vm.engine
 import me.rand.commons.idioms.NormalizedNumber._
 import me.rand.commons.idioms.Status._
 import me.rand.vm.alu.VmRegister
-import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.engine.Variable.Scalar
 import me.rand.vm.engine.VmContext.VmProfile
 import me.rand.vm.engine.VmProgram.InstructionInstance
 import me.rand.vm.engine.VmTypes.VmType
-import me.rand.vm.is.Exit
+import me.rand.vm.is.{Exit, InstructionSet}
 import me.rand.vm.main.VmError.VmContextError._
 import me.rand.vm.main.VmError._
 import org.scalatest.FlatSpec
@@ -338,7 +337,7 @@ class VmContextTest extends FlatSpec {
           c1 <- c0.setPcToBlockCalled("b0")
           instruction <- c1.program.nextInstruction
         } yield instruction) match {
-          case Ok(instruction) if instruction.instruction == Exit =>
+          case Ok(instruction) if instruction.instruction == InstructionSet.map(Exit.shortName) =>
             ok()
 
           case whatever =>
@@ -466,5 +465,5 @@ class VmContextTest extends FlatSpec {
 
   private def aDummyBasicBlockCalled(name: String) =
     VmProgram.BasicBlockBuilder
-      .aBasicBlockCalled(name) + new InstructionInstance(Exit, Operands.none) build
+      .aBasicBlockCalled(name) + new InstructionInstance(InstructionSet.map(Exit.shortName), Operands.none) build
 }

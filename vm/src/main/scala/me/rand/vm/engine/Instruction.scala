@@ -26,108 +26,93 @@
 package me.rand.vm.engine
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.alu.VmRegister
-import me.rand.vm.engine.Instruction.Operand.{Destination, Source}
-import me.rand.vm.engine.Instruction.Operands
-import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError
+import me.rand.vm.main.VmError.SyntaxError.NoMatchingProfile
 import me.rand.vm.main.{ExecutionContext, VmError}
 
 // Documentation: doc/vmarchitecture.md
-trait Instruction {
-  def execute(vmContext: VmContext, operands: Operands)(implicit executionContext: ExecutionContext): VmContext OrElse VmError
+class Instruction(name: String, signatures: Instruction.Signatures) {
+  def execute(operands: Operands)(implicit vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError =
+    for {
+      reduced <- OperandReducer.appliedTo(operands).execute
+      functions <- signatures.searchSignatureMatching(name, reduced.sources)
+      computeResult <- functions.compute(vmContext, executionContext)
+      updateResult <- functions.update(computeResult, reduced.destination, vmContext, executionContext)
+    } yield updateResult
+
+  // Encapsulate signatures constructor for simplicity
+  def |(newSignature: Instruction.Signature): Instruction =
+    new Instruction(name, signatures | newSignature)
 }
 
 object Instruction {
+  type UpdateFunction = (Variable, Option[Variable.Pointer], VmContext, ExecutionContext) => VmContext OrElse VmError
+  type ComputeFunction = (VmContext, ExecutionContext) => Variable OrElse VmError
 
-  sealed trait Operand
+  def called(name: String): Instruction = new Instruction(name, Signatures.empty)
 
-  object Operand {
+  // Nifty decorator, not super useful, but prefer to phrase it that wai
+  protected class ComputeUpdateFunctions(val compute: ComputeFunction, val update: UpdateFunction)
 
-    sealed trait Source extends Operand
+  class Signatures(list: List[Instruction.Signature]) {
+    def |(newSignature: Signature): Signatures =
+      new Signatures(list :+ newSignature)
 
-    object Source {
+    def searchSignatureMatching(instructionName: String, variables: List[Variable]): ComputeUpdateFunctions OrElse NoMatchingProfile = {
+      list.foreach {
+        eachSignature =>
+          eachSignature.getComputeFunctionIfVariablesMatch(variables) match {
+            case None =>
+            // Try next signature
 
-      sealed trait Variable extends Source
-
-      object Variable {
-
-        case class InTheHeap(index: Int) extends Source.Variable
-
-        case class InTheStack(index: Int) extends Source.Variable
-
+            case Some(computeFunction) =>
+              return Ok(new ComputeUpdateFunctions(computeFunction, eachSignature.getUpdateFunction))
+          }
       }
-
-      case class Indirect(pointer: Source.Variable, depth: Int) extends Source
-
-      sealed trait Reference extends Source
-
-      object Reference {
-
-        case class InTheHeap(index: Int) extends Source.Reference
-
-        case class InTheStack(index: Int) extends Source.Reference
-
-      }
-
-      case class Immediate(value: VmRegister) extends Source
-
+      Err(NoMatchingProfile(instructionName, variables))
     }
-
-    sealed trait Destination
-
-    object Destination {
-
-      object NoDestination extends Destination
-
-      sealed trait Variable extends Destination
-
-      object Variable {
-
-        case class InTheHeap(variableIndex: Int) extends Destination.Variable
-
-        case class InTheStack(variableIndex: Int) extends Destination.Variable
-
-      }
-
-      case class Redirect(pointer: Destination.Variable, depth: Int) extends Destination
-
-    }
-
   }
 
-  class Operands(val destination: Destination, val sources: Map[Int, Source]) {
-    def setDestination(destinationOperand: Destination): Operands =
-      new Operands(destination = destinationOperand, sources)
+  object Signatures {
+    def empty: Signatures = new Signatures(List.empty)
+  }
 
-    def addSource(operandIndexAndValue: (Int, Source)): Operands =
-      new Operands(destination, sources = sources + operandIndexAndValue)
+  sealed trait Signature {
+    def getComputeFunctionIfVariablesMatch(variables: Iterable[Variable]): Option[ComputeFunction]
 
-    def fetchSource(operandId: Int): Source OrElse IllegalEncodingError =
-      sources.get(operandId) match {
-        case None =>
-          Err(IllegalEncodingError.UnspecifiedSourceOperand(operandId))
+    def getUpdateFunction: UpdateFunction
+  }
 
-        case Some(operand) =>
-          Ok(operand)
+  class PartialSignature(fetch: Iterable[Variable] => Option[ComputeFunction]) {
+    def withUpdateFunction(updateFunction: UpdateFunction): Signature =
+      new Signature {
+        override def getComputeFunctionIfVariablesMatch(variables: Iterable[Variable]): Option[ComputeFunction] =
+          fetch(variables)
+
+        override def getUpdateFunction: UpdateFunction = updateFunction
       }
   }
 
-  object Operands {
-    def none = new Operands(Destination.NoDestination, Map.empty)
+  case class Monadic[T1 <: Variable](vt1: Class[T1]) {
+    def withComputeFunction(f: (T1, VmContext, ExecutionContext) => Variable OrElse VmError) =
+      new PartialSignature(
+        variables =>
+          if ((variables.size == 1) && variables.head.getClass.isAssignableFrom(vt1))
+            Some((vmx: VmContext, ecx: ExecutionContext) => f(variables.head.asInstanceOf[T1], vmx, ecx))
+          else None
+      )
   }
 
-  class OperandsBuilder(operands: Operands) {
-    def +(destination: Destination): OperandsBuilder =
-      new OperandsBuilder(new Operands(destination, operands.sources))
-
-    def +(source: (Int, Source)): OperandsBuilder =
-      new OperandsBuilder(new Operands(operands.destination, operands.sources + source))
-
-    def build: Operands = operands
-  }
-
-  object OperandsBuilder {
-    def none = new OperandsBuilder(Operands.none)
+  case class Dyadic[T1 <: Variable, T2 <: Variable](vt1: Class[T1], vt2: Class[T2]) {
+    def computeIfMatch(f: (T1, T2, VmContext, ExecutionContext) => Variable OrElse VmError) =
+      new PartialSignature(
+        variables =>
+          if ((variables.size == 2) &&
+            variables.head.getClass.isAssignableFrom(vt1) &&
+            variables.tail.head.getClass.isAssignableFrom(vt2))
+            Some((vmx: VmContext, ecx: ExecutionContext) =>
+              f(variables.head.asInstanceOf[T1], variables.tail.head.asInstanceOf[T2], vmx, ecx))
+          else None
+      )
   }
 
 }

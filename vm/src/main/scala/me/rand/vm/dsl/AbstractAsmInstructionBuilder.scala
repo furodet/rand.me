@@ -26,8 +26,8 @@
 package me.rand.vm.dsl
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.Instruction
 import me.rand.vm.engine.VmProgram.InstructionInstance
+import me.rand.vm.engine.{Instruction, Operands}
 import me.rand.vm.main.VmError.SyntaxError
 
 import scala.language.implicitConversions
@@ -40,24 +40,24 @@ class AbstractAsmInstructionBuilder(instruction: Instruction) {
       buildSourceAndDestinationOperands(sourceOperands, targetOperand) && (operands => new InstructionInstance(instruction, operands))
 
     def >(): InstructionInstance OrElse SyntaxError =
-      buildSourceOperands(sourceOperands) && (operands => new InstructionInstance(instruction, operands._1))
+      buildSourceOperands(sourceOperands) && (operands => new InstructionInstance(instruction, operands))
 
     private def buildSourceAndDestinationOperands(sources: Seq[AbstractAsmOperandBuilder], target: AbstractAsmOperandBuilder) =
       for {
         operands <- buildSourceOperands(sources)
-        withDestination <- addDestinationOperand(operands._1, target)
+        withDestination <- addDestinationOperand(operands, target)
       } yield withDestination
 
-    private def buildSourceOperands(sources: Seq[AbstractAsmOperandBuilder]): (Instruction.Operands, Int) OrElse SyntaxError =
-      sources.tryFoldLeft((Instruction.Operands.none, 0)) {
-        case ((operands, operandIndex), eachSource) =>
+    private def buildSourceOperands(sources: Seq[AbstractAsmOperandBuilder]): Operands OrElse SyntaxError =
+      sources.tryFoldLeft(Operands.none) {
+        case (operands, eachSource) =>
           eachSource.toSourceOperand && {
             builtOperand =>
-              (operands.addSource(operandIndex -> builtOperand), operandIndex + 1)
+              operands.addSource(builtOperand)
           }
       }
 
-    private def addDestinationOperand(operands: Instruction.Operands, destination: AbstractAsmOperandBuilder): Instruction.Operands OrElse SyntaxError =
+    private def addDestinationOperand(operands: Operands, destination: AbstractAsmOperandBuilder): Operands OrElse SyntaxError =
       destination.toDestinationOperand && (t => operands.setDestination(t))
   }
 

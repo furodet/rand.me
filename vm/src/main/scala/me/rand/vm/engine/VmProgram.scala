@@ -26,11 +26,10 @@
 package me.rand.vm.engine
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.Instruction.Operands
 import me.rand.vm.engine.VmProgram.{BasicBlock, Counter, InstructionInstance}
-import me.rand.vm.main.{ExecutionContext, VmError}
 import me.rand.vm.main.VmError.VmContextError
 import me.rand.vm.main.VmError.VmContextError.{NoSuchBasicBlock, ProgramCounterOutOfBlock, ProgramCounterOutOfBounds}
+import me.rand.vm.main.{ExecutionContext, VmError}
 
 import scala.language.postfixOps
 
@@ -72,7 +71,7 @@ object VmProgram {
 
   class InstructionInstance(val instruction: Instruction, val operands: Operands) {
     def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError =
-      instruction.execute(vmContext, operands)
+      instruction.execute(operands)(vmContext, executionContext)
   }
 
   class BasicBlock(val name: String, val instructions: Array[InstructionInstance])

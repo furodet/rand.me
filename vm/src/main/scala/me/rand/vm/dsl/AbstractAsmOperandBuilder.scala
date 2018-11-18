@@ -28,14 +28,13 @@ package me.rand.vm.dsl
 import me.rand.commons.idioms.NormalizedNumber
 import me.rand.commons.idioms.Status._
 import me.rand.vm.alu.VmRegister
-import me.rand.vm.engine.Instruction.Operand
-import me.rand.vm.engine.{Instruction, VmContext, VmTypes}
+import me.rand.vm.engine.{Operand, VmContext, VmTypes}
 import me.rand.vm.main.VmError
 import me.rand.vm.main.VmError.SyntaxError
 
 // Documentation: doc/vmeasm.md
 sealed trait AbstractAsmOperandBuilder {
-  def toSourceOperand: Instruction.Operand.Source OrElse VmError.SyntaxError
+  def toSourceOperand: Operand.Source OrElse VmError.SyntaxError
 
   def toDestinationOperand: Operand.Destination OrElse VmError.SyntaxError
 }

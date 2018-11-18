@@ -23,26 +23,31 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.vm.is
+package me.rand.vm.engine
 
-import me.rand.commons.idioms.Status.OrElse
-import me.rand.vm.engine.Instruction.Operands
-import me.rand.vm.engine.{Instruction, Variable, VmContext}
-import me.rand.vm.main.{ExecutionContext, VmError}
+class Operands(val destination: Operand.Destination, val sources: List[Operand.Source]) {
+  def setDestination(destinationOperand: Operand.Destination): Operands =
+    new Operands(destination = destinationOperand, sources)
 
-private[is] trait StandardMonadicInstruction extends Instruction {
-  def executeOperation(x: Variable): Variable OrElse VmError
+  def addSource(operand: Operand.Source): Operands =
+    new Operands(destination, sources = sources :+ operand)
+}
 
-  def operationName: String
+object Operands {
+  def none = new Operands(Operand.Destination.NoDestination, List.empty)
 
-  def execute(vmContext: VmContext, operands: Operands)(implicit executionContext: ExecutionContext): VmContext OrElse VmError = {
-    implicit val context: VmContext = vmContext
-    for {
-      op <- InstructionHelpers.fetchImmediateOrVariable(0, operands)
-      destination <- InstructionHelpers.fetchDestination(operands)
-      result <- executeOperation(op)
-      update <- InstructionHelpers.updateDestination(destination, result)
-      _ = executionContext.logger ~> s"${destination.name} := $operationName ${op.getValueString} = ${update.getValueString}"
-    } yield vmContext
+  class OperandsBuilder(operands: Operands) {
+    def +(destination: Operand.Destination): OperandsBuilder =
+      new OperandsBuilder(new Operands(destination, operands.sources))
+
+    def +(source: Operand.Source): OperandsBuilder =
+      new OperandsBuilder(new Operands(operands.destination, operands.sources :+ source))
+
+    def build: Operands = operands
   }
+
+  object OperandsBuilder {
+    def none = new OperandsBuilder(Operands.none)
+  }
+
 }

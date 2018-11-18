@@ -31,14 +31,16 @@ import me.rand.vm.dsl.AbstractAsmInstructionBuilder._
 import me.rand.vm.dsl.AbstractAsmOperandBuilder._
 import me.rand.vm.engine.Variable.{Pointer, Scalar}
 import me.rand.vm.engine.VmContext
-import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError.{UnspecifiedDestinationOperand, UnspecifiedSourceOperand}
+import me.rand.vm.main.VmError.SyntaxError.NoMatchingProfile
+import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError.UnspecifiedDestinationOperand
 
 class CopySpec extends BaseIsSpec {
+  private lazy val copy = InstructionSet.map(Copy.shortName)
 
   "copy" should "pass 'copy 123:u32 > %0'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- Copy < !!(123, 'u32) > %(0)
+      command <- copy < !!(123, 'u32) > %(0)
       context <- command.execute(vmContext)
       result <- context.heap.getVariable(0)
     } yield result) match {
@@ -56,7 +58,7 @@ class CopySpec extends BaseIsSpec {
   "copy" should "pass 'copy %0 > $0'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- Copy < %(0) > $(0)
+      command <- copy < %(0) > $(0)
       context <- command.execute(vmContext)
       result <- context.stack.getVariable(0)
     } yield result) match {
@@ -74,7 +76,7 @@ class CopySpec extends BaseIsSpec {
   "copy" should "pass 'copy %1 > %0 (pointer to stack)'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- Copy < %(1) > %(0)
+      command <- copy < %(1) > %(0)
       context <- command.execute(vmContext)
       result <- context.heap.getVariable(0)
     } yield result) match {
@@ -90,7 +92,7 @@ class CopySpec extends BaseIsSpec {
   "copy" should "pass 'copy $1 > %0 (pointer to heap)'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- Copy < $(1) > %(0)
+      command <- copy < $(1) > %(0)
       context <- command.execute(vmContext)
       result <- context.heap.getVariable(0)
     } yield result) match {
@@ -106,7 +108,7 @@ class CopySpec extends BaseIsSpec {
   "copy" should "pass 'copy $2 > %0 (pointer to instruction)'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- Copy < $(2) > %(0)
+      command <- copy < $(2) > %(0)
       context <- command.execute(vmContext)
       result <- context.heap.getVariable(0)
     } yield result) match {
@@ -124,7 +126,7 @@ class CopySpec extends BaseIsSpec {
   "copy" should "pass 'copy **%2 > $0'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- Copy < *.*(%(2)) > $(0)
+      command <- copy < *.*(%(2)) > $(0)
       context <- command.execute(vmContext)
       result <- context.stack.getVariable(0)
     } yield result) match {
@@ -142,7 +144,7 @@ class CopySpec extends BaseIsSpec {
   "copy" should "pass 'copy 12345:u32 > **%2'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- Copy < !!(12345, 'u32) > *.*(%(2))
+      command <- copy < !!(12345, 'u32) > *.*(%(2))
       context <- command.execute(vmContext)
       result <- context.stack.getVariable(0)
     } yield result) match {
@@ -160,7 +162,7 @@ class CopySpec extends BaseIsSpec {
   "copy" should "pass 'copy &%0 > $2'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- Copy < &(%(0)) > $(2)
+      command <- copy < &(%(0)) > $(2)
       context <- command.execute(vmContext)
       result <- context.stack.getVariable(2)
     } yield result) match {
@@ -176,7 +178,7 @@ class CopySpec extends BaseIsSpec {
   "copy" should "not pass 'copy 123 > _'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- Copy < !!(123, 'u32) > ()
+      command <- copy < !!(123, 'u32) > ()
       context <- command.execute(vmContext)
     } yield context) match {
       case Err(error@UnspecifiedDestinationOperand) =>
@@ -190,10 +192,10 @@ class CopySpec extends BaseIsSpec {
   "copy" should "not pass 'copy _ > %0'" in {
     implicit val vmContext: VmContext = givenABareMinimalVmContext
     (for {
-      command <- Copy < () > %(0)
+      command <- copy < () > %(0)
       context <- command.execute(vmContext)
     } yield context) match {
-      case Err(error@UnspecifiedSourceOperand(0)) =>
+      case Err(error@NoMatchingProfile(Copy.shortName, _)) =>
         executionContext.logger > error.toString
 
       case whatever =>

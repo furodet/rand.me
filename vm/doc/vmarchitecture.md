@@ -26,7 +26,7 @@ The profile string has the following form:
 ```
 
 Where:
-  * `BYTELEN` is the machine word length, as desribed in *Virtual machine types*
+  * `BYTELEN` is the machine word length, as described in *Virtual machine types*
   * `HEAPSIZE` is the number of variables in the heap
     * It must be strictly greater than 0
 
@@ -112,14 +112,54 @@ Construction of a program consists of:
   * Register the basic blocks to a program, with the `++` method
   * Registering the program to the virtual machine context, thanks to `setProgram`
 
-**Instructions and operands**
+**Instructions**
 
-Every instruction is an object extending `Instruction` to provide an `execute` function that:
-  * Fetches the supplied operands within the execution context and translates them to variable. For example:
-    * Operand `%1` is fetched as *heap variable number 1*
-    * If no such type of variable is expected by the instruction, the fetching stage returns an error
-    * If no such variable is found, the fetching stage returns an error
-  * Executes some operations that update the execution context
+Each instruction is instantiated by a given factory (e.g. the `Copy` factory to create a "copy" instruction).
+The `InstructionSet` object creates lazy instances of instructions, accessible via a name-based map. For
+example, to get an instance of `exit`:
+
+```
+    InstructionSet.map(Exit.shortName)
+```
+
+Instructions are "polymorphic" in the sense that they can handle different types of input variables with
+different implementations. The normal life-cycle of instruction processing is a Reduce/Fetch/Compute/Update (RFCU)
+paradigm:
+
+  * **Reduce**: given a list of input operands, translate them to variables, as described below
+  * **Fetch**: given the resulting list of variables, find an instance of the requested instruction capable of
+    handling the variable types (e.g. *an instance of exit handling a `Scalar`*)
+  * **Compute**: let the instruction compute the input variables
+  * **Update**: let the instruction update the VM context with computation result... This usually consists of
+    writing the computation result into the specified output variable
+
+Another way of expressing the RFCU paradigm is:
+
+```
+  CALL(INSTRUCTION, INPUT OPERANDS, OUPUT OPERAND) ::=
+    (INPUT VARIABLES, OUPUT VARIABLE) = REDUCE(INPUT OPERANDS, OUTPUT OPERAND)
+    (COMPUTE_FUNCTION, UPDATE_FUNCTION) = FETCH(INSTRUCTION, INPUT VARIABLE TYPES)
+    R = COMPUTE_FUNCTION(INPUT VARIABLES)
+    VM CONTEXT = UPDATE FUNCTION(R, OUTPUT VARIABLE)
+```
+
+The idiomatic way of building an instruction is summarized here-after:
+
+```
+    Instruction.called(...)
+      .|(
+        PROFILE
+      ).|(
+        PROFILE
+      ) ...
+    
+    With PROFILE =
+      Instruction.Nadic(VARIABLE TYPES)     // Nadic = Monadic, Dyadic, etc.
+        .withComputeFunction(...)
+        .withUpdateFunction(...)
+```
+
+**Instruction operands**
 
 A list of operands, along with the instruction to execute is an `InstructionInstance`. Such an
 object is built by an assembler to create a program. The virtual machine's core execution engine

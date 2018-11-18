@@ -28,24 +28,63 @@ package me.rand.vm.is
 import me.rand.commons.idioms.NormalizedNumber._
 import me.rand.commons.idioms.Status._
 import me.rand.vm.alu.{Comparator, VmRegister}
-import me.rand.vm.engine.Variable.Scalar
-import me.rand.vm.engine.{Variable, VmContext}
-import me.rand.vm.main.VmError
-
-class Compare(compare: Comparator) extends StandardDyadicInstruction {
-  private def booleanToVmWord(b: Boolean)(implicit vmContext: VmContext) =
-    VmRegister.ofType(vmContext.vmTypes.minUnsignedType)
-      .withValue(if (b) 1 else 0)
-
-  override def executeOperation(x: Variable, y: Variable)(implicit vmContext: VmContext): Variable OrElse VmError =
-    for {
-      result <- compare.execute(x, y)
-      asWord = booleanToVmWord(result)
-    } yield Scalar.anonymous(asWord)
-
-  override def operationName: String = compare.toString
-}
+import me.rand.vm.engine.Variable.{Pointer, Scalar}
+import me.rand.vm.engine.{Instruction, Variable, VmContext}
+import me.rand.vm.main.{ExecutionContext, VmError}
 
 object Compare {
-  def apply(compare: Comparator): Compare = new Compare(compare)
+  private[is] def apply(comparator: Comparator): Instruction =
+    Instruction.called(comparator.name)
+      .|(
+        Instruction.Dyadic(classOf[Scalar], classOf[Scalar])
+          .computeIfMatch {
+            (x, y, vmx, ecx) =>
+              val result = comparator.aluComparator(x.value, y.value)
+              ecx.logger ~> s"${comparator.name} $x $y => $result"
+              Ok(booleanToScalar(result)(vmx))
+          }
+          .withUpdateFunction(standardUpdateFunction)
+      )
+      .|(
+        Instruction.Dyadic(classOf[Pointer.ToInstruction], classOf[Pointer.ToInstruction])
+          .computeIfMatch {
+            (x, y, vmx, ecx) =>
+              val result = (x.value.basicBlock == y.value.basicBlock) && comparator.intComparator(x.value.index, y.value.index)
+              ecx.logger ~> s"${comparator.name} $x $y => $result"
+              Ok(booleanToScalar(result)(vmx))
+          }
+          .withUpdateFunction(standardUpdateFunction)
+      )
+      .|(
+        Instruction.Dyadic(classOf[Pointer.ToVariable.InTheHeap], classOf[Pointer.ToVariable.InTheHeap])
+          .computeIfMatch {
+            (x, y, vmx, ecx) =>
+              val result = comparator.intComparator(x.index, y.index)
+              ecx.logger ~> s"${comparator.name} $x $y => $result"
+              Ok(booleanToScalar(result)(vmx))
+          }.withUpdateFunction(standardUpdateFunction))
+      .|(
+        Instruction.Dyadic(classOf[Pointer.ToVariable.InTheStack], classOf[Pointer.ToVariable.InTheStack])
+          .computeIfMatch {
+            (x, y, vmx, ecx) =>
+              val result = comparator.intComparator(x.index, y.index)
+              ecx.logger ~> s"${comparator.name} $x $y => $result"
+              Ok(booleanToScalar(result)(vmx))
+          }.withUpdateFunction(standardUpdateFunction)
+
+      )
+
+
+  private def booleanToScalar(b: Boolean)(vmContext: VmContext): Scalar = {
+    val asRegister = VmRegister.ofType(vmContext.vmTypes.minUnsignedType)
+      .withValue(if (b) 1 else 0)
+    Scalar.anonymous(asRegister)
+  }
+
+  private def standardUpdateFunction(result: Variable, out: Option[Variable.Pointer], vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError =
+    for {
+      update <- InstructionHelpers.updateDestination(out, result)(vmContext)
+      _ = if (update.isDefined) executionContext.logger ~> s"${update.get.name} := ${update.get.getValueString}"
+    } yield vmContext
+
 }

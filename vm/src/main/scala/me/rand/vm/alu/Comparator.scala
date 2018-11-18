@@ -25,77 +25,64 @@
  */
 package me.rand.vm.alu
 
-import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.Variable
-import me.rand.vm.main.VmError.VmExecutionError.AluError
-
 sealed trait Comparator {
-  def execute(op1: Variable, op2: Variable): Boolean OrElse AluError
+  def name: String
 
-  protected def standardComparator(op1: Variable, op2: Variable,
-                                   comparisonName: String,
-                                   aluCompareOperation: (VmRegister, VmRegister) => Boolean,
-                                   intCompareOperation: (Int, Int) => Boolean): Boolean OrElse AluError =
-    (op1, op2) match {
-      case (Variable.Scalar(_, x), Variable.Scalar(_, y)) =>
-        Ok(aluCompareOperation(x, y))
+  def aluComparator: (VmRegister, VmRegister) => Boolean
 
-      case (Variable.Pointer.ToVariable.InTheHeap(_, x), Variable.Pointer.ToVariable.InTheHeap(_, y)) =>
-        Ok(intCompareOperation(x, y))
+  def intComparator: (Int, Int) => Boolean
 
-      case (Variable.Pointer.ToVariable.InTheStack(_, x), Variable.Pointer.ToVariable.InTheStack(_, y)) =>
-        Ok(intCompareOperation(x, y))
-
-      case (Variable.Pointer.ToInstruction(_, x), Variable.Pointer.ToInstruction(_, y)) =>
-        Ok((x.basicBlock == y.basicBlock) && intCompareOperation(x.index, y.index))
-
-      case (x: Variable, y: Variable) =>
-        Err(AluError.InconsistentTypesForComparison(comparisonName, x, y))
-    }
+  override def toString: String = name
 }
 
 object Comparator {
 
   object ?= extends Comparator {
-    override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError =
-      standardComparator(op1, op2, toString, Alu.isEqual, _ == _)
+    override def name: String = "?="
 
-    override def toString: String = "?="
+    override def aluComparator: (VmRegister, VmRegister) => Boolean = Alu.isEqual
+
+    override def intComparator: (Int, Int) => Boolean = _ == _
   }
 
   object ?≠ extends Comparator {
-    override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError =
-      standardComparator(op1, op2, toString, Alu.isNotEqual, _ != _)
+    override def name: String = "?≠"
 
-    override def toString: String = "?≠"
+    override def aluComparator: (VmRegister, VmRegister) => Boolean = Alu.isNotEqual
+
+    override def intComparator: (Int, Int) => Boolean = _ != _
   }
 
   object ?< extends Comparator {
-    override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError =
-      standardComparator(op1, op2, toString, Alu.isLower, _ < _)
+    override def name: String = "?<"
 
-    override def toString: String = "?<"
+    override def aluComparator: (VmRegister, VmRegister) => Boolean = Alu.isLower
+
+    override def intComparator: (Int, Int) => Boolean = _ < _
   }
 
   object ?> extends Comparator {
-    override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError =
-      standardComparator(op1, op2, toString, Alu.isGreater, _ > _)
+    override def name: String = "?>"
 
-    override def toString: String = "?>"
+    override def aluComparator: (VmRegister, VmRegister) => Boolean = Alu.isGreater
+
+    override def intComparator: (Int, Int) => Boolean = _ > _
   }
 
   object ?≤ extends Comparator {
-    override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError =
-      standardComparator(op1, op2, toString, Alu.isLowerOrEqual, _ < _)
+    override def name: String = "?≤"
 
-    override def toString: String = "?≤"
+    override def aluComparator: (VmRegister, VmRegister) => Boolean = Alu.isLowerOrEqual
+
+    override def intComparator: (Int, Int) => Boolean = _ <= _
   }
 
   object ?≥ extends Comparator {
-    override def execute(op1: Variable, op2: Variable): Boolean OrElse AluError =
-      standardComparator(op1, op2, toString, Alu.isGreaterOrEqual, _ >= _)
+    override def name: String = "?≥"
 
-    override def toString: String = "?≥"
+    override def aluComparator: (VmRegister, VmRegister) => Boolean = Alu.isGreaterOrEqual
+
+    override def intComparator: (Int, Int) => Boolean = _ >= _
   }
 
 }

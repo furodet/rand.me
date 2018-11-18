@@ -23,27 +23,62 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.vm.is
+package me.rand.vm.engine
 
-import me.rand.commons.idioms.Status.OrElse
-import me.rand.vm.engine.Instruction.Operands
-import me.rand.vm.engine.{Instruction, Variable, VmContext}
-import me.rand.vm.main.{ExecutionContext, VmError}
+import me.rand.vm.alu.VmRegister
 
-private[is] trait StandardDyadicInstruction extends Instruction {
-  def executeOperation(x: Variable, y: Variable)(implicit vmContext: VmContext): Variable OrElse VmError
+sealed trait Operand
 
-  def operationName: String
+object Operand {
 
-  def execute(vmContext: VmContext, operands: Operands)(implicit executionContext: ExecutionContext): VmContext OrElse VmError = {
-    implicit val context: VmContext = vmContext
-    for {
-      op1 <- InstructionHelpers.fetchImmediateOrVariable(0, operands)
-      op2 <- InstructionHelpers.fetchImmediateOrVariable(1, operands)
-      destination <- InstructionHelpers.fetchDestination(operands)
-      result <- executeOperation(op1, op2)
-      update <- InstructionHelpers.updateDestination(destination, result)
-      _ = executionContext.logger ~> s"${destination.name} := ${op1.getValueString} $operationName ${op2.getValueString} = ${update.getValueString}"
-    } yield vmContext
+  sealed trait Source extends Operand
+
+  object Source {
+
+    sealed trait Variable extends Source
+
+    object Variable {
+
+      case class InTheHeap(index: Int) extends Source.Variable
+
+      case class InTheStack(index: Int) extends Source.Variable
+
+    }
+
+    case class Indirect(pointer: Source.Variable, depth: Int) extends Source
+
+    sealed trait Reference extends Source
+
+    object Reference {
+
+      case class InTheHeap(index: Int) extends Source.Reference
+
+      case class InTheStack(index: Int) extends Source.Reference
+
+    }
+
+    case class Immediate(value: VmRegister) extends Source
+
   }
+
+  sealed trait Destination
+
+  object Destination {
+
+    object NoDestination extends Destination
+
+    sealed trait Variable extends Destination
+
+    object Variable {
+
+      case class InTheHeap(variableIndex: Int) extends Destination.Variable
+
+      case class InTheStack(variableIndex: Int) extends Destination.Variable
+
+    }
+
+    case class Redirect(pointer: Destination.Variable, depth: Int) extends Destination
+
+  }
+
 }
