@@ -38,7 +38,6 @@ object BitFlip {
         Instruction.Monadic(classOf[Variable.Scalar]).withComputeFunction {
           (x, _, ecx) =>
             val result = Alu.bitFlip(x.value)
-            ecx.logger ~> s"$shortName $x => $result"
             Ok(Variable.Scalar.anonymous(result))
         }.withUpdateFunction {
           (result, out, vmx, ecx) =>

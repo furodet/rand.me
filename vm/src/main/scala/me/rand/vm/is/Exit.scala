@@ -37,7 +37,6 @@ object Exit {
       .|(
         Instruction.Monadic(classOf[Scalar]).withComputeFunction {
           (x, _, ecx) =>
-            ecx.logger ~> s"$shortName $x"
             Ok(x)
         }.withUpdateFunction {
           (r, _, vmx, _) =>

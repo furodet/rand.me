@@ -43,7 +43,7 @@ class UpdateVariable(maybePointer: Option[Pointer]) {
       case Some(pointer) =>
         updateDestination(pointer, variable) && {
           updated =>
-            executionContext.logger ~> s"${updated.name} := ${updated.getValueString}"
+            executionContext.logger ~> s"UPDATE ${updated.name} ${updated.getValueString}"
             // Due to internal mutability of varsets, updated VM context is equal to the initial VM context object.
             vmContext
         }

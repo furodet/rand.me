@@ -41,7 +41,6 @@ object Copy {
       .|(Instruction.Monadic(classOf[Variable.Pointer.ToInstruction]).withComputeFunction(logOperand).withUpdateFunction(doCopy))
 
   private def logOperand(x: Variable, vmContext: VmContext, executionContext: ExecutionContext): Variable OrElse VmError = {
-    executionContext.logger ~> s"$shortName $x"
     Ok(x)
   }
 

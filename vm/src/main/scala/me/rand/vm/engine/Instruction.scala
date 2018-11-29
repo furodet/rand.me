@@ -31,13 +31,21 @@ import me.rand.vm.main.{ExecutionContext, VmError}
 
 // Documentation: doc/vmarchitecture.md
 class Instruction(name: String, signatures: Instruction.Signatures) {
-  def execute(operands: Operands)(implicit vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError =
+  def execute(operands: Operands)(implicit vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError = {
+    executionContext.logger ~> s"RUN $name"
+    traceOperands(operands, executionContext)
     for {
       reduced <- OperandReducer.appliedTo(operands).execute
       functions <- signatures.searchSignatureMatching(name, reduced.sources)
       computeResult <- functions.compute(vmContext, executionContext)
       updateResult <- functions.update(computeResult, reduced.destination, vmContext, executionContext)
     } yield updateResult
+  }
+
+  private def traceOperands(operands: Operands, executionContext: ExecutionContext): Unit = {
+    operands.sources.foreach(operand => executionContext.logger ~> s"<- $operand")
+    executionContext.logger ~> s"-> ${operands.destination}"
+  }
 
   // Encapsulate signatures constructor for simplicity
   def |(newSignature: Instruction.Signature): Instruction =
@@ -97,20 +105,37 @@ object Instruction {
       new PartialSignature(
         variables =>
           if ((variables.size == 1) && variables.head.getClass.isAssignableFrom(vt1))
-            Some((vmx: VmContext, ecx: ExecutionContext) => f(variables.head.asInstanceOf[T1], vmx, ecx))
+            Some((vmx: VmContext, ecx: ExecutionContext) => {
+              val x = variables.head.asInstanceOf[T1]
+              f(x, vmx, ecx) && {
+                result =>
+                  ecx.logger ~> s"IN ${x.name} ${x.getValueString}"
+                  ecx.logger ~> s"=> ${result.getValueString}"
+                  result
+              }
+            })
           else None
       )
   }
 
   case class Dyadic[T1 <: Variable, T2 <: Variable](vt1: Class[T1], vt2: Class[T2]) {
-    def computeIfMatch(f: (T1, T2, VmContext, ExecutionContext) => Variable OrElse VmError) =
+    def withComputeFunction(f: (T1, T2, VmContext, ExecutionContext) => Variable OrElse VmError) =
       new PartialSignature(
         variables =>
           if ((variables.size == 2) &&
             variables.head.getClass.isAssignableFrom(vt1) &&
             variables.tail.head.getClass.isAssignableFrom(vt2))
-            Some((vmx: VmContext, ecx: ExecutionContext) =>
-              f(variables.head.asInstanceOf[T1], variables.tail.head.asInstanceOf[T2], vmx, ecx))
+            Some((vmx: VmContext, ecx: ExecutionContext) => {
+              val x = variables.head.asInstanceOf[T1]
+              val y = variables.tail.head.asInstanceOf[T2]
+              f(x, y, vmx, ecx) && {
+                result =>
+                  ecx.logger ~> s"IN ${x.name} ${x.getValueString}"
+                  ecx.logger ~> s"IN ${y.name} ${y.getValueString}"
+                  ecx.logger ~> s"=> ${result.getValueString}"
+                  result
+              }
+            })
           else None
       )
   }

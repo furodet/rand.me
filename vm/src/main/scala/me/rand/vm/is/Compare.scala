@@ -37,38 +37,34 @@ object Compare {
     Instruction.called(comparator.name)
       .|(
         Instruction.Dyadic(classOf[Scalar], classOf[Scalar])
-          .computeIfMatch {
+          .withComputeFunction {
             (x, y, vmx, ecx) =>
               val result = comparator.aluComparator(x.value, y.value)
-              ecx.logger ~> s"${comparator.name} $x $y => $result"
               Ok(booleanToScalar(result)(vmx))
           }
           .withUpdateFunction(standardUpdateFunction)
       )
       .|(
         Instruction.Dyadic(classOf[Pointer.ToInstruction], classOf[Pointer.ToInstruction])
-          .computeIfMatch {
+          .withComputeFunction {
             (x, y, vmx, ecx) =>
               val result = (x.value.basicBlock == y.value.basicBlock) && comparator.intComparator(x.value.index, y.value.index)
-              ecx.logger ~> s"${comparator.name} $x $y => $result"
               Ok(booleanToScalar(result)(vmx))
           }
           .withUpdateFunction(standardUpdateFunction)
       )
       .|(
         Instruction.Dyadic(classOf[Pointer.ToVariable.InTheHeap], classOf[Pointer.ToVariable.InTheHeap])
-          .computeIfMatch {
+          .withComputeFunction {
             (x, y, vmx, ecx) =>
               val result = comparator.intComparator(x.index, y.index)
-              ecx.logger ~> s"${comparator.name} $x $y => $result"
               Ok(booleanToScalar(result)(vmx))
           }.withUpdateFunction(standardUpdateFunction))
       .|(
         Instruction.Dyadic(classOf[Pointer.ToVariable.InTheStack], classOf[Pointer.ToVariable.InTheStack])
-          .computeIfMatch {
+          .withComputeFunction {
             (x, y, vmx, ecx) =>
               val result = comparator.intComparator(x.index, y.index)
-              ecx.logger ~> s"${comparator.name} $x $y => $result"
               Ok(booleanToScalar(result)(vmx))
           }.withUpdateFunction(standardUpdateFunction)
 
