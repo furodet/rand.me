@@ -23,27 +23,33 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.vm.is
+package me.rand.vm.engine
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.Variable._
-import me.rand.vm.engine._
+import me.rand.vm.engine.Variable.Pointer
+import me.rand.vm.main.ExecutionContext
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError
-import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue._
+import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue.{IllegalDestinationPointer, InvalidRedirect, InvalidTargetReference}
 
 import scala.annotation.tailrec
 
-object InstructionHelpers {
-  private[is] def updateDestination(maybePointer: Option[Pointer], variable: Variable)(implicit vmContext: VmContext): Option[Variable] OrElse IllegalEncodingError =
+class UpdateVariable(maybePointer: Option[Pointer]) {
+  // Instruction Helpers: update a destination variable
+  def withValueOf(variable: Variable)(implicit vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse IllegalEncodingError =
     maybePointer match {
       case None =>
-        Ok(None)
+        Ok(vmContext)
 
       case Some(pointer) =>
-        updateDestination(pointer, variable) && (Some(_))
+        updateDestination(pointer, variable) && {
+          updated =>
+            executionContext.logger ~> s"${updated.name} := ${updated.getValueString}"
+            // Due to internal mutability of varsets, updated VM context is equal to the initial VM context object.
+            vmContext
+        }
     }
 
-  private[is] def updateDestination(pointer: Pointer, variable: Variable)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
+  private def updateDestination(pointer: Pointer, variable: Variable)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
     pointer match {
       case ptr: Pointer.ToVariable =>
         updateDestination(ptr.getContainingVarSet(vmContext), ptr.name, ptr.index, variable)
@@ -91,4 +97,10 @@ object InstructionHelpers {
       case _ =>
         Err(InvalidRedirect)
     }
+}
+
+object UpdateVariable {
+  def pointedBy(maybePointer: Option[Pointer]) = new UpdateVariable(maybePointer)
+
+  def pointedBy(pointer: Pointer) = new UpdateVariable(Some(pointer))
 }

@@ -29,7 +29,7 @@ import me.rand.commons.idioms.NormalizedNumber._
 import me.rand.commons.idioms.Status._
 import me.rand.vm.alu.{Comparator, VmRegister}
 import me.rand.vm.engine.Variable.{Pointer, Scalar}
-import me.rand.vm.engine.{Instruction, Variable, VmContext}
+import me.rand.vm.engine.{Instruction, UpdateVariable, Variable, VmContext}
 import me.rand.vm.main.{ExecutionContext, VmError}
 
 object Compare {
@@ -82,9 +82,6 @@ object Compare {
   }
 
   private def standardUpdateFunction(result: Variable, out: Option[Variable.Pointer], vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError =
-    for {
-      update <- InstructionHelpers.updateDestination(out, result)(vmContext)
-      _ = if (update.isDefined) executionContext.logger ~> s"${update.get.name} := ${update.get.getValueString}"
-    } yield vmContext
+    UpdateVariable.pointedBy(out).withValueOf(result)(vmContext, executionContext)
 
 }

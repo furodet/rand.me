@@ -27,7 +27,7 @@ package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
 import me.rand.vm.alu.Alu
-import me.rand.vm.engine.{Instruction, Variable}
+import me.rand.vm.engine.{Instruction, UpdateVariable, Variable}
 
 object BitFlip {
   lazy val shortName = "~"
@@ -42,10 +42,7 @@ object BitFlip {
             Ok(Variable.Scalar.anonymous(result))
         }.withUpdateFunction {
           (result, out, vmx, ecx) =>
-            for {
-              update <- InstructionHelpers.updateDestination(out, result)(vmx)
-              _ = if (update.isDefined) ecx.logger ~> s"${update.get.name} := ${update.get.getValueString}"
-            } yield vmx
+            UpdateVariable.pointedBy(out).withValueOf(result)(vmx, ecx)
         }
       )
 }

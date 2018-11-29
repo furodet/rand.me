@@ -26,7 +26,7 @@
 package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.{Instruction, Variable, VmContext}
+import me.rand.vm.engine.{Instruction, UpdateVariable, Variable, VmContext}
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError.UnspecifiedDestinationOperand
 import me.rand.vm.main.{ExecutionContext, VmError}
 
@@ -45,15 +45,12 @@ object Copy {
     Ok(x)
   }
 
-  private def doCopy(r: Variable, out: Option[Variable.Pointer], vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError =
+  private def doCopy(result: Variable, out: Option[Variable.Pointer], vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError =
     out match {
       case None =>
         Err(UnspecifiedDestinationOperand)
 
       case Some(output) =>
-        for {
-          update <- InstructionHelpers.updateDestination(output, r)(vmContext)
-          _ = executionContext.logger ~> s"${update.name} := ${update.getValueString}"
-        } yield vmContext
+        UpdateVariable.pointedBy(output).withValueOf(result)(vmContext, executionContext)
     }
 }
