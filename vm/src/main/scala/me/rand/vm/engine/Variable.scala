@@ -46,6 +46,16 @@ object Variable {
 
   object Scalar {
     def anonymous(value: VmRegister) = Scalar("<undef>", value)
+
+    def anonymous(value: Int, vmContext: VmContext) = Scalar("<undef>", intToScalar(value, vmContext))
+
+    private def intToScalar(value: Int, vmContext: VmContext): VmRegister = {
+      val nrEncodingBits = 32 - Integer.numberOfLeadingZeros(value)
+      val nrEncodingBytes = (nrEncodingBits + 7) / 8
+      // It is safe to promote to the proper byte length: no machine would support N bytes and
+      // log2(N) is not encodable on a machine word.
+      VmRegister.normalize(vmContext.vmTypes.select(nrEncodingBytes, isSigned = false).get, value)
+    }
   }
 
   sealed trait Pointer extends Variable

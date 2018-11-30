@@ -27,29 +27,24 @@ package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
 import me.rand.vm.alu.Alu
+import me.rand.vm.engine.Instruction
 import me.rand.vm.engine.Variable.{Pointer, Scalar}
-import me.rand.vm.engine.{Instruction, VmContext}
 
-object SizeOf {
-  lazy val shortName = "sizeof"
+object Increment {
+  lazy val shortName = "increment"
 
-  private[is] def apply(): Instruction =
-    Instruction.called("sizeof")
+  def apply(): Instruction =
+    Instruction.called(shortName)
       .|(
         Instruction.Monadic(classOf[Scalar]).withComputeFunction {
-          (x, vmContext, _) =>
-            val result = Alu.sizeof(x.value)
-            Ok(Scalar.anonymous(result, vmContext))
+          (x, _, _) =>
+            Ok(Scalar.anonymous(Alu.increment(x.value)))
         }.withDefaultUpdateFunction
       )
       .|(
-        Instruction.Monadic(classOf[Pointer]).withComputeFunction {
-          (_, vmContext, _) =>
-            Ok(arbitrarySizeOfPointer(vmContext))
+        Instruction.Monadic(classOf[Pointer.ToVariable]).withComputeFunction {
+          (x, vmContext, _) =>
+            Ok(Scalar.anonymous(x.index + 1, vmContext))
         }.withDefaultUpdateFunction
       )
-
-  private def arbitrarySizeOfPointer(vmContext: VmContext): Scalar =
-  // TODO: size of pointers should be an optional configuration value, for any kind of pointer
-    Scalar.anonymous(vmContext.vmTypes.maxUnsignedType.byteLen, vmContext)
 }

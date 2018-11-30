@@ -40,6 +40,7 @@ object InstructionSet {
       Comparator.?≥.name -> Compare(Comparator.?≥),
       Copy.shortName -> Copy(),
       Exit.shortName -> Exit(),
+      Increment.shortName -> Increment(),
       SizeOf.shortName -> SizeOf()
     )
 }
