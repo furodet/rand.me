@@ -35,7 +35,12 @@ import scala.annotation.tailrec
 class VmTypes(val typeMap: Map[String, VmType]) {
   // Whatever the virtual machine is, there are always "minimal types" representing
   // one byte signed and unsigned.
-  lazy val minUnsignedType: VmType = select(1, isSigned = true).get
+  lazy val minUnsignedType: VmType = select(1, isSigned = false).get
+  // And there is a type with the maximum length... Easy to lazily guess.
+  lazy val maxUnsignedType: VmType = {
+    val maxLen = typeMap.values.map(vmType => vmType.byteLen).max
+    select(maxLen, isSigned = false).get
+  }
 
   def valueOf(s: String): VmType OrElse InvalidVmTypeString =
     typeMap.get(s) match {

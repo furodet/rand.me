@@ -36,7 +36,7 @@ object BitFlip {
     Instruction.called(shortName)
       .|(
         Instruction.Monadic(classOf[Variable.Scalar]).withComputeFunction {
-          (x, _, ecx) =>
+          (x, _, _) =>
             val result = Alu.bitFlip(x.value)
             Ok(Variable.Scalar.anonymous(result))
         }.withUpdateFunction {

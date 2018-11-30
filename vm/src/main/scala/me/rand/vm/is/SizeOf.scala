@@ -27,57 +27,55 @@ package me.rand.vm.is
 
 import me.rand.commons.idioms.NormalizedNumber._
 import me.rand.commons.idioms.Status._
-import me.rand.vm.alu.{Comparator, VmRegister}
+import me.rand.vm.alu.{Alu, VmRegister}
 import me.rand.vm.engine.Variable.{Pointer, Scalar}
 import me.rand.vm.engine.{Instruction, UpdateVariable, Variable, VmContext}
 import me.rand.vm.main.{ExecutionContext, VmError}
 
-object Compare {
-  private[is] def apply(comparator: Comparator): Instruction =
-    Instruction.called(comparator.name)
+object SizeOf {
+  lazy val shortName = "sizeof"
+
+  private[is] def apply(): Instruction =
+    Instruction.called("sizeof")
       .|(
-        Instruction.Dyadic(classOf[Scalar], classOf[Scalar])
-          .withComputeFunction {
-            (x, y, vmx, _) =>
-              val result = comparator.aluComparator(x.value, y.value)
-              Ok(booleanToScalar(result)(vmx))
-          }
-          .withUpdateFunction(standardUpdateFunction)
+        Instruction.Monadic(classOf[Scalar]).withComputeFunction {
+          (x, vmx, _) =>
+            val result = Alu.sizeof(x.value)
+            Ok(intToScalar(result, vmx))
+        }.withUpdateFunction(standardUpdateFunction)
       )
       .|(
-        Instruction.Dyadic(classOf[Pointer.ToInstruction], classOf[Pointer.ToInstruction])
-          .withComputeFunction {
-            (x, y, vmx, _) =>
-              val result = (x.value.basicBlock == y.value.basicBlock) && comparator.intComparator(x.value.index, y.value.index)
-              Ok(booleanToScalar(result)(vmx))
-          }
-          .withUpdateFunction(standardUpdateFunction)
+        Instruction.Monadic(classOf[Pointer.ToInstruction]).withComputeFunction {
+          (_, vmx, _) =>
+            Ok(arbitrarySizeOfPointer(vmx))
+        }.withUpdateFunction(standardUpdateFunction)
       )
       .|(
-        Instruction.Dyadic(classOf[Pointer.ToVariable.InTheHeap], classOf[Pointer.ToVariable.InTheHeap])
-          .withComputeFunction {
-            (x, y, vmx, _) =>
-              val result = comparator.intComparator(x.index, y.index)
-              Ok(booleanToScalar(result)(vmx))
-          }.withUpdateFunction(standardUpdateFunction))
+        Instruction.Monadic(classOf[Pointer.ToVariable.InTheHeap]).withComputeFunction {
+          (_, vmx, _) =>
+            Ok(arbitrarySizeOfPointer(vmx))
+        }.withUpdateFunction(standardUpdateFunction)
+      )
       .|(
-        Instruction.Dyadic(classOf[Pointer.ToVariable.InTheStack], classOf[Pointer.ToVariable.InTheStack])
-          .withComputeFunction {
-            (x, y, vmx, _) =>
-              val result = comparator.intComparator(x.index, y.index)
-              Ok(booleanToScalar(result)(vmx))
-          }.withUpdateFunction(standardUpdateFunction)
-
+        Instruction.Monadic(classOf[Pointer.ToVariable.InTheStack]).withComputeFunction {
+          (_, vmx, _) =>
+            Ok(arbitrarySizeOfPointer(vmx))
+        }.withUpdateFunction(standardUpdateFunction)
       )
 
+  private def arbitrarySizeOfPointer(vmContext: VmContext): Scalar =
+  // TODO: size of pointers should be an optional configuration value, for any kind of pointer
+    intToScalar(vmContext.vmTypes.maxUnsignedType.byteLen, vmContext)
 
-  private def booleanToScalar(b: Boolean)(vmContext: VmContext): Scalar = {
-    val asRegister = VmRegister.ofType(vmContext.vmTypes.minUnsignedType)
-      .withValue(if (b) 1 else 0)
+  private def intToScalar(value: Int, vmContext: VmContext): Scalar = {
+    val nrEncodingBits = 32 - Integer.numberOfLeadingZeros(value)
+    val nrEncodingBytes = (nrEncodingBits + 7) / 8
+    // It is safe to promote to the proper byte length: no machine would support N bytes and
+    // log2(N) is not encodable on a machine word.
+    val asRegister = VmRegister.normalize(vmContext.vmTypes.select(nrEncodingBytes, isSigned = false).get, value)
     Scalar.anonymous(asRegister)
   }
 
   private def standardUpdateFunction(result: Variable, out: Option[Variable.Pointer], vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError =
     UpdateVariable.pointedBy(out).withValueOf(result)(vmContext, executionContext)
-
 }
