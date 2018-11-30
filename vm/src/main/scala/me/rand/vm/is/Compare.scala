@@ -29,8 +29,7 @@ import me.rand.commons.idioms.NormalizedNumber._
 import me.rand.commons.idioms.Status._
 import me.rand.vm.alu.{Comparator, VmRegister}
 import me.rand.vm.engine.Variable.{Pointer, Scalar}
-import me.rand.vm.engine.{Instruction, UpdateVariable, Variable, VmContext}
-import me.rand.vm.main.{ExecutionContext, VmError}
+import me.rand.vm.engine.{Instruction, VmContext}
 
 object Compare {
   private[is] def apply(comparator: Comparator): Instruction =
@@ -41,8 +40,7 @@ object Compare {
             (x, y, vmContext, _) =>
               val result = comparator.aluComparator(x.value, y.value)
               Ok(booleanToScalar(result)(vmContext))
-          }
-          .withUpdateFunction(standardUpdateFunction)
+          }.withDefaultUpdateFunction
       )
       .|(
         Instruction.Dyadic(classOf[Pointer.ToInstruction], classOf[Pointer.ToInstruction])
@@ -50,8 +48,7 @@ object Compare {
             (x, y, vmContext, _) =>
               val result = (x.value.basicBlock == y.value.basicBlock) && comparator.intComparator(x.value.index, y.value.index)
               Ok(booleanToScalar(result)(vmContext))
-          }
-          .withUpdateFunction(standardUpdateFunction)
+          }.withDefaultUpdateFunction
       )
       .|(
         Instruction.Dyadic(classOf[Pointer.ToVariable.InTheHeap], classOf[Pointer.ToVariable.InTheHeap])
@@ -59,15 +56,15 @@ object Compare {
             (x, y, vmContext, _) =>
               val result = comparator.intComparator(x.index, y.index)
               Ok(booleanToScalar(result)(vmContext))
-          }.withUpdateFunction(standardUpdateFunction))
+          }.withDefaultUpdateFunction
+      )
       .|(
         Instruction.Dyadic(classOf[Pointer.ToVariable.InTheStack], classOf[Pointer.ToVariable.InTheStack])
           .withComputeFunction {
             (x, y, vmContext, _) =>
               val result = comparator.intComparator(x.index, y.index)
               Ok(booleanToScalar(result)(vmContext))
-          }.withUpdateFunction(standardUpdateFunction)
-
+          }.withDefaultUpdateFunction
       )
 
 
@@ -76,8 +73,4 @@ object Compare {
       .withValue(if (b) 1 else 0)
     Scalar.anonymous(asRegister)
   }
-
-  private def standardUpdateFunction(result: Variable, out: Option[Variable.Pointer], vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError =
-    UpdateVariable.pointedBy(out).withValueOf(result)(vmContext, executionContext)
-
 }

@@ -98,7 +98,13 @@ object Instruction {
 
         override def getUpdateFunction: UpdateFunction = updateFunction
       }
+
+    def withDefaultUpdateFunction: Signature =
+      withUpdateFunction(standardUpdateFunction)
   }
+
+  private def standardUpdateFunction(result: Variable, out: Option[Variable.Pointer], vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError =
+    UpdateVariable.pointedBy(out).withValueOf(result)(vmContext, executionContext)
 
   case class Monadic[T1 <: Variable](vt1: Class[T1]) {
     def withComputeFunction(f: (T1, VmContext, ExecutionContext) => Variable OrElse VmError) =

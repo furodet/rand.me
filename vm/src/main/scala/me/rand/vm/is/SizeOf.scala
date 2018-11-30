@@ -29,8 +29,7 @@ import me.rand.commons.idioms.NormalizedNumber._
 import me.rand.commons.idioms.Status._
 import me.rand.vm.alu.{Alu, VmRegister}
 import me.rand.vm.engine.Variable.{Pointer, Scalar}
-import me.rand.vm.engine.{Instruction, UpdateVariable, Variable, VmContext}
-import me.rand.vm.main.{ExecutionContext, VmError}
+import me.rand.vm.engine.{Instruction, VmContext}
 
 object SizeOf {
   lazy val shortName = "sizeof"
@@ -42,13 +41,13 @@ object SizeOf {
           (x, vmContext, _) =>
             val result = Alu.sizeof(x.value)
             Ok(intToScalar(result, vmContext))
-        }.withUpdateFunction(standardUpdateFunction)
+        }.withDefaultUpdateFunction
       )
       .|(
         Instruction.Monadic(classOf[Pointer]).withComputeFunction {
           (_, vmContext, _) =>
             Ok(arbitrarySizeOfPointer(vmContext))
-        }.withUpdateFunction(standardUpdateFunction)
+        }.withDefaultUpdateFunction
       )
 
   private def arbitrarySizeOfPointer(vmContext: VmContext): Scalar =
@@ -63,7 +62,4 @@ object SizeOf {
     val asRegister = VmRegister.normalize(vmContext.vmTypes.select(nrEncodingBytes, isSigned = false).get, value)
     Scalar.anonymous(asRegister)
   }
-
-  private def standardUpdateFunction(result: Variable, out: Option[Variable.Pointer], vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError =
-    UpdateVariable.pointedBy(out).withValueOf(result)(vmContext, executionContext)
 }
