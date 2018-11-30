@@ -25,9 +25,32 @@
  */
 package me.rand.asm.main
 
+import java.io.FileReader
+
+import me.rand.asm.parser.AsmParser
+
 object Main {
   def main(args: Array[String]): Unit = {
-    // TODO
-    println("Hello rand.me ASM")
+    optionParser.parse(args, AsmOptions()) match {
+      case None =>
+        // Too bad
+        optionParser.showUsageAsError()
+
+      case Some(options) =>
+        val result = parse(new FileReader(options.in))
+        println(result)
+    }
   }
+
+  private lazy val optionParser = new scopt.OptionParser[AsmOptions]("asm") {
+    opt[java.io.File]('s', "assemble").valueName("file").required().maxOccurs(1).action {
+      (file, options) =>
+        options.copy(in = file)
+    }
+
+    help("help").text("prints this help")
+  }
+
+  def parse(reader: java.io.Reader) =
+    AsmParser.read(reader).execute
 }
