@@ -23,11 +23,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.vm.main
+package me.rand.asm.main
 
 object Main {
   def main(args: Array[String]): Unit = {
     // TODO
-    println("hello rand.me VM")
+    println("Hello rand.me ASM")
   }
 }

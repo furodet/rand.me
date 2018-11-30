@@ -23,11 +23,31 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.vm.main
+package me.rand.asm.parser
 
-object Main {
-  def main(args: Array[String]): Unit = {
-    // TODO
-    println("hello rand.me VM")
-  }
+import scala.util.parsing.combinator.RegexParsers
+
+class AsmParser(input: java.io.Reader) extends RegexParsers {
+  def execute = parseAll(main, input)
+
+  def main: Parser[List[String]] = skip ~> rep(token <~ skip) <~ eof
+
+  def skip: Parser[Unit] = rep(whiteSpace | comment) ^^^ Unit
+
+  def comment: Parser[Unit] = "//" ~ rep(not("\n") ~ ".".r) ^^^ Unit
+
+  def eof: Parser[String] = "\\z".r | failure("unexpected character")
+
+  def token: Parser[String] = instruction
+
+  def instruction: Parser[String] =
+    instructionName ^^ (">" + _)
+
+  def instructionName: Parser[String] = "hello"
+
+  //val number: Regex = "[1-9][0-9]+".r
+}
+
+object AsmParser {
+  def read(input: java.io.Reader) = new AsmParser(input)
 }

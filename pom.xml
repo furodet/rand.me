@@ -11,6 +11,7 @@
     <modules>
         <module>commons</module>
         <module>vm</module>
+        <module>asm</module>
     </modules>
 
     <properties>
