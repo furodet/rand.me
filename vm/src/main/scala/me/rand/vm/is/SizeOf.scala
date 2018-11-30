@@ -45,19 +45,7 @@ object SizeOf {
         }.withUpdateFunction(standardUpdateFunction)
       )
       .|(
-        Instruction.Monadic(classOf[Pointer.ToInstruction]).withComputeFunction {
-          (_, vmContext, _) =>
-            Ok(arbitrarySizeOfPointer(vmContext))
-        }.withUpdateFunction(standardUpdateFunction)
-      )
-      .|(
-        Instruction.Monadic(classOf[Pointer.ToVariable.InTheHeap]).withComputeFunction {
-          (_, vmContext, _) =>
-            Ok(arbitrarySizeOfPointer(vmContext))
-        }.withUpdateFunction(standardUpdateFunction)
-      )
-      .|(
-        Instruction.Monadic(classOf[Pointer.ToVariable.InTheStack]).withComputeFunction {
+        Instruction.Monadic(classOf[Pointer]).withComputeFunction {
           (_, vmContext, _) =>
             Ok(arbitrarySizeOfPointer(vmContext))
         }.withUpdateFunction(standardUpdateFunction)

@@ -104,7 +104,7 @@ object Instruction {
     def withComputeFunction(f: (T1, VmContext, ExecutionContext) => Variable OrElse VmError) =
       new PartialSignature(
         variables =>
-          if ((variables.size == 1) && variables.head.getClass.isAssignableFrom(vt1))
+          if ((variables.size == 1) && variableTypeCompliesWith(variables.head, vt1))
             Some((vmContext: VmContext, executionContext: ExecutionContext) => {
               val x = variables.head.asInstanceOf[T1]
               f(x, vmContext, executionContext) && {
@@ -123,8 +123,8 @@ object Instruction {
       new PartialSignature(
         variables =>
           if ((variables.size == 2) &&
-            variables.head.getClass.isAssignableFrom(vt1) &&
-            variables.tail.head.getClass.isAssignableFrom(vt2))
+            variableTypeCompliesWith(variables.head, vt1) &&
+            variableTypeCompliesWith(variables.tail.head, vt2))
             Some((vmContext: VmContext, executionContext: ExecutionContext) => {
               val x = variables.head.asInstanceOf[T1]
               val y = variables.tail.head.asInstanceOf[T2]
@@ -140,4 +140,6 @@ object Instruction {
       )
   }
 
+  private def variableTypeCompliesWith[T <: Variable](variable: Variable, vt: Class[T]): Boolean =
+    vt.isAssignableFrom(variable.getClass)
 }

@@ -34,15 +34,9 @@ object Copy {
   lazy val shortName = "copy"
 
   private[is] def apply(): Instruction =
-    Instruction.called(shortName)
-      .|(Instruction.Monadic(classOf[Variable.Scalar]).withComputeFunction(logOperand).withUpdateFunction(doCopy))
-      .|(Instruction.Monadic(classOf[Variable.Pointer.ToVariable.InTheStack]).withComputeFunction(logOperand).withUpdateFunction(doCopy))
-      .|(Instruction.Monadic(classOf[Variable.Pointer.ToVariable.InTheHeap]).withComputeFunction(logOperand).withUpdateFunction(doCopy))
-      .|(Instruction.Monadic(classOf[Variable.Pointer.ToInstruction]).withComputeFunction(logOperand).withUpdateFunction(doCopy))
-
-  private def logOperand(x: Variable, vmContext: VmContext, executionContext: ExecutionContext): Variable OrElse VmError = {
-    Ok(x)
-  }
+    Instruction.called(shortName).|(Instruction.Monadic(classOf[Variable]).withComputeFunction {
+      (x, _, _) => Ok(x)
+    }.withUpdateFunction(doCopy))
 
   private def doCopy(result: Variable, out: Option[Variable.Pointer], vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError =
     out match {
