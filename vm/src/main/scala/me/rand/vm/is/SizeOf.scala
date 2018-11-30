@@ -39,27 +39,27 @@ object SizeOf {
     Instruction.called("sizeof")
       .|(
         Instruction.Monadic(classOf[Scalar]).withComputeFunction {
-          (x, vmx, _) =>
+          (x, vmContext, _) =>
             val result = Alu.sizeof(x.value)
-            Ok(intToScalar(result, vmx))
+            Ok(intToScalar(result, vmContext))
         }.withUpdateFunction(standardUpdateFunction)
       )
       .|(
         Instruction.Monadic(classOf[Pointer.ToInstruction]).withComputeFunction {
-          (_, vmx, _) =>
-            Ok(arbitrarySizeOfPointer(vmx))
+          (_, vmContext, _) =>
+            Ok(arbitrarySizeOfPointer(vmContext))
         }.withUpdateFunction(standardUpdateFunction)
       )
       .|(
         Instruction.Monadic(classOf[Pointer.ToVariable.InTheHeap]).withComputeFunction {
-          (_, vmx, _) =>
-            Ok(arbitrarySizeOfPointer(vmx))
+          (_, vmContext, _) =>
+            Ok(arbitrarySizeOfPointer(vmContext))
         }.withUpdateFunction(standardUpdateFunction)
       )
       .|(
         Instruction.Monadic(classOf[Pointer.ToVariable.InTheStack]).withComputeFunction {
-          (_, vmx, _) =>
-            Ok(arbitrarySizeOfPointer(vmx))
+          (_, vmContext, _) =>
+            Ok(arbitrarySizeOfPointer(vmContext))
         }.withUpdateFunction(standardUpdateFunction)
       )
 

@@ -40,8 +40,8 @@ object BitFlip {
             val result = Alu.bitFlip(x.value)
             Ok(Variable.Scalar.anonymous(result))
         }.withUpdateFunction {
-          (result, out, vmx, ecx) =>
-            UpdateVariable.pointedBy(out).withValueOf(result)(vmx, ecx)
+          (result, out, vmContext, executionContext) =>
+            UpdateVariable.pointedBy(out).withValueOf(result)(vmContext, executionContext)
         }
       )
 }

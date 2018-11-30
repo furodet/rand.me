@@ -105,12 +105,12 @@ object Instruction {
       new PartialSignature(
         variables =>
           if ((variables.size == 1) && variables.head.getClass.isAssignableFrom(vt1))
-            Some((vmx: VmContext, ecx: ExecutionContext) => {
+            Some((vmContext: VmContext, executionContext: ExecutionContext) => {
               val x = variables.head.asInstanceOf[T1]
-              f(x, vmx, ecx) && {
+              f(x, vmContext, executionContext) && {
                 result =>
-                  ecx.logger ~> s"IN ${x.name} ${x.getValueString}"
-                  ecx.logger ~> s"=> ${result.getValueString}"
+                  executionContext.logger ~> s"IN ${x.name} ${x.getValueString}"
+                  executionContext.logger ~> s"=> ${result.getValueString}"
                   result
               }
             })
@@ -125,14 +125,14 @@ object Instruction {
           if ((variables.size == 2) &&
             variables.head.getClass.isAssignableFrom(vt1) &&
             variables.tail.head.getClass.isAssignableFrom(vt2))
-            Some((vmx: VmContext, ecx: ExecutionContext) => {
+            Some((vmContext: VmContext, executionContext: ExecutionContext) => {
               val x = variables.head.asInstanceOf[T1]
               val y = variables.tail.head.asInstanceOf[T2]
-              f(x, y, vmx, ecx) && {
+              f(x, y, vmContext, executionContext) && {
                 result =>
-                  ecx.logger ~> s"IN ${x.name} ${x.getValueString}"
-                  ecx.logger ~> s"IN ${y.name} ${y.getValueString}"
-                  ecx.logger ~> s"=> ${result.getValueString}"
+                  executionContext.logger ~> s"IN ${x.name} ${x.getValueString}"
+                  executionContext.logger ~> s"IN ${y.name} ${y.getValueString}"
+                  executionContext.logger ~> s"=> ${result.getValueString}"
                   result
               }
             })

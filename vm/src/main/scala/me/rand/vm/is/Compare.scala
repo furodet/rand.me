@@ -38,34 +38,34 @@ object Compare {
       .|(
         Instruction.Dyadic(classOf[Scalar], classOf[Scalar])
           .withComputeFunction {
-            (x, y, vmx, _) =>
+            (x, y, vmContext, _) =>
               val result = comparator.aluComparator(x.value, y.value)
-              Ok(booleanToScalar(result)(vmx))
+              Ok(booleanToScalar(result)(vmContext))
           }
           .withUpdateFunction(standardUpdateFunction)
       )
       .|(
         Instruction.Dyadic(classOf[Pointer.ToInstruction], classOf[Pointer.ToInstruction])
           .withComputeFunction {
-            (x, y, vmx, _) =>
+            (x, y, vmContext, _) =>
               val result = (x.value.basicBlock == y.value.basicBlock) && comparator.intComparator(x.value.index, y.value.index)
-              Ok(booleanToScalar(result)(vmx))
+              Ok(booleanToScalar(result)(vmContext))
           }
           .withUpdateFunction(standardUpdateFunction)
       )
       .|(
         Instruction.Dyadic(classOf[Pointer.ToVariable.InTheHeap], classOf[Pointer.ToVariable.InTheHeap])
           .withComputeFunction {
-            (x, y, vmx, _) =>
+            (x, y, vmContext, _) =>
               val result = comparator.intComparator(x.index, y.index)
-              Ok(booleanToScalar(result)(vmx))
+              Ok(booleanToScalar(result)(vmContext))
           }.withUpdateFunction(standardUpdateFunction))
       .|(
         Instruction.Dyadic(classOf[Pointer.ToVariable.InTheStack], classOf[Pointer.ToVariable.InTheStack])
           .withComputeFunction {
-            (x, y, vmx, _) =>
+            (x, y, vmContext, _) =>
               val result = comparator.intComparator(x.index, y.index)
-              Ok(booleanToScalar(result)(vmx))
+              Ok(booleanToScalar(result)(vmContext))
           }.withUpdateFunction(standardUpdateFunction)
 
       )

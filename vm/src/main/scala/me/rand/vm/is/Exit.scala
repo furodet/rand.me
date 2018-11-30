@@ -36,12 +36,12 @@ object Exit {
     Instruction.called(shortName)
       .|(
         Instruction.Monadic(classOf[Scalar]).withComputeFunction {
-          (x, _, ecx) =>
+          (x, _, _) =>
             Ok(x)
         }.withUpdateFunction {
-          (r, _, vmx, _) =>
+          (r, _, vmContext, _) =>
             // Can safely assume that result is a scalar
-            Ok(vmx.halt(r.asInstanceOf[Scalar].value.toInt))
+            Ok(vmContext.halt(r.asInstanceOf[Scalar].value.toInt))
         }
       )
 }
