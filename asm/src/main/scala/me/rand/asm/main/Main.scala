@@ -25,53 +25,57 @@
  */
 package me.rand.asm.main
 
-import java.io.{FileReader, IOException}
+import java.io.{IOException, PrintWriter}
 
 import me.rand.asm.parser.AsmParser
+import me.rand.commons.idioms.Logger
+import me.rand.commons.idioms.Logger._
 import me.rand.commons.idioms.Status._
+
+import scala.io.Source
 
 object Main {
   def main(args: Array[String]): Unit = {
-    optionParser.parse(args, AsmOptions()) match {
-      case None =>
-        // Too bad
-        optionParser.showUsageAsError()
+    (for {
+      options <- AsmOptions.fromUserArgs(args)
+      source <- getReaderForFile(options.in)
+      logger = setupLogger(options.verbose)
+      parsed = parse(source)(logger)
+    } yield parsed) match {
+      case Ok(result) =>
+        println(result)
 
-      case Some(options) =>
-        (for {
-          reader <- getReaderForFile(options.in)
-          parsed = parse(reader)
-        } yield parsed) match {
-          case Ok(result) =>
-            println(result)
-
-          case Err(error) =>
-            System.err.println(error)
-            System.exit(1)
-        }
+      case Err(error) =>
+        System.err.println(error)
+        System.exit(1)
     }
   }
 
-  private lazy val optionParser = new scopt.OptionParser[AsmOptions]("asm") {
-    opt[java.io.File]('s', "assemble").action {
-      (file, options) =>
-        options.copy(in = file)
-    }.valueName("file").required().maxOccurs(1).text("assemble source file")
-
-    help("help").text("prints this help")
+  private def setupLogger(isVerbose: Boolean): Logger = {
+    val errWriter = new PrintWriter(System.err)
+    val outWriter = new PrintWriter(System.out)
+    val defaultConfiguration = Seq(
+      LogError -> ("Error: " to errWriter),
+      LogWarning -> ("Warning: " to errWriter),
+      LogInfo -> ("Info: " to outWriter)
+    )
+    Logger.forConfiguration(
+      if (isVerbose) defaultConfiguration :+ (LogDebug -> ("debug " to outWriter))
+      else defaultConfiguration
+    )
   }
 
-  private def getReaderForFile(file: java.io.File): java.io.Reader OrElse AsmError =
+  private def getReaderForFile(file: java.io.File): Source OrElse AsmError =
     try {
-      Ok(new FileReader(file))
+      Ok(Source.fromFile(file))
     } catch {
       case err: IOException =>
         Err(AsmError.AsmArgumentError.CantOpenFile(file.getName, err))
     }
 
-  def parse(reader: java.io.Reader) = {
-    val result = AsmParser.read(reader).execute
-    reader.close()
+  def parse(source: Source)(implicit logger: Logger) = {
+    val result = AsmParser.read(source.getLines()).execute
+    source.close()
     result
   }
 }

@@ -26,13 +26,35 @@
 package me.rand.asm.parser
 
 import me.rand.asm.main.AsmError.AsmParserError
+import me.rand.commons.idioms.Logger
 import me.rand.commons.idioms.Status._
 
-class AsmParser(input: java.io.Reader) {
-  def execute = Err(AsmParserError.UnknownInstruction("what?"))
+class AsmParser(input: Iterable[String]) {
+  def execute(implicit logger: Logger) =
+    input.tryFoldLeft(0) {
+      case (lineNumber, eachLine) =>
+        logger >> s"$lineNumber: $eachLine"
+        translateLine(lineNumber, eachLine) && (_ => lineNumber + 1)
+    }
+
+  private def translateLine(lineNumber: Int, text: String): Option[String] OrElse AsmParserError =
+    text.trim.split("\\s+").toList match {
+      case Nil | "" :: _ =>
+        // Empty line
+        Ok(None)
+
+      case k :: _ if k.startsWith("//") =>
+        Ok(None)
+
+      case key :: args =>
+        translateCode(lineNumber, key, args) && (Some(_))
+    }
+
+  private def translateCode(lineNumber: Int, keyword: String, args: List[String]): String OrElse AsmParserError =
+    Err(AsmParserError.UnknownInstruction(keyword, lineNumber))
 
 }
 
 object AsmParser {
-  def read(input: java.io.Reader) = new AsmParser(input)
+  def read(input: Iterator[String]) = new AsmParser(input.toIterable)
 }

@@ -25,4 +25,32 @@
  */
 package me.rand.asm.main
 
-case class AsmOptions(in: java.io.File = null)
+import me.rand.commons.idioms.Status._
+
+case class AsmOptions(in: java.io.File = null, verbose: Boolean = false)
+
+object AsmOptions {
+  def fromUserArgs(args: Array[String]): AsmOptions OrElse String =
+    optionParser.parse(args, AsmOptions()) match {
+      case None =>
+        optionParser.showUsageAsError()
+        Err("")
+
+      case Some(options) =>
+        Ok(options)
+    }
+
+  private lazy val optionParser = new scopt.OptionParser[AsmOptions]("asm") {
+    opt[java.io.File]('s', "assemble").action {
+      (file, options) =>
+        options.copy(in = file)
+    }.valueName("file").required().maxOccurs(1).text("assemble source file")
+
+    opt[Unit]("vv").action {
+      (_, options) =>
+        options.copy(verbose = true)
+    }.optional().text("assemble verbosely")
+
+    help("help").text("prints this help")
+  }
+}

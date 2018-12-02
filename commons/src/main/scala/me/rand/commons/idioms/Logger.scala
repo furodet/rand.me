@@ -59,6 +59,7 @@ class Logger(configuration: LoggerConfiguration) {
 
       case Some((prefix, printWriter)) =>
         printWriter.println(prefix + message)
+        printWriter.flush()
     }
 
   def !!(errorMessage: String): Unit = printIfNeeded(errorMessage, configuration.errorOut)

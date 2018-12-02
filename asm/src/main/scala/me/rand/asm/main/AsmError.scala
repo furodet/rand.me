@@ -40,13 +40,15 @@ object AsmError {
 
   }
 
-  sealed trait AsmParserError extends AsmError
+  sealed trait AsmParserError extends AsmError {
+    def lineNumber: Int
+  }
 
   object AsmParserError {
 
-    case class UnknownInstruction(name: String) extends AsmParserError {
+    case class UnknownInstruction(name: String, lineNumber: Int) extends AsmParserError {
       override def toString: String =
-        s"unknown instruction '$name'"
+        s"$lineNumber: unknown instruction '$name'"
     }
 
   }
