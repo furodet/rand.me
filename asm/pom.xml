@@ -20,13 +20,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.scala-lang.modules</groupId>
-            <artifactId>scala-parser-combinators_2.12</artifactId>
-            <version>1.0.7</version>
-        </dependency>
-
-
-        <dependency>
             <groupId>org.scalatest</groupId>
             <artifactId>scalatest_2.12</artifactId>
         </dependency>

@@ -23,16 +23,32 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.asm.parser
+package me.rand.asm.main
 
-import me.rand.asm.main.AsmError.AsmParserError
-import me.rand.commons.idioms.Status._
+sealed trait AsmError
 
-class AsmParser(input: java.io.Reader) {
-  def execute = Err(AsmParserError.UnknownInstruction("what?"))
+object AsmError {
 
-}
+  sealed trait AsmArgumentError extends AsmError
 
-object AsmParser {
-  def read(input: java.io.Reader) = new AsmParser(input)
+  object AsmArgumentError {
+
+    case class CantOpenFile(fileName: String, cause: Throwable) extends AsmArgumentError {
+      override def toString: String =
+        s"could not open '$fileName': ${cause.getMessage}"
+    }
+
+  }
+
+  sealed trait AsmParserError extends AsmError
+
+  object AsmParserError {
+
+    case class UnknownInstruction(name: String) extends AsmParserError {
+      override def toString: String =
+        s"unknown instruction '$name'"
+    }
+
+  }
+
 }

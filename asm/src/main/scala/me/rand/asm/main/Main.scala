@@ -25,9 +25,10 @@
  */
 package me.rand.asm.main
 
-import java.io.FileReader
+import java.io.{FileReader, IOException}
 
 import me.rand.asm.parser.AsmParser
+import me.rand.commons.idioms.Status._
 
 object Main {
   def main(args: Array[String]): Unit = {
@@ -37,20 +38,40 @@ object Main {
         optionParser.showUsageAsError()
 
       case Some(options) =>
-        val result = parse(new FileReader(options.in))
-        println(result)
+        (for {
+          reader <- getReaderForFile(options.in)
+          parsed = parse(reader)
+        } yield parsed) match {
+          case Ok(result) =>
+            println(result)
+
+          case Err(error) =>
+            System.err.println(error)
+            System.exit(1)
+        }
     }
   }
 
   private lazy val optionParser = new scopt.OptionParser[AsmOptions]("asm") {
-    opt[java.io.File]('s', "assemble").valueName("file").required().maxOccurs(1).action {
+    opt[java.io.File]('s', "assemble").action {
       (file, options) =>
         options.copy(in = file)
-    }
+    }.valueName("file").required().maxOccurs(1).text("assemble source file")
 
     help("help").text("prints this help")
   }
 
-  def parse(reader: java.io.Reader) =
-    AsmParser.read(reader).execute
+  private def getReaderForFile(file: java.io.File): java.io.Reader OrElse AsmError =
+    try {
+      Ok(new FileReader(file))
+    } catch {
+      case err: IOException =>
+        Err(AsmError.AsmArgumentError.CantOpenFile(file.getName, err))
+    }
+
+  def parse(reader: java.io.Reader) = {
+    val result = AsmParser.read(reader).execute
+    reader.close()
+    result
+  }
 }
