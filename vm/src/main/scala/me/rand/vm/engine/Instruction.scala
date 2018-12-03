@@ -50,6 +50,8 @@ class Instruction(name: String, signatures: Instruction.Signatures) {
   // Encapsulate signatures constructor for simplicity
   def |(newSignature: Instruction.Signature): Instruction =
     new Instruction(name, signatures | newSignature)
+
+  override def toString: String = s"$name $signatures"
 }
 
 object Instruction {
@@ -78,6 +80,9 @@ object Instruction {
       }
       Err(NoMatchingProfile(instructionName, variables))
     }
+
+    override def toString: String =
+      list.map(_.getVariableTypes.mkString("(", ",", ")")).mkString("[", ",", "]")
   }
 
   object Signatures {
@@ -88,15 +93,19 @@ object Instruction {
     def getComputeFunctionIfVariablesMatch(variables: Iterable[Variable]): Option[ComputeFunction]
 
     def getUpdateFunction: UpdateFunction
+
+    def getVariableTypes: List[Class[_]]
   }
 
-  class PartialSignature(fetch: Iterable[Variable] => Option[ComputeFunction]) {
+  class PartialSignature(fetch: Iterable[Variable] => Option[ComputeFunction], vts: List[Class[_]]) {
     def withUpdateFunction(updateFunction: UpdateFunction): Signature =
       new Signature {
         override def getComputeFunctionIfVariablesMatch(variables: Iterable[Variable]): Option[ComputeFunction] =
           fetch(variables)
 
         override def getUpdateFunction: UpdateFunction = updateFunction
+
+        override def getVariableTypes: List[Class[_]] = vts
       }
 
     def withDefaultUpdateFunction: Signature =
@@ -120,7 +129,8 @@ object Instruction {
                   result
               }
             })
-          else None
+          else None,
+        List(vt1)
       )
   }
 
@@ -142,7 +152,8 @@ object Instruction {
                   result
               }
             })
-          else None
+          else None,
+        List(vt1, vt2)
       )
   }
 

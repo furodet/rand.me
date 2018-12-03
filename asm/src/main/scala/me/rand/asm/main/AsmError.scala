@@ -25,6 +25,8 @@
  */
 package me.rand.asm.main
 
+import me.rand.vm.main.VmError.VmProfileStringError
+
 sealed trait AsmError
 
 object AsmError {
@@ -46,9 +48,46 @@ object AsmError {
 
   object AsmParserError {
 
+    case class DuplicateMachineSpecification(lineNumber: Int) extends AsmParserError {
+      override def toString: String =
+        s"$lineNumber: machine profile already defined"
+    }
+
+    case object MissingMachineSpecification extends AsmParserError {
+      override def toString: String =
+        s"no machine specification found"
+
+      override def lineNumber: Int = 0
+    }
+
     case class UnknownInstruction(name: String, lineNumber: Int) extends AsmParserError {
       override def toString: String =
         s"$lineNumber: unknown instruction '$name'"
+    }
+
+    case class UnknownOperandType(name: String, lineNumber: Int) extends AsmParserError {
+      override def toString: String =
+        s"$lineNumber: unknown type of operand '$name'"
+    }
+
+    case class InvalidOperandIndex(name: String, lineNumber: Int) extends AsmParserError {
+      override def toString: String =
+        s"$lineNumber: invalid operand index '$name'"
+    }
+
+    case class InvalidIndirection(name: String, lineNumber: Int) extends AsmParserError {
+      override def toString: String =
+        s"$lineNumber: invalid indirection '$name'"
+    }
+
+    case class InvalidReference(name: String, lineNumber: Int) extends AsmParserError {
+      override def toString: String =
+        s"$lineNumber: invalid variable reference '$name'"
+    }
+
+    case class InvalidMachineSpecification(text: String, cause: VmProfileStringError, lineNumber: Int) extends AsmParserError {
+      override def toString: String =
+        s"$lineNumber: invalid machine specification '$text': $cause"
     }
 
   }
