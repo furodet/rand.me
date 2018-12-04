@@ -36,7 +36,8 @@ import me.rand.vm.engine.VmTypes.VmType
 import me.rand.vm.engine.{Operand, Operands, VmContext}
 import me.rand.vm.is.InstructionSet
 
-class AsmParser(input: Iterable[String]) {
+class AsmParser(input: Iterable[String], prefix: Option[String]) {
+  def withPrefix(newPrefix: Option[String]): AsmParser = new AsmParser(input, newPrefix)
 
   private case class AsmParserContext(lineNumber: Int = 1, vmContext: Option[VmContext] = None, tokens: List[AsmToken] = List.empty) {
     def nextLine: AsmParserContext = copy(lineNumber = lineNumber + 1)
@@ -65,7 +66,7 @@ class AsmParser(input: Iterable[String]) {
 
   private def parseInput(implicit logger: Logger): AsmParserContext OrElse AsmParserError =
     input.tryFoldLeft(AsmParserContext()) {
-      case (context, eachLine) =>
+      case (context, eachLine) if matchesPrefix(eachLine) =>
         logger >> s"${context.lineNumber}: $eachLine"
         translateLine(eachLine)(logger, context) & {
           case None =>
@@ -77,6 +78,18 @@ class AsmParser(input: Iterable[String]) {
           case Some(asmToken) =>
             Ok(context.recordNewToken(asmToken))
         }
+
+      case (context, _) =>
+        Ok(context.nextLine)
+    }
+
+  private def matchesPrefix(text: String): Boolean =
+    prefix match {
+      case None =>
+        true
+
+      case Some(prefixText) =>
+        text.startsWith(prefixText)
     }
 
   private def getParserResultIfVmContextIsDefined(asmParserContext: AsmParserContext): (VmContext, List[AsmToken]) OrElse AsmParserError =
@@ -88,8 +101,9 @@ class AsmParser(input: Iterable[String]) {
         Err(AsmParserError.MissingMachineSpecification)
     }
 
-  private def translateLine(text: String)(implicit logger: Logger, asmParserContext: AsmParserContext): Option[AsmToken] OrElse AsmParserError =
-    text.trim.split("\\s+").toList match {
+  private def translateLine(text: String)(implicit logger: Logger, asmParserContext: AsmParserContext): Option[AsmToken] OrElse AsmParserError = {
+    val cleanText = (if (prefix.isDefined) text.substring(prefix.get.length) else text).trim.split("\\s+").toList
+    cleanText match {
       case Nil | "" :: _ =>
         // Empty line
         Ok(None)
@@ -100,6 +114,7 @@ class AsmParser(input: Iterable[String]) {
       case key :: args =>
         translateCode(key, args) && (Some(_))
     }
+  }
 
   private def translateCode(keyword: String, args: List[String])(implicit logger: Logger, asmParserContext: AsmParserContext): AsmToken OrElse AsmParserError =
     keyword match {
@@ -290,5 +305,5 @@ class AsmParser(input: Iterable[String]) {
 }
 
 object AsmParser {
-  def read(input: Iterator[String]) = new AsmParser(input.toIterable)
+  def read(input: Iterator[String]) = new AsmParser(input.toIterable, None)
 }

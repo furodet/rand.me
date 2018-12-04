@@ -27,7 +27,7 @@ package me.rand.asm.main
 
 import me.rand.commons.idioms.Status._
 
-case class AsmOptions(in: java.io.File = null, verbose: Boolean = false)
+case class AsmOptions(in: java.io.File = null, verbose: Boolean = false, prefix: Option[String] = None)
 
 object AsmOptions {
   def fromUserArgs(args: Array[String]): AsmOptions OrElse String =
@@ -50,6 +50,11 @@ object AsmOptions {
       (_, options) =>
         options.copy(verbose = true)
     }.optional().text("assemble verbosely")
+
+    opt[String](name = "prefix").action {
+      (prefix, options) =>
+        options.copy(prefix = Some(prefix))
+    }.optional().maxOccurs(1).valueName("text").text("text prefixing assembly directives (none by default)")
 
     help("help").text("prints this help")
   }

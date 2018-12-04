@@ -41,7 +41,7 @@ object Main {
       options <- AsmOptions.fromUserArgs(args)
       source <- getReaderForFile(options.in)
       logger = setupLogger(options.verbose)
-      parsed <- parse(source)(logger)
+      parsed <- parse(source, options.prefix)(logger)
     } yield parsed) match {
       case Ok(result) =>
         println(result)
@@ -74,8 +74,8 @@ object Main {
         Err(AsmError.AsmArgumentError.CantOpenFile(file.getName, err))
     }
 
-  def parse(source: Source)(implicit logger: Logger): (VmContext, List[AsmToken]) OrElse AsmError.AsmParserError = {
-    val result = AsmParser.read(source.getLines()).execute
+  def parse(source: Source, prefix: Option[String])(implicit logger: Logger): (VmContext, List[AsmToken]) OrElse AsmError.AsmParserError = {
+    val result = AsmParser.read(source.getLines()).withPrefix(prefix).execute
     source.close()
     result
   }
