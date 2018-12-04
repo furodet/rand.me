@@ -25,6 +25,7 @@
  */
 package me.rand.asm.parser
 
+import me.rand.vm.alu.VmRegister
 import me.rand.vm.engine.VmContext
 import me.rand.vm.engine.VmProgram.InstructionInstance
 
@@ -42,6 +43,30 @@ object AsmToken {
   case class Instruction(instance: InstructionInstance, lineNumber: Int) extends AsmToken {
     override def toString: String =
       s"@$lineNumber $instance"
+  }
+
+  sealed trait Directive extends AsmToken
+
+  object Directive {
+
+    case class DeclareBasicBlock(name: String, lineNumber: Int) extends Directive {
+      override def toString: String = s".bb($name)"
+    }
+
+    sealed trait DeclareVariable extends Directive
+
+    object DeclareVariable {
+
+      case class InTheHeap(name: String, heapIndex: Int, initialValue: VmRegister, lineNumber: Int) extends DeclareVariable {
+        override def toString: String = s".var(%$heapIndex:$name=$initialValue)"
+      }
+
+      case class InTheStack(name: String, stackIndex: Int, initialValue: VmRegister, lineNumber: Int) extends DeclareVariable {
+        override def toString: String = s".var($$$stackIndex:$name=$initialValue)"
+      }
+
+    }
+
   }
 
 }

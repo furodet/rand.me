@@ -66,6 +66,10 @@ class VmTypes(val typeMap: Map[String, VmType]) {
       case _ =>
         None
     }
+
+  private lazy val textual = typeMap.values.map(_.name).toList.sorted.mkString("[", ",", "]")
+
+  override def toString: String = textual
 }
 
 object VmTypes {

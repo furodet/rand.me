@@ -100,6 +100,16 @@ object AsmError {
         s"$lineNumber: invalid type length specification '$text'"
     }
 
+    case class InvalidDirectiveSpecification(keyword: String, lineNumber: Int) extends AsmParserError {
+      override def toString: String =
+        s"$lineNumber: invalid directive specification '$keyword'"
+    }
+
+    case class InvalidVariableSpecification(text: String, lineNumber: Int) extends AsmParserError {
+      override def toString: String =
+        s"$lineNumber: invalid variable specification '$text'"
+    }
+
   }
 
 }
