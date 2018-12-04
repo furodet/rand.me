@@ -65,14 +65,14 @@ object AsmError {
         s"$lineNumber: unknown instruction '$name'"
     }
 
-    case class UnknownOperandType(name: String, lineNumber: Int) extends AsmParserError {
+    case class UnknownSourceOperandType(name: String, lineNumber: Int) extends AsmParserError {
       override def toString: String =
-        s"$lineNumber: unknown type of operand '$name'"
+        s"$lineNumber: unknown type of source operand '$name'"
     }
 
-    case class InvalidOperandIndex(name: String, lineNumber: Int) extends AsmParserError {
+    case class UnknownDestinationOperandType(name: String, lineNumber: Int) extends AsmParserError {
       override def toString: String =
-        s"$lineNumber: invalid operand index '$name'"
+        s"$lineNumber: unknown type of destination operand '$name'"
     }
 
     case class InvalidIndirection(name: String, lineNumber: Int) extends AsmParserError {
@@ -88,6 +88,16 @@ object AsmError {
     case class InvalidMachineSpecification(text: String, cause: VmProfileStringError, lineNumber: Int) extends AsmParserError {
       override def toString: String =
         s"$lineNumber: invalid machine specification '$text': $cause"
+    }
+
+    case class UnspecifiedMachineProfile(lineNumber: Int) extends AsmParserError {
+      override def toString: String =
+        s"$lineNumber: no machine specification provided - could not decode type"
+    }
+
+    case class InvalidTypeLen(text: String, lineNumber: Int) extends AsmParserError {
+      override def toString: String =
+        s"$lineNumber: invalid type length specification '$text'"
     }
 
   }

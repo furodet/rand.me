@@ -26,24 +26,30 @@
 package me.rand.asm.parser
 
 import me.rand.asm.main.AsmError.AsmParserError
-import me.rand.commons.idioms.Logger
+import me.rand.commons.idioms.NormalizedNumber._
 import me.rand.commons.idioms.Status._
+import me.rand.commons.idioms.{Logger, NormalizedNumber}
 import me.rand.vm.alu.VmRegister
 import me.rand.vm.engine.Operands.OperandsBuilder
 import me.rand.vm.engine.VmProgram.InstructionInstance
+import me.rand.vm.engine.VmTypes.VmType
 import me.rand.vm.engine.{Operand, Operands, VmContext}
 import me.rand.vm.is.InstructionSet
 
 class AsmParser(input: Iterable[String]) {
 
-  private case class AsmParserContext(lineNumber: Int = 0, vmContext: Option[VmContext] = None, tokens: List[AsmToken] = List.empty) {
+  private case class AsmParserContext(lineNumber: Int = 1, vmContext: Option[VmContext] = None, tokens: List[AsmToken] = List.empty) {
     def nextLine: AsmParserContext = copy(lineNumber = lineNumber + 1)
 
-    def recordNewToken(token: AsmToken): AsmParserContext = copy(lineNumber = lineNumber + 1, tokens = tokens :+ token)
+    def recordNewToken(token: AsmToken)(implicit logger: Logger): AsmParserContext = {
+      logger >> s"$lineNumber: registering token $token"
+      copy(lineNumber = lineNumber + 1, tokens = tokens :+ token)
+    }
 
-    def recordMachIfNotYetDefined(token: AsmToken.Mach): AsmParserContext OrElse AsmParserError =
+    def recordMachIfNotYetDefined(token: AsmToken.Mach)(implicit logger: Logger): AsmParserContext OrElse AsmParserError =
       vmContext match {
         case None =>
+          logger >> s"$lineNumber: registering token $token"
           Ok(copy(lineNumber = lineNumber + 1, vmContext = Some(token.vmContext), tokens = tokens :+ token))
 
         case Some(_) =>
@@ -51,7 +57,13 @@ class AsmParser(input: Iterable[String]) {
       }
   }
 
-  def execute(implicit logger: Logger): (List[AsmToken], VmContext) OrElse AsmParserError =
+  def execute(implicit logger: Logger): (VmContext, List[AsmToken]) OrElse AsmParserError =
+    for {
+      asmParserContext <- parseInput
+      result <- getParserResultIfVmContextIsDefined(asmParserContext)
+    } yield result
+
+  private def parseInput(implicit logger: Logger): AsmParserContext OrElse AsmParserError =
     input.tryFoldLeft(AsmParserContext()) {
       case (context, eachLine) =>
         logger >> s"${context.lineNumber}: $eachLine"
@@ -65,9 +77,12 @@ class AsmParser(input: Iterable[String]) {
           case Some(asmToken) =>
             Ok(context.recordNewToken(asmToken))
         }
-    } & {
+    }
+
+  private def getParserResultIfVmContextIsDefined(asmParserContext: AsmParserContext): (VmContext, List[AsmToken]) OrElse AsmParserError =
+    asmParserContext match {
       case AsmParserContext(_, Some(vmContext), tokens) =>
-        Ok((tokens, vmContext))
+        Ok((vmContext, tokens))
 
       case _ =>
         Err(AsmParserError.MissingMachineSpecification)
@@ -89,6 +104,7 @@ class AsmParser(input: Iterable[String]) {
   private def translateCode(keyword: String, args: List[String])(implicit logger: Logger, asmParserContext: AsmParserContext): AsmToken OrElse AsmParserError =
     keyword match {
       case ".mach" =>
+        logger >> s"applying machine definition '${args.head}'"
         VmContext.usingProfileString(args.head) match {
           case Ok(vmContext) =>
             Ok(AsmToken.Mach(vmContext, asmParserContext.lineNumber))
@@ -98,15 +114,16 @@ class AsmParser(input: Iterable[String]) {
         }
 
       case directive if directive.startsWith(".") =>
+        logger >> s"applying directive '$directive'"
         throw new NotImplementedError("directives not implemented (yet)")
 
       case instructionName =>
+        logger >> s"searching for instruction '$instructionName'"
         InstructionSet.map.get(instructionName) match {
           case None =>
             Err(AsmParserError.UnknownInstruction(keyword, asmParserContext.lineNumber))
 
           case Some(instruction) =>
-            logger >> s"found instruction $instruction"
             translateInstructionOperands(args) &&
               (operands => AsmToken.Instruction(new InstructionInstance(instruction, operands), asmParserContext.lineNumber))
         }
@@ -117,7 +134,7 @@ class AsmParser(input: Iterable[String]) {
       case ((builder, isFetchingOutput), eachArg) =>
         (eachArg, isFetchingOutput) match {
           case (">", _) =>
-            Ok(builder, true)
+            Ok((builder, true))
 
           case (_, false) =>
             translateInstructionSourceOperand(eachArg) && (x => (builder + x, isFetchingOutput))
@@ -129,22 +146,22 @@ class AsmParser(input: Iterable[String]) {
 
   private def translateInstructionSourceOperand(arg: String)(implicit asmParserContext: AsmParserContext): Operand.Source OrElse AsmParserError =
     arg match {
-      case aHeapVariable if aHeapVariable.startsWith("%") =>
-        getOperandIndexFromName(aHeapVariable.tail) && Operand.Source.Variable.InTheHeap
+      case aHeapVariable if aHeapVariable.matches("%[0-9]+") =>
+        Ok(Operand.Source.Variable.InTheHeap(aHeapVariable.tail.toInt))
 
-      case aStackVariable if aStackVariable.startsWith("$") =>
-        getOperandIndexFromName(aStackVariable.tail) && Operand.Source.Variable.InTheStack
+      case aStackVariable if aStackVariable.matches("\\$[0-9]+") =>
+        Ok(Operand.Source.Variable.InTheStack(aStackVariable.tail.toInt))
 
       case aPointer if aPointer.startsWith("*") =>
         val (depth, operand) = countIndirectionsAndFetchOperandName(aPointer, "*")
         operand match {
-          case aHeapVariable if aHeapVariable.startsWith("%") =>
-            getOperandIndexFromName(aHeapVariable.tail) &&
-              (index => Operand.Source.Indirect(Operand.Source.Variable.InTheHeap(index), depth))
+          case aHeapVariable if aHeapVariable.matches("%[0-9]+") =>
+            val index = aHeapVariable.tail.toInt
+            Ok(Operand.Source.Indirect(Operand.Source.Variable.InTheHeap(index), depth))
 
-          case aStackVariable if aStackVariable.startsWith("$") =>
-            getOperandIndexFromName(aStackVariable.tail) &&
-              (index => Operand.Source.Indirect(Operand.Source.Variable.InTheStack(index), depth))
+          case aStackVariable if aStackVariable.matches("\\$[0-9]+") =>
+            val index = aStackVariable.tail.toInt
+            Ok(Operand.Source.Indirect(Operand.Source.Variable.InTheStack(index), depth))
 
           case _ =>
             Err(AsmParserError.InvalidIndirection(aPointer, asmParserContext.lineNumber))
@@ -152,21 +169,21 @@ class AsmParser(input: Iterable[String]) {
 
       case anAddress if anAddress.startsWith("&") =>
         anAddress.tail match {
-          case aHeapVariable if aHeapVariable.startsWith("%") =>
-            getOperandIndexFromName(aHeapVariable.tail) && Operand.Source.Reference.InTheHeap
+          case aHeapVariable if aHeapVariable.matches("%[0-9]+") =>
+            Ok(Operand.Source.Reference.InTheHeap(aHeapVariable.tail.toInt))
 
-          case aStackVariable if aStackVariable.startsWith("$") =>
-            getOperandIndexFromName(aStackVariable.tail) && Operand.Source.Reference.InTheStack
+          case aStackVariable if aStackVariable.matches("\\$[0-9]+") =>
+            Ok(Operand.Source.Reference.InTheStack(aStackVariable.tail.toInt))
 
           case _ =>
             Err(AsmParserError.InvalidReference(anAddress, asmParserContext.lineNumber))
         }
 
-      case anImmediate if anImmediate.startsWith("=") =>
-        translateImmediateValue(anImmediate.tail) && Operand.Source.Immediate
+      case anImmediate if anImmediate.matches("\\(([0-9a-fA-F][0-9a-fA-F])+:[su][0-9]+\\)") =>
+        translateImmediateValue(anImmediate.tail.init) && Operand.Source.Immediate
 
       case somethingElse =>
-        Err(AsmParserError.UnknownOperandType(somethingElse, asmParserContext.lineNumber))
+        Err(AsmParserError.UnknownSourceOperandType(somethingElse, asmParserContext.lineNumber))
     }
 
   private def translateInstructionDestinationOperand(arg: String)(implicit asmParserContext: AsmParserContext): Operand.Destination OrElse AsmParserError =
@@ -174,29 +191,29 @@ class AsmParser(input: Iterable[String]) {
       case "_" =>
         Ok(Operand.Destination.NoDestination)
 
-      case aHeapVariable if aHeapVariable.startsWith("%") =>
-        getOperandIndexFromName(aHeapVariable.tail) && Operand.Destination.Variable.InTheHeap
+      case aHeapVariable if aHeapVariable.matches("%[0-9]+") =>
+        Ok(Operand.Destination.Variable.InTheHeap(aHeapVariable.tail.toInt))
 
-      case aStackVariable if aStackVariable.startsWith("$") =>
-        getOperandIndexFromName(aStackVariable.tail) && Operand.Destination.Variable.InTheStack
+      case aStackVariable if aStackVariable.matches("\\$[0-9]+") =>
+        Ok(Operand.Destination.Variable.InTheStack(aStackVariable.tail.toInt))
 
       case aPointer if aPointer.startsWith("*") =>
         val (depth, operand) = countIndirectionsAndFetchOperandName(aPointer, "*")
         operand match {
-          case aHeapVariable if aHeapVariable.startsWith("%") =>
-            getOperandIndexFromName(aHeapVariable.tail) &&
-              (index => Operand.Destination.Redirect(Operand.Destination.Variable.InTheHeap(index), depth))
+          case aHeapVariable if aHeapVariable.matches("%[0-9]+") =>
+            val index = aHeapVariable.tail.toInt
+            Ok(Operand.Destination.Redirect(Operand.Destination.Variable.InTheHeap(index), depth))
 
-          case aStackVariable if aStackVariable.startsWith("$") =>
-            getOperandIndexFromName(aStackVariable.tail) &&
-              (index => Operand.Destination.Redirect(Operand.Destination.Variable.InTheStack(index), depth))
+          case aStackVariable if aStackVariable.matches("\\$[0-9]+") =>
+            val index = aStackVariable.tail.toInt
+            Ok(Operand.Destination.Redirect(Operand.Destination.Variable.InTheStack(index), depth))
 
           case _ =>
             Err(AsmParserError.InvalidIndirection(aPointer, asmParserContext.lineNumber))
         }
 
       case somethingElse =>
-        Err(AsmParserError.UnknownOperandType(somethingElse, asmParserContext.lineNumber))
+        Err(AsmParserError.UnknownDestinationOperandType(somethingElse, asmParserContext.lineNumber))
     }
 
   private def countIndirectionsAndFetchOperandName(name: String, matchPrefix: String, depth: Int = 0): (Int, String) =
@@ -204,17 +221,45 @@ class AsmParser(input: Iterable[String]) {
       countIndirectionsAndFetchOperandName(name.tail, matchPrefix, depth + 1)
     else (depth, name)
 
-  private def getOperandIndexFromName(name: String)(implicit asmParserContext: AsmParserContext): Int OrElse AsmParserError =
-    try {
-      Ok(Integer.valueOf(name))
-    } catch {
-      case _: NumberFormatException =>
-        Err(AsmParserError.InvalidOperandIndex(name, asmParserContext.lineNumber))
+  private def translateImmediateValue(text: String)(implicit asmParserContext: AsmParserContext): VmRegister OrElse AsmParserError = {
+    val fields = text.split(":")
+    for {
+      vmType <- decodeType(fields(1), asmParserContext.vmContext, asmParserContext.lineNumber)
+      value = decodeNumber(fields(0))
+    } yield VmRegister.normalize(vmType, value)
+  }
+
+  private def decodeNumber(text: String): NormalizedNumber =
+    text.sliding(2, 2).map(byteAsString => Integer.parseInt(byteAsString, 16))
+
+  private def decodeType(text: String, vmContext: Option[VmContext], lineNumber: Int): VmType OrElse AsmParserError =
+    if (vmContext.isDefined) decodeType(text.tail, isSigned = text.head == 's', vmContext.get, lineNumber)
+    else Err(AsmParserError.UnspecifiedMachineProfile(lineNumber))
+
+  private def decodeType(radix: String, isSigned: Boolean, vmContext: VmContext, lineNumber: Int): VmType OrElse AsmParserError =
+    decodeTypeLen(radix, lineNumber) & {
+      vmContext.vmTypes.select(_, isSigned) match {
+        case None =>
+          Err(AsmParserError.InvalidTypeLen(radix, lineNumber))
+
+        case Some(vmType) =>
+          Ok(vmType)
+      }
     }
 
-  private def translateImmediateValue(text: String)(implicit asmParserContext: AsmParserContext): VmRegister OrElse AsmParserError =
-  // TODO
-    ???
+  private def decodeTypeLen(text: String, lineNumber: Int): Int OrElse AsmParserError =
+    try {
+      text.toInt match {
+        case bitLen if bitLen > 0 =>
+          Ok((bitLen + 7) / 8)
+
+        case _ =>
+          Err(AsmParserError.InvalidTypeLen(text, lineNumber))
+      }
+    } catch {
+      case _: NumberFormatException =>
+        Err(AsmParserError.InvalidTypeLen(text, lineNumber))
+    }
 }
 
 object AsmParser {

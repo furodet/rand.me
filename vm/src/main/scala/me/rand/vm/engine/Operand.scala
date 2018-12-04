@@ -39,25 +39,37 @@ object Operand {
 
     object Variable {
 
-      case class InTheHeap(index: Int) extends Source.Variable
+      case class InTheHeap(index: Int) extends Source.Variable {
+        override def toString: String = s"%$index"
+      }
 
-      case class InTheStack(index: Int) extends Source.Variable
+      case class InTheStack(index: Int) extends Source.Variable {
+        override def toString: String = s"$$$index"
+      }
 
     }
 
-    case class Indirect(pointer: Source.Variable, depth: Int) extends Source
+    case class Indirect(pointer: Source.Variable, depth: Int) extends Source {
+      override def toString: String = s"*[$depth]$pointer"
+    }
 
     sealed trait Reference extends Source
 
     object Reference {
 
-      case class InTheHeap(index: Int) extends Source.Reference
+      case class InTheHeap(index: Int) extends Source.Reference {
+        override def toString: String = s"&%$index"
+      }
 
-      case class InTheStack(index: Int) extends Source.Reference
+      case class InTheStack(index: Int) extends Source.Reference {
+        override def toString: String = s"&$$$index"
+      }
 
     }
 
-    case class Immediate(value: VmRegister) extends Source
+    case class Immediate(value: VmRegister) extends Source {
+      override def toString: String = s"$value"
+    }
 
   }
 
@@ -65,19 +77,27 @@ object Operand {
 
   object Destination {
 
-    object NoDestination extends Destination
+    object NoDestination extends Destination {
+      override def toString: String = "none"
+    }
 
     sealed trait Variable extends Destination
 
     object Variable {
 
-      case class InTheHeap(variableIndex: Int) extends Destination.Variable
+      case class InTheHeap(variableIndex: Int) extends Destination.Variable {
+        override def toString: String = s"%$variableIndex"
+      }
 
-      case class InTheStack(variableIndex: Int) extends Destination.Variable
+      case class InTheStack(variableIndex: Int) extends Destination.Variable {
+        override def toString: String = s"$$$variableIndex"
+      }
 
     }
 
-    case class Redirect(pointer: Destination.Variable, depth: Int) extends Destination
+    case class Redirect(pointer: Destination.Variable, depth: Int) extends Destination {
+      override def toString: String = s"*[$depth]$pointer"
+    }
 
   }
 

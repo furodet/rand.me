@@ -34,8 +34,14 @@ sealed trait AsmToken {
 
 object AsmToken {
 
-  case class Mach(vmContext: VmContext, lineNumber: Int) extends AsmToken
+  case class Mach(vmContext: VmContext, lineNumber: Int) extends AsmToken {
+    override def toString: String =
+      s"@$lineNumber ${vmContext.vmTypes}"
+  }
 
-  case class Instruction(instance: InstructionInstance, lineNumber: Int) extends AsmToken
+  case class Instruction(instance: InstructionInstance, lineNumber: Int) extends AsmToken {
+    override def toString: String =
+      s"@$lineNumber $instance"
+  }
 
 }

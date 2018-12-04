@@ -27,10 +27,11 @@ package me.rand.asm.main
 
 import java.io.{IOException, PrintWriter}
 
-import me.rand.asm.parser.AsmParser
+import me.rand.asm.parser.{AsmParser, AsmToken}
 import me.rand.commons.idioms.Logger
 import me.rand.commons.idioms.Logger._
 import me.rand.commons.idioms.Status._
+import me.rand.vm.engine.VmContext
 
 import scala.io.Source
 
@@ -40,7 +41,7 @@ object Main {
       options <- AsmOptions.fromUserArgs(args)
       source <- getReaderForFile(options.in)
       logger = setupLogger(options.verbose)
-      parsed = parse(source)(logger)
+      parsed <- parse(source)(logger)
     } yield parsed) match {
       case Ok(result) =>
         println(result)
@@ -73,7 +74,7 @@ object Main {
         Err(AsmError.AsmArgumentError.CantOpenFile(file.getName, err))
     }
 
-  def parse(source: Source)(implicit logger: Logger) = {
+  def parse(source: Source)(implicit logger: Logger): (VmContext, List[AsmToken]) OrElse AsmError.AsmParserError = {
     val result = AsmParser.read(source.getLines()).execute
     source.close()
     result

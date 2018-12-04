@@ -72,6 +72,9 @@ object VmProgram {
   class InstructionInstance(val instruction: Instruction, val operands: Operands) {
     def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError =
       instruction.execute(operands)(vmContext, executionContext)
+
+    override def toString: String =
+      s"$instruction(${operands.sources.mkString(",")} > ${operands.destination})"
   }
 
   class BasicBlock(val name: String, val instructions: Array[InstructionInstance])
