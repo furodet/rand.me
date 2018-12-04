@@ -64,6 +64,9 @@ object Instruction {
   protected class ComputeUpdateFunctions(val compute: ComputeFunction, val update: UpdateFunction)
 
   class Signatures(list: List[Instruction.Signature]) {
+    private lazy val signatureString =
+      list.map(_.getVariableTypes.map(_.getSimpleName).mkString("(", ",", ")")).mkString("[", ",", "]")
+
     def |(newSignature: Signature): Signatures =
       new Signatures(list :+ newSignature)
 
@@ -81,8 +84,7 @@ object Instruction {
       Err(NoMatchingProfile(instructionName, variables))
     }
 
-    override def toString: String =
-      list.map(_.getVariableTypes.mkString("(", ",", ")")).mkString("[", ",", "]")
+    override def toString: String = signatureString
   }
 
   object Signatures {
