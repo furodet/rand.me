@@ -25,6 +25,7 @@
  */
 package me.rand.asm.main
 
+import me.rand.vm.main.VmError
 import me.rand.vm.main.VmError.VmProfileStringError
 
 sealed trait AsmError
@@ -108,6 +109,41 @@ object AsmError {
     case class InvalidVariableSpecification(text: String, lineNumber: Int) extends AsmParserError {
       override def toString: String =
         s"$lineNumber: invalid variable specification '$text'"
+    }
+
+    case class InvalidInstructionSetVersionSpecification(string: String, lineNumber: Int) extends AsmParserError {
+      override def toString: String =
+        s"$lineNumber: invalid instruction set version specification '$string'"
+    }
+
+    case class IncompatibleInstructionSet(error: VmError.IncompatibleInstructionSetVersion, lineNumber: Int) extends AsmParserError {
+      override def toString: String = s"$lineNumber: $error"
+    }
+
+  }
+
+  sealed trait AsmProgramBuilderError extends AsmError
+
+  object AsmProgramBuilderError {
+
+    case class NoBasicBlockDeclared(lineNumber: Int) extends AsmProgramBuilderError {
+      override def toString: String = s"$lineNumber: could not set instruction: no basic block declared yet"
+    }
+
+    case object UndefinedBootstrapBlock extends AsmProgramBuilderError {
+      override def toString: String = "undefined bootstrap"
+    }
+
+    case class NoSuchBootstrapBlock(name: String, lineNumber: Int) extends AsmProgramBuilderError {
+      override def toString: String = s"$lineNumber: invalid bootstrap: no basic block called '$name' declared"
+    }
+
+    case class DuplicateBootstrapDefinition(lineNumber: Int) extends AsmProgramBuilderError {
+      override def toString: String = s"$lineNumber: duplicate bootstrap definition"
+    }
+
+    case class CantPutHeapVariable(error: VmError.VmContextError, lineNumber: Int) extends AsmProgramBuilderError {
+      override def toString: String = s"$lineNumber: cannot place heap variable: $error"
     }
 
   }

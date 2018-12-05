@@ -53,6 +53,10 @@ object AsmToken {
       override def toString: String = s".bb($name)"
     }
 
+    case class DefineBootBasicBlock(name: String, lineNumber: Int) extends Directive {
+      override def toString: String = s".boot($name)"
+    }
+
     sealed trait DeclareVariable extends Directive
 
     object DeclareVariable {
@@ -61,12 +65,7 @@ object AsmToken {
         override def toString: String = s".var(%$heapIndex:$name=$initialValue)"
       }
 
-      case class InTheStack(name: String, stackIndex: Int, initialValue: VmRegister, lineNumber: Int) extends DeclareVariable {
-        override def toString: String = s".var($$$stackIndex:$name=$initialValue)"
-      }
-
     }
-
   }
 
 }

@@ -31,10 +31,21 @@ import me.rand.vm.main.VmError.IncompatibleInstructionSetVersion
 class InstructionSetVersion(val major: Int, val minor: Int) {
   def isOlderThan(other: InstructionSetVersion): Boolean =
     (major < other.major) || (minor < other.minor)
+
+  override def toString: String = s"$major.$minor"
 }
 
 object InstructionSetVersion {
   val current = new InstructionSetVersion(0, 1)
+
+  def fromString(string: String): Option[InstructionSetVersion] =
+    string.split("\\.").toList match {
+      case major :: minor :: _ if major.matches("[0-9]+") && minor.matches("[0-9]+") =>
+        Some(new InstructionSetVersion(major.toInt, minor.toInt))
+
+      case _ =>
+        None
+    }
 
   def assertThatVirtualMachineVersionIsCompatibleWith(version: InstructionSetVersion): Unit OrElse IncompatibleInstructionSetVersion =
     if (current.isOlderThan(version) || (current.major != version.major)) Err(IncompatibleInstructionSetVersion(version))

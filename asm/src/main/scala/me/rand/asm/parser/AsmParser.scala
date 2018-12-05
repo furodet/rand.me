@@ -34,7 +34,7 @@ import me.rand.vm.engine.Operands.OperandsBuilder
 import me.rand.vm.engine.VmProgram.InstructionInstance
 import me.rand.vm.engine.VmTypes.VmType
 import me.rand.vm.engine.{Operand, Operands, VmContext}
-import me.rand.vm.is.InstructionSet
+import me.rand.vm.is.{InstructionSet, InstructionSetVersion}
 
 class AsmParser(input: Iterable[String], prefix: Option[String]) {
   def withPrefix(newPrefix: Option[String]): AsmParser = new AsmParser(input, newPrefix)
@@ -118,15 +118,15 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
 
   private def translateCode(keyword: String, args: List[String])(implicit logger: Logger, asmParserContext: AsmParserContext): AsmToken OrElse AsmParserError =
     keyword match {
-      case ".mach" =>
-        logger >> s"applying machine definition '${args.head}'"
-        VmContext.usingProfileString(args.head) match {
+      case ".mach" if args.length == 2 =>
+        logger >> s"applying machine definition 'version=${args.head} ${args(1)}'"
+        verifyInstructionSetVersion(args.head, asmParserContext.lineNumber) & (_ => VmContext.usingProfileString(args(1)) match {
           case Ok(vmContext) =>
             Ok(AsmToken.Mach(vmContext, asmParserContext.lineNumber))
 
           case Err(cause) =>
             Err(AsmParserError.InvalidMachineSpecification(args.head, cause, asmParserContext.lineNumber))
-        }
+        })
 
       case directive if directive.startsWith(".") =>
         logger >> s"applying directive '$directive'"
@@ -136,6 +136,9 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
 
           case ".var" =>
             translateVariableDeclarationDirective(args)
+
+          case ".boot" if args.nonEmpty =>
+            Ok(AsmToken.Directive.DefineBootBasicBlock(args.head, asmParserContext.lineNumber))
 
           case _ =>
             Err(AsmParserError.InvalidDirectiveSpecification(keyword, asmParserContext.lineNumber))
@@ -153,6 +156,21 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
         }
     }
 
+  private def verifyInstructionSetVersion(string: String, lineNumber: Int): Unit OrElse AsmParserError =
+    InstructionSetVersion.fromString(string) match {
+      case None =>
+        Err(AsmParserError.InvalidInstructionSetVersionSpecification(string, lineNumber))
+
+      case Some(version) =>
+        InstructionSetVersion.assertThatVirtualMachineVersionIsCompatibleWith(version) match {
+          case Err(error) =>
+            Err(AsmParserError.IncompatibleInstructionSet(error, lineNumber))
+
+          case _ =>
+            Ok(())
+        }
+    }
+
   private def matchesHeapVariable(string: String) = string.matches("%[0-9]+")
 
   private def matchesStackVariable(string: String) = string.matches("\\$[0-9]+")
@@ -163,9 +181,6 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
     args match {
       case name :: id :: value :: Nil if matchesHeapVariable(id) && matchesImmediateValue(value) =>
         translateImmediateValue(value.tail.init) && (v => AsmToken.Directive.DeclareVariable.InTheHeap(name, id.tail.toInt, v, asmParserContext.lineNumber))
-
-      case name :: id :: value :: Nil if matchesStackVariable(id) && matchesImmediateValue(value) =>
-        translateImmediateValue(value.tail.init) && (v => AsmToken.Directive.DeclareVariable.InTheStack(name, id.tail.toInt, v, asmParserContext.lineNumber))
 
       case _ =>
         Err(AsmParserError.InvalidVariableSpecification(args.mkString(" "), asmParserContext.lineNumber))

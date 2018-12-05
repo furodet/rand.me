@@ -27,6 +27,7 @@ package me.rand.asm.main
 
 import java.io.{IOException, PrintWriter}
 
+import me.rand.asm.builder.AsmProgramBuilder
 import me.rand.asm.parser.{AsmParser, AsmToken}
 import me.rand.commons.idioms.Logger
 import me.rand.commons.idioms.Logger._
@@ -40,15 +41,29 @@ object Main {
     (for {
       options <- AsmOptions.fromUserArgs(args)
       source <- getReaderForFile(options.in)
-      logger = setupLogger(options.verbose)
-      parsed <- parse(source, options.prefix)(logger)
-    } yield parsed) match {
+      vmContext <- main(options, source)
+    } yield vmContext) match {
       case Ok(result) =>
         println(result)
 
       case Err(error) =>
         System.err.println(error)
         System.exit(1)
+    }
+  }
+
+  def main(options: AsmOptions, source: Source): VmContext OrElse Unit = {
+    implicit val logger: Logger = setupLogger(options.verbose)
+    (for {
+      parsed <- parse(source, options.prefix)
+      vmContext <- buildProgram(parsed._1, parsed._2)
+    } yield vmContext) match {
+      case Err(error) =>
+        logger !! error.toString
+        Err(())
+
+      case Ok(context) =>
+        Ok(context)
     }
   }
 
@@ -74,9 +89,12 @@ object Main {
         Err(AsmError.AsmArgumentError.CantOpenFile(file.getName, err))
     }
 
-  def parse(source: Source, prefix: Option[String])(implicit logger: Logger): (VmContext, List[AsmToken]) OrElse AsmError.AsmParserError = {
+  private def parse(source: Source, prefix: Option[String])(implicit logger: Logger): (VmContext, List[AsmToken]) OrElse AsmError.AsmParserError = {
     val result = AsmParser.read(source.getLines()).withPrefix(prefix).execute
     source.close()
     result
   }
+
+  private def buildProgram(initialContext: VmContext, tokens: List[AsmToken])(implicit logger: Logger): VmContext OrElse AsmError.AsmProgramBuilderError =
+    AsmProgramBuilder.startingFromContext(initialContext).applyProgram(tokens)
 }
