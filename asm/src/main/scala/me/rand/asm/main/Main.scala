@@ -52,18 +52,15 @@ object Main {
     }
   }
 
-  def main(options: AsmOptions, source: Source): VmContext OrElse Unit = {
+  def main(options: AsmOptions, source: Source): VmContext OrElse String = {
     implicit val logger: Logger = setupLogger(options.verbose)
     (for {
       parsed <- parse(source, options.prefix)
       vmContext <- buildProgram(parsed._1, parsed._2)
-    } yield vmContext) match {
-      case Err(error) =>
+    } yield vmContext) | {
+      error =>
         logger !! error.toString
-        Err(())
-
-      case Ok(context) =>
-        Ok(context)
+        Err("***")
     }
   }
 

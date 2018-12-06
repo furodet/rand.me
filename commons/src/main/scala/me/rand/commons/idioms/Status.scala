@@ -80,6 +80,18 @@ object Status {
       def &&[ReturnType](g: WhenOk => ReturnType): Status[ReturnType, WhenErr] = f.map(g)
 
       def &[ReturnType](g: WhenOk => Status[ReturnType, WhenErr]): Status[ReturnType, WhenErr] = f.flatMap(g)
+
+      def |[ReturnErrorType](g: WhenErr => Status[WhenOk, ReturnErrorType]): Status[WhenOk, ReturnErrorType] =
+        f match {
+          case Ok(x) =>
+            Ok(x)
+
+          case Err(err) =>
+            g(err)
+        }
+
+      def ||[ReturnErrorType](g: WhenErr => ReturnErrorType): Status[WhenOk, ReturnErrorType] =
+        f | (x => Err(g(x)))
     }
 
     def >[WhenOk, WhenErr](f: Status[WhenOk, WhenErr]): PartialStatementBuilder[WhenOk, WhenErr] =

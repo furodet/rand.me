@@ -140,12 +140,38 @@ class StatusTest extends FlatSpec {
     }
   }
 
+  "a status" should "allow to left map and fail" in {
+    def okIfHello(string: String): String OrElse Int =
+      if (string == "hello") Ok("aloha") else Err(66)
+
+    okIfHello("helloo") || (_ + 8) match {
+      case Err(74) =>
+        succeed
+
+      case somethingElse =>
+        fail(s"invalid result returned by map: $somethingElse")
+    }
+  }
+
   "a status" should "allow to map and fail" in {
     def okIfHello(string: String): String OrElse Int =
       if (string == "hello") Ok("aloha") else Err(66)
 
     okIfHello("goodbye") && (_ + "0") match {
       case Err(66) =>
+        succeed
+
+      case somethingElse =>
+        fail(s"invalid result returned by map: $somethingElse")
+    }
+  }
+
+  "a status" should "allow to left map and succeed" in {
+    def okIfHello(string: String): String OrElse Int =
+      if (string == "hello") Ok("aloha") else Err(66)
+
+    okIfHello("hello") || (_ + 8) match {
+      case Ok("aloha") =>
         succeed
 
       case somethingElse =>
@@ -166,12 +192,38 @@ class StatusTest extends FlatSpec {
     }
   }
 
+  "a status" should "allow to flat left map and fail" in {
+    def okIfHello(string: String): String OrElse Int =
+      if (string == "hello") Ok("aloha") else Err(66)
+
+    okIfHello("helloo") | { x => Err(x + 8) } match {
+      case Err(74) =>
+        succeed
+
+      case somethingElse =>
+        fail(s"invalid result returned by flat map: $somethingElse")
+    }
+  }
+
   "a status" should "allow to flat map and fail" in {
     def okIfHello(string: String): String OrElse Int =
       if (string == "hello") Ok("aloha") else Err(66)
 
     okIfHello("hello") & { _ => Err(77) } match {
       case Err(77) =>
+        succeed
+
+      case somethingElse =>
+        fail(s"invalid result returned by flat map: $somethingElse")
+    }
+  }
+
+  "a status" should "allow to flat left map and succeed" in {
+    def okIfHello(string: String): String OrElse Int =
+      if (string == "hello") Ok("aloha") else Err(66)
+
+    okIfHello("hello") | { x => Err(x + 8) } match {
+      case Ok("aloha") =>
         succeed
 
       case somethingElse =>
