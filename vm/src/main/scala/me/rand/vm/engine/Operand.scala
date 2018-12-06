@@ -53,6 +53,10 @@ object Operand {
       override def toString: String = s"*[$depth]$pointer"
     }
 
+    case class Indexed(pointer: Source.Variable, offset: Int) extends Source {
+      override def toString: String = s"$pointer[$offset]"
+    }
+
     sealed trait Reference extends Source
 
     object Reference {
@@ -97,6 +101,10 @@ object Operand {
 
     case class Redirect(pointer: Destination.Variable, depth: Int) extends Destination {
       override def toString: String = s"*[$depth]$pointer"
+    }
+
+    case class Indexed(pointer: Destination.Variable, offset: Int) extends Destination {
+      override def toString: String = s"$pointer[$offset]"
     }
 
   }

@@ -112,11 +112,17 @@ object VmError {
         }
 
         case class InvalidIndirect(operandId: Int) extends IllegalEncodingError {
-          override def toString: String = s"source operand #$operandId redirects to an unexpected type of variable"
+          override def toString: String =
+            s"source operand #$operandId redirects to an unexpected type of variable"
         }
 
         case object InvalidRedirect extends IllegalEncodingError {
           override def toString: String = "destination operand redirects to an unexpected type of variable"
+        }
+
+        case class InvalidArrayBase(name: String) extends IllegalEncodingError {
+          override def toString: String =
+            s"operand '$name' is not a valid base for indexing"
         }
 
         case object IllegalDestinationPointer extends IllegalEncodingError {

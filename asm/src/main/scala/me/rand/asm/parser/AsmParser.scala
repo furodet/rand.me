@@ -177,6 +177,10 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
 
   private def matchesImmediateValue(string: String) = string.matches("\\(([0-9a-fA-F][0-9a-fA-F])+:[su][0-9]+\\)")
 
+  private def matchesIndexedHeapVariable(string: String) = string.matches("%[0-9]+\\[[0-9]+\\]")
+
+  private def matchesIndexedStackVariable(string: String) = string.matches("\\$[0-9]+\\[[0-9]+\\]")
+
   private def translateVariableDeclarationDirective(args: List[String])(implicit asmParserContext: AsmParserContext): AsmToken.Directive.DeclareVariable OrElse AsmParserError =
     args match {
       case name :: id :: value :: Nil if matchesHeapVariable(id) && matchesImmediateValue(value) =>
@@ -224,6 +228,18 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
             Err(AsmParserError.InvalidIndirection(aPointer, asmParserContext.lineNumber))
         }
 
+      case anIndexedVariable if matchesIndexedHeapVariable(anIndexedVariable) =>
+        val fields = anIndexedVariable.tail.split("\\[")
+        val index = fields.head.toInt
+        val offset = fields(1).init.toInt
+        Ok(Operand.Source.Indexed(Operand.Source.Variable.InTheHeap(index), offset))
+
+      case anIndexedVariable if matchesIndexedStackVariable(anIndexedVariable) =>
+        val fields = anIndexedVariable.tail.split("\\[")
+        val index = fields.head.toInt
+        val offset = fields(1).init.toInt
+        Ok(Operand.Source.Indexed(Operand.Source.Variable.InTheStack(index), offset))
+
       case anAddress if anAddress.startsWith("&") =>
         anAddress.tail match {
           case aHeapVariable if matchesHeapVariable(aHeapVariable) =>
@@ -268,6 +284,18 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
           case _ =>
             Err(AsmParserError.InvalidIndirection(aPointer, asmParserContext.lineNumber))
         }
+
+      case anIndexedVariable if matchesIndexedHeapVariable(anIndexedVariable) =>
+        val fields = anIndexedVariable.tail.split("\\[")
+        val index = fields.head.toInt
+        val offset = fields(1).init.toInt
+        Ok(Operand.Destination.Indexed(Operand.Destination.Variable.InTheHeap(index), offset))
+
+      case anIndexedVariable if matchesIndexedStackVariable(anIndexedVariable) =>
+        val fields = anIndexedVariable.tail.split("\\[")
+        val index = fields.head.toInt
+        val offset = fields(1).init.toInt
+        Ok(Operand.Destination.Indexed(Operand.Destination.Variable.InTheStack(index), offset))
 
       case somethingElse =>
         Err(AsmParserError.UnknownDestinationOperandType(somethingElse, asmParserContext.lineNumber))

@@ -29,6 +29,7 @@ import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.OperandReducer.Result
 import me.rand.vm.engine.Variable.{Pointer, Scalar}
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError
+import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue
 import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue.{InvalidIndirect, InvalidRedirect, InvalidSourceReference, InvalidTargetReference}
 
 import scala.annotation.tailrec
@@ -61,6 +62,12 @@ class OperandReducer(operands: Operands) {
           afterIndirect <- reduceIndirect(pointerVariable, depth, operandId)
         } yield afterIndirect
 
+      case Operand.Source.Indexed(pointer, index) =>
+        for {
+          pointerVariable <- reduceSourceVariableOperand(pointer)
+          afterIndexing <- reduceIndexedVariableReference(pointerVariable, index)
+        } yield afterIndexing
+
       case referenceOperand: Operand.Source.Reference =>
         reduceReferenceVariableOperand(referenceOperand)
     }
@@ -75,6 +82,12 @@ class OperandReducer(operands: Operands) {
           firstPointer <- reduceDestinationVariableOperand(pointer)
           redirected <- reduceRedirect(firstPointer, depth)
         } yield Some(redirected)
+
+      case Operand.Destination.Indexed(pointer, index) =>
+        for {
+          baseVariable <- reduceDestinationVariableOperand(pointer)
+          variable <- reduceIndexedVariableReferenceToPointer(baseVariable, index)
+        } yield Some(variable)
 
       case Operand.Destination.NoDestination =>
         Ok(None)
@@ -120,6 +133,30 @@ class OperandReducer(operands: Operands) {
 
       case _: Pointer.ToInstruction =>
         Err(InvalidIndirect(operandId))
+    }
+
+  private def reduceIndexedVariableReference(root: Variable, offset: Int)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
+    root match {
+      case Variable.Pointer.ToVariable.InTheHeap(_, baseIndex) =>
+        reduceSourceVariable("heap", vmContext.heap, baseIndex + offset)
+
+      case Variable.Pointer.ToVariable.InTheStack(_, baseIndex) =>
+        reduceSourceVariable("stack", vmContext.stack, baseIndex + offset)
+
+      case _ =>
+        Err(InvalidPointerValue.InvalidArrayBase(root.name))
+    }
+
+  private def reduceIndexedVariableReferenceToPointer(root: Variable, offset: Int)(implicit vmContext: VmContext): Variable.Pointer.ToVariable OrElse IllegalEncodingError =
+    root match {
+      case Variable.Pointer.ToVariable.InTheHeap(_, baseIndex) =>
+        reduceSourceVariable("heap", vmContext.heap, baseIndex + offset) && (v => Variable.Pointer.ToVariable.InTheHeap(v.name, baseIndex + offset))
+
+      case Variable.Pointer.ToVariable.InTheStack(_, baseIndex) =>
+        reduceSourceVariable("stack", vmContext.stack, baseIndex + offset) && (v => Variable.Pointer.ToVariable.InTheStack(v.name, baseIndex + offset))
+
+      case _ =>
+        Err(InvalidPointerValue.InvalidArrayBase(root.name))
     }
 
   private def reduceTargetVariable(varSet: VarSet, pointerName: Option[String], variableIndex: Int): Variable OrElse IllegalEncodingError =
