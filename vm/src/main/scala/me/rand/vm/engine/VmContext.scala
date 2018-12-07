@@ -50,6 +50,12 @@ case class VmContext(vmTypes: VmTypes,
   def setProgram(newProgram: VmProgram): VmContext = copy(program = newProgram)
 
   def halt(exitCode: Int): VmContext = copy(exitCode = Some(exitCode))
+
+  def putHeapVariable(id: Int, v: Variable): VmContext OrElse VmContextError =
+    heap.putVariable(id, v) && (_ => this)
+
+  def putStackVariable(id: Int, v: Variable): VmContext OrElse VmContextError =
+    stack.putVariable(id, v) && (_ => this)
 }
 
 object VmContext {

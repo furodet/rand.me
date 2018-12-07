@@ -32,7 +32,7 @@ import me.rand.vm.main.VmError.VmContextError.VariableIndexOutOfBounds
 
 // Documentation: doc/vmarchitecture.md
 trait VarSet {
-  def putVariable(id: Int, v: Variable): Unit OrElse VmContextError
+  private[engine] def putVariable(id: Int, v: Variable): Unit OrElse VmContextError
 
   def getVariable(id: Int): Option[Variable] OrElse VmContextError
 }
@@ -40,7 +40,7 @@ trait VarSet {
 object VarSet {
 
   class InArray(val data: Array[Option[Variable]]) extends VarSet {
-    override def putVariable(id: Int, v: Variable): Unit OrElse VariableIndexOutOfBounds =
+    override private[engine] def putVariable(id: Int, v: Variable): Unit OrElse VariableIndexOutOfBounds =
       try {
         data(id) = Some(v)
         Ok(())

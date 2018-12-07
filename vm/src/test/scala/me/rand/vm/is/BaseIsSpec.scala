@@ -68,8 +68,8 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
       case Ok(emptyContext) =>
         implicit val c: VmContext = emptyContext
         (for {
-          _ <- c.heap.putVariable(0, createScalarVariable("hp0", "u32", 0))
-        } yield c) match {
+          cc <- c.putHeapVariable(0, createScalarVariable("hp0", "u32", 0))
+        } yield cc) match {
           case Ok(context) =>
             context
 
@@ -84,7 +84,7 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
   protected def givenABareMinimalVmContext: VmContext =
     VmContext.usingProfileString("bl:4:heap:1024") match {
       case Ok(emptyContext) =>
-        implicit val c: VmContext = emptyContext.createFrameOfSize(3)
+        val c0: VmContext = emptyContext.createFrameOfSize(3)
         // Here's what we build:
         // HEAP:
         //
@@ -106,16 +106,16 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
         //   **(&&stk0) = *(&stk0) = stk0 = 0x12345678
         //    *(hp0) = hp0 = 0x87654321
         val fooBasicBlock = aBasicBlockCalled("foo")
-          .+(new InstructionInstance(InstructionSet.map(Exit.shortName), Operands.none.addSource(imm_("u8", 123))))
+          .+(new InstructionInstance(InstructionSet.map(Exit.shortName), Operands.none.addSource(imm_("u8", 123)(c0))))
           .build
         (for {
-          _ <- c.stack.putVariable(0, createScalarVariable("stk0", "u32", 0x12345678))
-          _ <- c.stack.putVariable(1, Variable.Pointer.ToVariable.InTheHeap("&hp0", 0))
-          _ <- c.stack.putVariable(2, Variable.Pointer.ToInstruction("stk2", Counter.atTheBeginningOf(fooBasicBlock)))
-          _ <- c.heap.putVariable(0, createScalarVariable("hp0", "u32", 0x87654321))
-          _ <- c.heap.putVariable(1, Variable.Pointer.ToVariable.InTheStack("&stk0", 0))
-          _ <- c.heap.putVariable(2, Variable.Pointer.ToVariable.InTheHeap("&&stk0", 1))
-        } yield c.setProgram(VmProgram.empty.++(fooBasicBlock))) match {
+          c1 <- c0.putStackVariable(0, createScalarVariable("stk0", "u32", 0x12345678)(c0))
+          c2 <- c1.putStackVariable(1, Variable.Pointer.ToVariable.InTheHeap("&hp0", 0))
+          c3 <- c2.putStackVariable(2, Variable.Pointer.ToInstruction("stk2", Counter.atTheBeginningOf(fooBasicBlock)))
+          c4 <- c3.putHeapVariable(0, createScalarVariable("hp0", "u32", 0x87654321)(c3))
+          c5 <- c4.putHeapVariable(1, Variable.Pointer.ToVariable.InTheStack("&stk0", 0))
+          c6 <- c5.putHeapVariable(2, Variable.Pointer.ToVariable.InTheHeap("&&stk0", 1))
+        } yield c6.setProgram(VmProgram.empty.++(fooBasicBlock))) match {
           case Ok(context) =>
             context
 

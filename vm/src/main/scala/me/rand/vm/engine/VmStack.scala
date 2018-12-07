@@ -53,7 +53,7 @@ class VmStack(val frames: List[VmFrame]) extends VarSet {
       r <- frame.vars.getVariable(id)
     } yield r
 
-  override def putVariable(id: Int, v: Variable): Unit OrElse VmContextError =
+  override private[engine] def putVariable(id: Int, v: Variable): Unit OrElse VmContextError =
     for {
       frame <- getTopFrameOrErrorForAction("write")
       r <- frame.vars.putVariable(id, v)

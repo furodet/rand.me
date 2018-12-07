@@ -45,6 +45,9 @@ class AsmProgramBuilder(initialContext: VmContext) {
           Ok(basicBlockBuilder)
       }
 
+    def withVmContext(newContext: VmContext): AsmProgramBuilderContext =
+      new AsmProgramBuilderContext(newContext, currentBasicBlock)
+
     def withNewBasicBlockCalled(name: String): AsmProgramBuilderContext =
       new AsmProgramBuilderContext(registerLastBasicBlockUnderConstructionIfAny, Some(BasicBlockBuilder.aBasicBlockCalled(name)))
 
@@ -93,12 +96,12 @@ class AsmProgramBuilder(initialContext: VmContext) {
             context.withBootBasicBlock(name, lineNumber)
 
           case AsmToken.Directive.DeclareVariable.InTheHeap(name, heapIndex, initialValue, lineNumber) =>
-            context.vmContext.heap.putVariable(heapIndex, Variable.Scalar(name, initialValue)) match {
+            context.vmContext.putHeapVariable(heapIndex, Variable.Scalar(name, initialValue)) match {
               case Err(error) =>
                 Err(AsmProgramBuilderError.CantPutHeapVariable(error, lineNumber))
 
-              case _ =>
-                Ok(context)
+              case Ok(newContext) =>
+                Ok(context.withVmContext(newContext))
             }
         }
     } & returnVmContextIfBootstrapIsDefined
