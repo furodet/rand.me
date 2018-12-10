@@ -337,7 +337,7 @@ class VmContextTest extends FlatSpec {
           c1 <- c0.setPcToBlockCalled("b0")
           instruction <- c1.program.nextInstruction
         } yield instruction) match {
-          case Ok(instruction) if instruction.instruction == InstructionSet.map(Exit.shortName) =>
+          case Ok(InstructionInstance(instruction, _)) if instruction == InstructionSet.map(Exit.shortName) =>
             ok()
 
           case whatever =>
@@ -465,5 +465,5 @@ class VmContextTest extends FlatSpec {
 
   private def aDummyBasicBlockCalled(name: String) =
     VmProgram.BasicBlockBuilder
-      .aBasicBlockCalled(name) + new InstructionInstance(InstructionSet.map(Exit.shortName), Operands.none) build
+      .aBasicBlockCalled(name) + InstructionInstance(InstructionSet.map(Exit.shortName), Operands.none) build
 }

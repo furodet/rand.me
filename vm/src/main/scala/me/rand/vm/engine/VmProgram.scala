@@ -26,7 +26,7 @@
 package me.rand.vm.engine
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.VmProgram.{BasicBlock, Counter, InstructionInstance}
+import me.rand.vm.engine.VmProgram.{BasicBlock, Counter, VirtualInstruction}
 import me.rand.vm.main.VmError.VmContextError
 import me.rand.vm.main.VmError.VmContextError.{NoSuchBasicBlock, ProgramCounterOutOfBlock, ProgramCounterOutOfBounds}
 import me.rand.vm.main.{ExecutionContext, VmError}
@@ -38,7 +38,7 @@ class VmProgram(val basicBlocks: Map[String, BasicBlock], val pc: Counter) {
   def ++(basicBlock: BasicBlock): VmProgram =
     new VmProgram(basicBlocks + (basicBlock.name -> basicBlock), pc)
 
-  def nextInstruction: InstructionInstance OrElse VmContextError =
+  def nextInstruction: VirtualInstruction OrElse VmContextError =
     pc.basicBlock match {
       case None =>
         Err(ProgramCounterOutOfBlock)
@@ -69,19 +69,31 @@ class VmProgram(val basicBlocks: Map[String, BasicBlock], val pc: Counter) {
 object VmProgram {
   def empty: VmProgram = new VmProgram(Map.empty, Counter.reset)
 
-  class InstructionInstance(val instruction: Instruction, val operands: Operands) {
-    def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError =
+  sealed trait VirtualInstruction {
+    def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError
+  }
+
+  case class InlineDirective() extends VirtualInstruction {
+    override def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): OrElse[VmContext, VmError] =
+      ???
+  }
+
+  case class InstructionInstance(instruction: Instruction, operands: Operands) extends VirtualInstruction {
+    override def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError =
       instruction.execute(operands)(vmContext, executionContext)
 
     override def toString: String =
       s"$instruction(${operands.sources.mkString(",")} > ${operands.destination})"
   }
 
-  class BasicBlock(val name: String, val instructions: Array[InstructionInstance])
+  class BasicBlock(val name: String, val instructions: Array[VirtualInstruction])
 
-  class BasicBlockBuilder(val name: String, val instructions: Vector[InstructionInstance]) {
+  class BasicBlockBuilder(val name: String, val instructions: Vector[VirtualInstruction]) {
     def +(instruction: InstructionInstance): BasicBlockBuilder =
       new BasicBlockBuilder(name, instructions :+ instruction)
+
+    def +(directive: InlineDirective): BasicBlockBuilder =
+      new BasicBlockBuilder(name, instructions :+ directive)
 
     def build: BasicBlock = {
       new BasicBlock(name, instructions.toArray)

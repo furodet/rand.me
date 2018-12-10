@@ -106,7 +106,7 @@ class BaseIsSpec extends FlatSpec with BeforeAndAfterEach {
         //   **(&&stk0) = *(&stk0) = stk0 = 0x12345678
         //    *(hp0) = hp0 = 0x87654321
         val fooBasicBlock = aBasicBlockCalled("foo")
-          .+(new InstructionInstance(InstructionSet.map(Exit.shortName), Operands.none.addSource(imm_("u8", 123)(c0))))
+          .+(InstructionInstance(InstructionSet.map(Exit.shortName), Operands.none.addSource(imm_("u8", 123)(c0))))
           .build
         (for {
           c1 <- c0.putStackVariable(0, createScalarVariable("stk0", "u32", 0x12345678)(c0))

@@ -180,3 +180,7 @@ Operands can be:
     * `TargetVariable.InTheStack`: a pointer to a stack variable
     * `Redirect`: a series of pointers redirecting to a variable (e.g. `**pointer`)
 
+In addition, the core execution engine may handle `InlineDirective` objects, which allow to perform
+specific control at runtime.
+
+TODO: describe inline directives.
