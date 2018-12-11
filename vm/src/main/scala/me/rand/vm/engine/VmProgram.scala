@@ -73,9 +73,9 @@ object VmProgram {
     def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError
   }
 
-  case class InlineDirective() extends VirtualInstruction {
+  case class InlineDirective(vmControl: VmControl) extends VirtualInstruction {
     override def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): OrElse[VmContext, VmError] =
-      ???
+      vmControl.execute(vmContext)
   }
 
   case class InstructionInstance(instruction: Instruction, operands: Operands) extends VirtualInstruction {

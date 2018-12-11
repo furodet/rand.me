@@ -152,7 +152,7 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
 
           case Some(instruction) =>
             translateInstructionOperands(args) &&
-              (operands => AsmToken.Instruction(new InstructionInstance(instruction, operands), asmParserContext.lineNumber))
+              (operands => AsmToken.Instruction(InstructionInstance(instruction, operands), asmParserContext.lineNumber))
         }
     }
 
@@ -181,10 +181,13 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
 
   private def matchesIndexedStackVariable(string: String) = string.matches("\\$[0-9]+\\[[0-9]+\\]")
 
-  private def translateVariableDeclarationDirective(args: List[String])(implicit asmParserContext: AsmParserContext): AsmToken.Directive.DeclareVariable OrElse AsmParserError =
+  private def translateVariableDeclarationDirective(args: List[String])(implicit asmParserContext: AsmParserContext): AsmToken.Directive.TagVariable OrElse AsmParserError =
     args match {
       case name :: id :: value :: Nil if matchesHeapVariable(id) && matchesImmediateValue(value) =>
-        translateImmediateValue(value.tail.init) && (v => AsmToken.Directive.DeclareVariable.InTheHeap(name, id.tail.toInt, v, asmParserContext.lineNumber))
+        translateImmediateValue(value.tail.init) && (v => AsmToken.Directive.TagVariable.InTheHeap(name, id.tail.toInt, v, asmParserContext.lineNumber))
+
+      case name :: id :: value :: Nil if matchesStackVariable(id) && matchesImmediateValue(value) =>
+        translateImmediateValue(value.tail.init) && (v => AsmToken.Directive.TagVariable.InTheStack(name, id.tail.toInt, v, asmParserContext.lineNumber))
 
       case _ =>
         Err(AsmParserError.InvalidVariableSpecification(args.mkString(" "), asmParserContext.lineNumber))

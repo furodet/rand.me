@@ -142,10 +142,6 @@ object AsmError {
       override def toString: String = s"$lineNumber: duplicate bootstrap definition"
     }
 
-    case class CantPutHeapVariable(error: VmError.VmContextError, lineNumber: Int) extends AsmProgramBuilderError {
-      override def toString: String = s"$lineNumber: cannot place heap variable: $error"
-    }
-
   }
 
 }

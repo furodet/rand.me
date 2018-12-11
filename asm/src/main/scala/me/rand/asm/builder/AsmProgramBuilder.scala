@@ -30,8 +30,9 @@ import me.rand.asm.main.AsmError.AsmProgramBuilderError
 import me.rand.asm.parser.AsmToken
 import me.rand.commons.idioms.Logger
 import me.rand.commons.idioms.Status._
-import me.rand.vm.engine.VmProgram.{BasicBlockBuilder, InstructionInstance}
-import me.rand.vm.engine.{Variable, VmContext}
+import me.rand.vm.alu.VmRegister
+import me.rand.vm.engine.VmProgram.{BasicBlockBuilder, InlineDirective, InstructionInstance}
+import me.rand.vm.engine.{Operand, VmContext, VmControl}
 
 class AsmProgramBuilder(initialContext: VmContext) {
 
@@ -53,6 +54,9 @@ class AsmProgramBuilder(initialContext: VmContext) {
 
     def withInstruction(instruction: InstructionInstance, intoBasicBlock: BasicBlockBuilder): AsmProgramBuilderContext =
       new AsmProgramBuilderContext(vmContext, Some(intoBasicBlock + instruction))
+
+    def withInlineDirective(inlineDirective: InlineDirective, intoBasicBlock: BasicBlockBuilder): AsmProgramBuilderContext =
+      new AsmProgramBuilderContext(vmContext, Some(intoBasicBlock + inlineDirective))
 
     def withBootBasicBlock(name: String, lineNumber: Int): AsmProgramBuilderContext OrElse AsmProgramBuilderError = {
       val safeVmContext = registerLastBasicBlockUnderConstructionIfAny
@@ -95,16 +99,18 @@ class AsmProgramBuilder(initialContext: VmContext) {
           case AsmToken.Directive.DefineBootBasicBlock(name, lineNumber) =>
             context.withBootBasicBlock(name, lineNumber)
 
-          case AsmToken.Directive.DeclareVariable.InTheHeap(name, heapIndex, initialValue, lineNumber) =>
-            context.vmContext.putHeapVariable(heapIndex, Variable.Scalar(name, initialValue)) match {
-              case Err(error) =>
-                Err(AsmProgramBuilderError.CantPutHeapVariable(error, lineNumber))
+          case AsmToken.Directive.TagVariable.InTheHeap(name, heapIndex, initialValue, lineNumber) =>
+            context.getCurrentBasicBlockOrError(lineNumber) &&
+              (context.withInlineDirective(forgeTagVariable(name, Operand.Source.Variable.InTheHeap(heapIndex), initialValue), _))
 
-              case Ok(newContext) =>
-                Ok(context.withVmContext(newContext))
-            }
+          case AsmToken.Directive.TagVariable.InTheStack(name, stackIndex, initialValue, lineNumber) =>
+            context.getCurrentBasicBlockOrError(lineNumber) &&
+              (context.withInlineDirective(forgeTagVariable(name, Operand.Source.Variable.InTheStack(stackIndex), initialValue), _))
         }
     } & returnVmContextIfBootstrapIsDefined
+
+  private def forgeTagVariable(tag: String, operand: Operand.Source.Variable, value: VmRegister): InlineDirective =
+    InlineDirective(VmControl.TagVariable(tag, operand, Operand.Source.Immediate(value)))
 
   private def returnVmContextIfBootstrapIsDefined(builderContext: AsmProgramBuilderContext): VmContext OrElse AsmProgramBuilderError =
     builderContext.vmContext.program.pc.basicBlock match {

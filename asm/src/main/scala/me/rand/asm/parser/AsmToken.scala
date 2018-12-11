@@ -57,15 +57,20 @@ object AsmToken {
       override def toString: String = s".boot($name)"
     }
 
-    sealed trait DeclareVariable extends Directive
+    sealed trait TagVariable extends Directive
 
-    object DeclareVariable {
+    object TagVariable {
 
-      case class InTheHeap(name: String, heapIndex: Int, initialValue: VmRegister, lineNumber: Int) extends DeclareVariable {
+      case class InTheHeap(name: String, heapIndex: Int, initialValue: VmRegister, lineNumber: Int) extends TagVariable {
         override def toString: String = s".var(%$heapIndex:$name=$initialValue)"
       }
 
+      case class InTheStack(name: String, stackIndex: Int, initialValue: VmRegister, lineNumber: Int) extends TagVariable {
+        override def toString: String = s".var($$$stackIndex:$name=$initialValue)"
+      }
+
     }
+
   }
 
 }
