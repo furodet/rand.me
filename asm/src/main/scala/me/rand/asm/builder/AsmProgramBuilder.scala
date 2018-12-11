@@ -36,7 +36,9 @@ import me.rand.vm.engine.{Operand, VmContext, VmControl}
 
 class AsmProgramBuilder(initialContext: VmContext) {
 
-  private class AsmProgramBuilderContext(val vmContext: VmContext, val currentBasicBlock: Option[BasicBlockBuilder]) {
+  private class AsmProgramBuilderContext(val vmContext: VmContext,
+                                         val currentBasicBlock: Option[BasicBlockBuilder],
+                                         val bootBasicBlockName: Option[(String, Int)]) {
     def getCurrentBasicBlockOrError(lineNumber: Int): BasicBlockBuilder OrElse AsmProgramBuilderError =
       currentBasicBlock match {
         case None =>
@@ -47,29 +49,23 @@ class AsmProgramBuilder(initialContext: VmContext) {
       }
 
     def withVmContext(newContext: VmContext): AsmProgramBuilderContext =
-      new AsmProgramBuilderContext(newContext, currentBasicBlock)
+      new AsmProgramBuilderContext(newContext, currentBasicBlock, bootBasicBlockName)
 
     def withNewBasicBlockCalled(name: String): AsmProgramBuilderContext =
-      new AsmProgramBuilderContext(registerLastBasicBlockUnderConstructionIfAny, Some(BasicBlockBuilder.aBasicBlockCalled(name)))
+      new AsmProgramBuilderContext(registerLastBasicBlockUnderConstructionIfAny, Some(BasicBlockBuilder.aBasicBlockCalled(name)), bootBasicBlockName)
 
     def withInstruction(instruction: InstructionInstance, intoBasicBlock: BasicBlockBuilder): AsmProgramBuilderContext =
-      new AsmProgramBuilderContext(vmContext, Some(intoBasicBlock + instruction))
+      new AsmProgramBuilderContext(vmContext, Some(intoBasicBlock + instruction), bootBasicBlockName)
 
     def withInlineDirective(inlineDirective: InlineDirective, intoBasicBlock: BasicBlockBuilder): AsmProgramBuilderContext =
-      new AsmProgramBuilderContext(vmContext, Some(intoBasicBlock + inlineDirective))
+      new AsmProgramBuilderContext(vmContext, Some(intoBasicBlock + inlineDirective), bootBasicBlockName)
 
-    def withBootBasicBlock(name: String, lineNumber: Int): AsmProgramBuilderContext OrElse AsmProgramBuilderError = {
-      val safeVmContext = registerLastBasicBlockUnderConstructionIfAny
-      if (safeVmContext.program.pc.basicBlock.isDefined)
-        Err(AsmProgramBuilderError.DuplicateBootstrapDefinition(lineNumber))
-      else safeVmContext.setPcToBlockCalled(name) match {
-        case Ok(newVmContext) =>
-          Ok(new AsmProgramBuilderContext(newVmContext, currentBasicBlock))
+    def withBootBasicBlock(name: String, lineNumber: Int): AsmProgramBuilderContext OrElse AsmProgramBuilderError =
+      if (bootBasicBlockName.isDefined) Err(AsmProgramBuilderError.DuplicateBootstrapDefinition(lineNumber))
+      else Ok(new AsmProgramBuilderContext(vmContext, currentBasicBlock, Some((name, lineNumber))))
 
-        case Err(_) =>
-          Err(AsmProgramBuilderError.NoSuchBootstrapBlock(name, lineNumber))
-      }
-    }
+    def complete: AsmProgramBuilderContext =
+      new AsmProgramBuilderContext(registerLastBasicBlockUnderConstructionIfAny, None, bootBasicBlockName)
 
     private def registerLastBasicBlockUnderConstructionIfAny: VmContext =
       currentBasicBlock match {
@@ -82,7 +78,7 @@ class AsmProgramBuilder(initialContext: VmContext) {
   }
 
   def applyProgram(tokens: List[AsmToken])(implicit logger: Logger): VmContext OrElse AsmProgramBuilderError =
-    tokens.tryFoldLeft(new AsmProgramBuilderContext(initialContext, None)) {
+    tokens.tryFoldLeft(new AsmProgramBuilderContext(initialContext, None, None)) {
       case (context, token) =>
         logger.>>(s"processing token $token")
         token match {
@@ -107,19 +103,22 @@ class AsmProgramBuilder(initialContext: VmContext) {
             context.getCurrentBasicBlockOrError(lineNumber) &&
               (context.withInlineDirective(forgeTagVariable(name, Operand.Source.Variable.InTheStack(stackIndex), initialValue), _))
         }
-    } & returnVmContextIfBootstrapIsDefined
+    } & updateVmContextWithBootstrap
 
   private def forgeTagVariable(tag: String, operand: Operand.Source.Variable, value: VmRegister): InlineDirective =
     InlineDirective(VmControl.TagVariable(tag, operand, Operand.Source.Immediate(value)))
 
-  private def returnVmContextIfBootstrapIsDefined(builderContext: AsmProgramBuilderContext): VmContext OrElse AsmProgramBuilderError =
-    builderContext.vmContext.program.pc.basicBlock match {
+  private def updateVmContextWithBootstrap(builderContext: AsmProgramBuilderContext): VmContext OrElse AsmProgramBuilderError = {
+    val completed = builderContext.complete
+    completed.bootBasicBlockName match {
       case None =>
         Err(AsmProgramBuilderError.UndefinedBootstrapBlock)
 
-      case Some(_) =>
-        Ok(builderContext.vmContext)
+      case Some((basicBlockName, lineNumber)) =>
+        completed.vmContext.setPcToBlockCalled(basicBlockName) ||
+          (_ => AsmProgramBuilderError.NoSuchBootstrapBlock(basicBlockName, lineNumber))
     }
+  }
 }
 
 object AsmProgramBuilder {
