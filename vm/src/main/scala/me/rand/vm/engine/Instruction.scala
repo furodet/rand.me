@@ -30,7 +30,7 @@ import me.rand.vm.main.VmError.SyntaxError.NoMatchingProfile
 import me.rand.vm.main.{ExecutionContext, VmError}
 
 // Documentation: doc/vmarchitecture.md
-class Instruction(name: String, signatures: Instruction.Signatures) {
+class Instruction(val name: String, signatures: Instruction.Signatures) {
   def execute(operands: Operands)(implicit vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError = {
     executionContext.logger ~> s"RUN $name"
     traceOperands(operands, executionContext)

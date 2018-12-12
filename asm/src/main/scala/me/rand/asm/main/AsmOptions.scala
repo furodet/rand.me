@@ -27,7 +27,7 @@ package me.rand.asm.main
 
 import me.rand.commons.idioms.Status._
 
-case class AsmOptions(in: java.io.File = null, verbose: Boolean = false, prefix: Option[String] = None)
+case class AsmOptions(in: java.io.File = null, out: Option[java.io.File] = None, verbose: Boolean = false, prefix: Option[String] = None)
 
 object AsmOptions {
   def fromUserArgs(args: Array[String]): AsmOptions OrElse String =
@@ -45,6 +45,11 @@ object AsmOptions {
       (file, options) =>
         options.copy(in = file)
     }.valueName("file").required().maxOccurs(1).text("assemble source file")
+
+    opt[java.io.File]('o', "output").action {
+      (file, options) =>
+        options.copy(out = Some(file))
+    }.valueName("file").optional().maxOccurs(1).text("write into output file")
 
     opt[Unit]("vv").action {
       (_, options) =>

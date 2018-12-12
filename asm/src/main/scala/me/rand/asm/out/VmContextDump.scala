@@ -23,33 +23,44 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.vm.engine
+package me.rand.asm.out
 
-import me.rand.commons.idioms.Status.OrElse
-import me.rand.vm.engine.Variable.Scalar
-import me.rand.vm.main.{ExecutionContext, VmError}
+import java.io.PrintWriter
 
-sealed trait VmControl {
-  def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError
-}
+import me.rand.vm.engine.VmProgram.{InlineDirective, InstructionInstance}
+import me.rand.vm.engine.{Operand, VmContext, VmProgram}
 
-// Documentation: doc/vmarchitecture.md
-object VmControl {
-
-  case class TagVariable(variableName: String, variableId: Operand.Source.Variable, initialValue: Operand.Source.Immediate) extends VmControl {
-    override def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): OrElse[VmContext, VmError] = {
-      val scalarValue = Scalar(variableName, initialValue.value)
-      variableId match {
-        case Operand.Source.Variable.InTheHeap(index) =>
-          vmContext.putHeapVariable(index, scalarValue)
-
-        case Operand.Source.Variable.InTheStack(index) =>
-          vmContext.putStackVariable(index, scalarValue)
-      }
+class VmContextDump(vmContext: VmContext) {
+  def into(out: PrintWriter): Unit = {
+    out.println(s"PC:${vmContext.program.pc}")
+    vmContext.program.basicBlocks.values.foreach {
+      eachBasicBlock =>
+        out.println(s"${eachBasicBlock.name}:")
+        eachBasicBlock.instructions.foreach {
+          eachInstruction =>
+            printInstructionInto(out, eachInstruction)
+        }
     }
-
-    override def toString: String =
-      s".var $variableName $variableId $initialValue"
   }
 
+  private def printInstructionInto(out: PrintWriter, instruction: VmProgram.VirtualInstruction): Unit =
+    instruction match {
+      case InlineDirective(vmControl) =>
+        out.println(s"\t$vmControl")
+
+      case InstructionInstance(vmInstruction, operands) =>
+        val sources = operands.sources.mkString(" ")
+        val destination = operands.destination match {
+          case Operand.Destination.NoDestination =>
+            "_"
+
+          case aDestination =>
+            aDestination.toString
+        }
+        out.println("\t%-10s %s > %s".format(vmInstruction.name, sources, destination))
+    }
+}
+
+object VmContextDump {
+  def forContext(vmContext: VmContext) = new VmContextDump(vmContext)
 }

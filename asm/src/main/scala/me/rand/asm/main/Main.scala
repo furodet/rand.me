@@ -25,9 +25,10 @@
  */
 package me.rand.asm.main
 
-import java.io.{IOException, PrintWriter}
+import java.io.{FileOutputStream, IOException, PrintWriter}
 
 import me.rand.asm.builder.AsmProgramBuilder
+import me.rand.asm.out.VmContextDump
 import me.rand.asm.parser.{AsmParser, AsmToken}
 import me.rand.commons.idioms.Logger
 import me.rand.commons.idioms.Logger._
@@ -42,13 +43,12 @@ object Main {
       options <- AsmOptions.fromUserArgs(args)
       source <- getReaderForFile(options.in)
       vmContext <- main(options, source)
-    } yield vmContext) match {
-      case Ok(result) =>
-        println(result)
+    } yield (vmContext, options.out)) match {
+      case Ok((result, outputFile)) =>
+        printVmContext(result, outputFile) || (error => exitOnError(error.toString))
 
       case Err(error) =>
-        System.err.println(error)
-        System.exit(1)
+        exitOnError(error.toString)
     }
   }
 
@@ -62,6 +62,11 @@ object Main {
         logger !! error.toString
         Err("***")
     }
+  }
+
+  private def exitOnError(errorMessage: String): Unit = {
+    System.err.println(errorMessage)
+    System.exit(1)
   }
 
   private def setupLogger(isVerbose: Boolean): Logger = {
@@ -94,4 +99,26 @@ object Main {
 
   private def buildProgram(initialContext: VmContext, tokens: List[AsmToken])(implicit logger: Logger): VmContext OrElse AsmError.AsmProgramBuilderError =
     AsmProgramBuilder.startingFromContext(initialContext).applyProgram(tokens)
+
+  private def printVmContext(vmContext: VmContext, out: Option[java.io.File]): Unit OrElse AsmError =
+    for {
+      writer <- openWriterTo(out)
+      _ = VmContextDump.forContext(vmContext).into(writer)
+      _ = writer.flush()
+      _ = writer.close()
+    } yield ()
+
+  private def openWriterTo(maybeFile: Option[java.io.File]): PrintWriter OrElse AsmError =
+    maybeFile match {
+      case None =>
+        Ok(new PrintWriter(System.out))
+
+      case Some(file) =>
+        try {
+          Ok(new PrintWriter(new FileOutputStream(file)))
+        } catch {
+          case ioe: IOException =>
+            Err(AsmError.AsmArgumentError.CantOpenFile(file.getAbsolutePath, ioe))
+        }
+    }
 }
