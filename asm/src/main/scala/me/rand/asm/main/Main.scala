@@ -42,7 +42,7 @@ object Main {
     (for {
       options <- AsmOptions.fromUserArgs(args)
       source <- getReaderForFile(options.in)
-      vmContext <- main(options, source)
+      vmContext <- assemble(options, source)
     } yield (vmContext, options.out)) match {
       case Ok((result, outputFile)) =>
         printVmContext(result, outputFile) || (error => exitOnError(error.toString))
@@ -52,7 +52,7 @@ object Main {
     }
   }
 
-  def main(options: AsmOptions, source: Source): VmContext OrElse String = {
+  def assemble(options: AsmOptions, source: Source): VmContext OrElse String = {
     implicit val logger: Logger = setupLogger(options.verbose)
     (for {
       parsed <- parse(source, options.prefix)

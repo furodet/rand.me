@@ -49,7 +49,8 @@ object VmRunner {
     }
 
     @tailrec
-    private def executeInstructionsOneByOne(context: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError =
+    private def executeInstructionsOneByOne(context: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError = {
+      executionContext.logger >> s"PC=${context.program.pc}"
       context.exitCode match {
         case Some(_) =>
           Ok(context)
@@ -63,8 +64,9 @@ object VmRunner {
               err
 
             case Ok(next) =>
-              executeInstructionsOneByOne(next)
+              executeInstructionsOneByOne(next.incrementPc)
           }
       }
+    }
   }
 }

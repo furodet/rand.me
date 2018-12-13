@@ -23,23 +23,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.asm.main
+package me.rand.simulator.main
 
+import me.rand.asm.main.AsmOptions
 import me.rand.commons.idioms.Status._
 
-case class AsmOptions(in: java.io.File = null, out: Option[java.io.File] = None, verbose: Boolean = false, prefix: Option[String] = None) {
-  def withInputFile(inputFile: java.io.File): AsmOptions = copy(in = inputFile)
+case class SimulatorOptions(asmOptions: AsmOptions = AsmOptions(), verboseRun: Boolean = false)
 
-  def withOutputFile(outputFile: java.io.File): AsmOptions = copy(out = Some(outputFile))
-
-  def withVerboseMode(enabled: Boolean): AsmOptions = copy(verbose = enabled)
-
-  def withPrefix(pfx: String): AsmOptions = copy(prefix = Some(pfx))
-}
-
-object AsmOptions {
-  def fromUserArgs(args: Array[String]): AsmOptions OrElse String =
-    optionParser.parse(args, AsmOptions()) match {
+object SimulatorOptions {
+  def fromUserArgs(args: Array[String]): SimulatorOptions OrElse String =
+    optionParser.parse(args, SimulatorOptions()) match {
       case None =>
         optionParser.showUsageAsError()
         Err("")
@@ -48,27 +41,30 @@ object AsmOptions {
         Ok(options)
     }
 
-  private lazy val optionParser = new scopt.OptionParser[AsmOptions]("asm") {
+  private lazy val optionParser = new scopt.OptionParser[SimulatorOptions]("simulator") {
     opt[java.io.File]('s', "assemble").action {
       (file, options) =>
-        options.withInputFile(file)
+        options.copy(asmOptions = options.asmOptions.withInputFile(file))
     }.valueName("file").required().maxOccurs(1).text("assemble source file")
 
-    opt[java.io.File]('o', "output").action {
-      (file, options) =>
-        options.withOutputFile(file)
-    }.valueName("file").optional().maxOccurs(1).text("write into output file")
-
-    opt[Unit]("vv").action {
+    opt[Unit]("vv:asm").action {
       (_, options) =>
-        options.withVerboseMode(true)
+        options.copy(asmOptions = options.asmOptions.withVerboseMode(true))
     }.optional().text("assemble verbosely")
+
+    opt[Unit]("vv:run").action {
+      (_, options) =>
+        options.copy(verboseRun = true)
+    }.optional().text("execute program verbosely")
 
     opt[String](name = "prefix").action {
       (prefix, options) =>
-        options.withPrefix(prefix)
+        options.copy(asmOptions = options.asmOptions.withPrefix(prefix))
     }.optional().maxOccurs(1).valueName("text").text("text prefixing assembly directives (none by default)")
 
     help("help").text("prints this help")
   }
+
 }
+
+
