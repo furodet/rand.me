@@ -52,16 +52,12 @@ object Main {
     }
   }
 
-  def assemble(options: AsmOptions, source: Source): VmContext OrElse String = {
+  def assemble(options: AsmOptions, source: Source): VmContext OrElse AsmError = {
     implicit val logger: Logger = setupLogger(options.verbose)
-    (for {
+    for {
       parsed <- parse(source, options.prefix)
       vmContext <- buildProgram(parsed._1, parsed._2)
-    } yield vmContext) | {
-      error =>
-        logger !! error.toString
-        Err("***")
-    }
+    } yield vmContext
   }
 
   private def exitOnError(errorMessage: String): Unit = {

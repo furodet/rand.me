@@ -27,8 +27,7 @@ package me.rand.simulator.main
 
 import java.io.{IOException, PrintWriter}
 
-import me.rand.asm.main.AsmError
-import me.rand.commons.idioms.Logger
+import me.rand.asm.main.{AsmError, AsmOptions}
 import me.rand.commons.idioms.Logger._
 import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.{VmContext, VmRunner}
@@ -37,15 +36,17 @@ import me.rand.vm.main.{ExecutionContext, VmError}
 import scala.io.Source
 
 object Main {
+
+  private class SimulatorContext(val asmSource: Source, val vmExecutionContext: ExecutionContext, val asmOptions: AsmOptions)
+
   def main(args: Array[String]): Unit =
     (for {
       options <- SimulatorOptions.fromUserArgs(args)
-      source <- getReaderForFile(options.asmOptions.in)
-      initialVmContext <- me.rand.asm.main.Main.assemble(options.asmOptions, source)
-      resultingVmContext <- runVm(options, initialVmContext)
-    } yield initialVmContext) match {
-      case Err(_) =>
-        // Error has been logged
+      simulatorContext <- setup(options)
+      result <- assembleAndRun(simulatorContext)
+    } yield result) match {
+      case Err(error) =>
+        System.err.println(error)
         System.exit(1)
 
       case Ok(_) =>
@@ -53,36 +54,55 @@ object Main {
         println("ok")
     }
 
-  private def getReaderForFile(file: java.io.File): Source OrElse AsmError =
-    try {
-      Ok(Source.fromFile(file))
-    } catch {
-      case err: IOException =>
-        Err(AsmError.AsmArgumentError.CantOpenFile(file.getName, err))
-    }
-
-  private def runVm(options: SimulatorOptions, context: VmContext): VmContext OrElse VmError = {
-    val logger = setupLogger(options.asmOptions.verbose)
-    val vmExecutionContext = new ExecutionContext(logger)
-    VmRunner.forAProgram(context.program).execute(context)(vmExecutionContext) || {
+  private def setup(options: SimulatorOptions): SimulatorContext OrElse SimulatorError =
+    (for {
+      source <- getReaderForFile(options.asmOptions.in)
+      executionContext <- setupExecutionContext(options)
+    } yield new SimulatorContext(source, executionContext, options.asmOptions)) || {
       error =>
         System.err.println(error)
         error
     }
+
+  private def getReaderForFile(file: java.io.File): Source OrElse SimulatorError =
+    try {
+      Ok(Source.fromFile(file))
+    } catch {
+      case err: IOException =>
+        Err(SimulatorError.CantOpenAsmFile(file.getName, err))
+    }
+
+  private def setupExecutionContext(options: SimulatorOptions): ExecutionContext OrElse SimulatorError = {
+    val loggerSpec = StandardLoggerConfiguration().withDebugLogs(options.asmOptions.verbose)
+    setupTraceExecutionContext(loggerSpec, options) && (logger => new ExecutionContext(logger.build))
   }
 
-  private def setupLogger(isVerbose: Boolean): Logger = {
-    val errWriter = new PrintWriter(System.err)
-    val outWriter = new PrintWriter(System.out)
-    val defaultConfiguration = Seq(
-      LogError -> ("Error: " to errWriter),
-      LogWarning -> ("Warning: " to errWriter),
-      LogInfo -> ("Info: " to outWriter),
-      LogTrace -> ("[] " to outWriter)
-    )
-    Logger.forConfiguration(
-      if (isVerbose) defaultConfiguration :+ (LogDebug -> ("debug " to outWriter))
-      else defaultConfiguration
-    )
-  }
+  private def setupTraceExecutionContext(from: StandardLoggerConfiguration, options: SimulatorOptions): StandardLoggerConfiguration OrElse SimulatorError =
+    options.traceOut match {
+      case None =>
+        Ok(from)
+
+      case Some(None) =>
+        Ok(from.withTracesToStdout)
+
+      case Some(Some(file)) =>
+        try {
+          Ok(from.withTracesTo(new PrintWriter(file)))
+        } catch {
+          case ioe: IOException =>
+            Err(SimulatorError.CantOpenTraceFile(file.getName, ioe))
+        }
+    }
+
+  private def assembleAndRun(context: SimulatorContext): VmContext OrElse SimulatorError =
+    (for {
+      initialVmContext <- me.rand.asm.main.Main.assemble(context.asmOptions, context.asmSource)
+      finalContext <- VmRunner.forAProgram(initialVmContext.program).execute(initialVmContext)(context.vmExecutionContext)
+    } yield finalContext) || {
+      case error: AsmError =>
+        SimulatorError.FromAsmError(error)
+
+      case error: VmError =>
+        SimulatorError.FromVmError(error)
+    }
 }

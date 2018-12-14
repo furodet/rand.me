@@ -131,5 +131,39 @@ object Logger {
     }
     new Logger(loggerConfiguration)
   }
+
+  // For practical application context, standard logging is:
+  //  - log info to stdout
+  //  - log errors and warnings to stderr
+  //  - debug log is optional to stdout
+  //  - traces are optional and sent to a given output file
+  // Provide a ready-made builder for that.
+  class StandardLoggerConfiguration(setup: Seq[(LogType, LoggerOutputSpecification)], errWriter: PrintWriter, outWriter: PrintWriter) {
+    def withDebugLogs(allowed: Boolean = false): StandardLoggerConfiguration =
+      if (allowed) new StandardLoggerConfiguration(setup :+ (LogDebug -> ("Debug: " to outWriter)), errWriter, outWriter)
+      else this
+
+    def withTracesTo(writer: PrintWriter): StandardLoggerConfiguration =
+      new StandardLoggerConfiguration(setup :+ (LogTrace -> ("[] " to writer)), errWriter, outWriter)
+
+    def withTracesToStdout: StandardLoggerConfiguration =
+      new StandardLoggerConfiguration(setup :+ (LogTrace -> ("[] " to outWriter)), errWriter, outWriter)
+
+    def build: Logger = forConfiguration(setup)
+  }
+
+  object StandardLoggerConfiguration {
+    lazy val errWriter = new PrintWriter(System.err)
+    lazy val outWriter = new PrintWriter(System.out)
+
+    def apply(): StandardLoggerConfiguration = {
+      new StandardLoggerConfiguration(Seq(
+        LogError -> ("Error: " to errWriter),
+        LogWarning -> ("Warning: " to errWriter),
+        LogInfo -> ("Info: " to outWriter)),
+        errWriter, outWriter)
+    }
+  }
+
 }
 

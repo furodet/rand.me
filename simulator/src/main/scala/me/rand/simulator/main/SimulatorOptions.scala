@@ -28,7 +28,9 @@ package me.rand.simulator.main
 import me.rand.asm.main.AsmOptions
 import me.rand.commons.idioms.Status._
 
-case class SimulatorOptions(asmOptions: AsmOptions = AsmOptions(), verboseRun: Boolean = false)
+case class SimulatorOptions(asmOptions: AsmOptions = AsmOptions(),
+                            verboseRun: Boolean = false,
+                            traceOut: Option[Option[java.io.File]] = None)
 
 object SimulatorOptions {
   def fromUserArgs(args: Array[String]): SimulatorOptions OrElse String =
@@ -56,6 +58,17 @@ object SimulatorOptions {
       (_, options) =>
         options.copy(verboseRun = true)
     }.optional().text("execute program verbosely")
+
+    opt[String]('t', "trace").action {
+      (fileSpec, options) =>
+        fileSpec match {
+          case "." =>
+            options.copy(traceOut = Some(None))
+
+          case aFileName =>
+            options.copy(traceOut = Some(Some(new java.io.File(aFileName))))
+        }
+    }.valueName(".|file").optional().maxOccurs(1).text("write traces into specified file ('.' for standard out)")
 
     opt[String](name = "prefix").action {
       (prefix, options) =>
