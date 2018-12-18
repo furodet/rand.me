@@ -29,12 +29,9 @@ import me.rand.commons.idioms.NormalizedNumber._
 import me.rand.commons.idioms.Status._
 import me.rand.vm.alu.VmRegister
 import me.rand.vm.engine.Variable.Scalar
-import me.rand.vm.engine.VmContext.VmProfile
 import me.rand.vm.engine.VmProgram.InstructionInstance
-import me.rand.vm.engine.VmTypes.VmType
 import me.rand.vm.is.{Exit, InstructionSet}
 import me.rand.vm.main.VmError.VmContextError._
-import me.rand.vm.main.VmError._
 import org.scalatest.FlatSpec
 
 import scala.language.postfixOps
@@ -44,86 +41,6 @@ class VmContextTest extends FlatSpec {
   private def ok(): Unit = ()
 
   private val aStandardHeapSize = 10
-
-  "VM profile" should "not be created from invalid specification (illegal string)" in {
-    VmProfile.fromString("babeubi") match {
-      case Err(VmProfileStringError.InvalidFormat(_, _)) =>
-        ok()
-
-      case whatever =>
-        fail(s"unexpected result from profile with illegal string: $whatever")
-    }
-  }
-
-  "VM profile" should "not be created from invalid specification (illegal string integer)" in {
-    VmProfile.fromString("bl:what?:heap:10") match {
-      case Err(VmProfileStringError.NotAPositiveNumber(_, "bl")) =>
-        ok()
-
-      case whatever =>
-        fail(s"unexpected result from profile with illegal string: $whatever")
-    }
-  }
-
-  "VM profile" should "not be created from invalid specification (invalid byte len)" in {
-    VmProfile.fromString("bl:0:heap:10") match {
-      case Err(VmProfileStringError.NotAPositiveNumber(_, "bl")) =>
-        ok()
-
-      case whatever =>
-        fail(s"unexpected result from profile with illegal string: $whatever")
-    }
-  }
-
-  "VM profile" should "not be created from invalid specification (excessive byte len)" in {
-    VmProfile.fromString("bl:257:heap:10") match {
-      case Err(VmProfileStringError.ValueExceedsMaximumAllowed(_, "bl", VmContext.maximumByteSizeAllowed)) =>
-        ok()
-
-      case whatever =>
-        fail(s"unexpected result from profile with illegal string: $whatever")
-    }
-  }
-
-  "VM profile" should "not be created from invalid specification (invalid varsetsize)" in {
-    VmProfile.fromString("bl:1:heap:-1") match {
-      case Err(VmProfileStringError.NotAPositiveNumber(_, "heap")) =>
-        ok()
-
-      case whatever =>
-        fail(s"unexpected result from profile with illegal string: $whatever")
-    }
-  }
-
-  "VM profile" should "not be created from invalid specification (excessive varsetsize)" in {
-    VmProfile.fromString(s"bl:1:heap:${VmContext.maximumNumberOfVariablesInHeap + 1}") match {
-      case Err(VmProfileStringError.ValueExceedsMaximumAllowed(_, "heap", VmContext.maximumNumberOfVariablesInHeap)) =>
-        ok()
-
-      case whatever =>
-        fail(s"unexpected result from profile with illegal string: $whatever")
-    }
-  }
-
-  "VM context" should "properly initialize for 8-bits machine" in {
-    VmContext.usingProfileString(s"bl:1:heap:${VmContext.maximumNumberOfVariablesInHeap}") match {
-      case Ok(vmContext) =>
-        assertThatVmTypesMapExactly(vmContext.vmTypes, 1)
-
-      case whatever =>
-        fail(s"unexpected result from profile/8-bits: $whatever")
-    }
-  }
-
-  "VM context" should "properly initialize for 64-bits machine" in {
-    VmContext.usingProfileString(s"bl:8:heap:${VmContext.maximumNumberOfVariablesInHeap}") match {
-      case Ok(vmContext) =>
-        assertThatVmTypesMapExactly(vmContext.vmTypes, 1, 2, 3, 4, 5, 6, 7, 8)
-
-      case whatever =>
-        fail(s"unexpected result from profile/64-bits: $whatever")
-    }
-  }
 
   "VM types" should "understand legal type strings and reject illegal type strings" in {
     VmContext.usingProfileString(s"bl:1:heap:10") match {
@@ -412,50 +329,6 @@ class VmContextTest extends FlatSpec {
       case whatever =>
         fail(s"unexpected result from valid profile definition: $whatever")
     }
-
-  private def assertThatVmTypesMapExactly(types: VmTypes, byteLens: Int*): Unit = {
-    // Has every expected type
-    byteLens.foreach {
-      eachLen =>
-        assertThatVmTypesSelectAllTypesOfByteLen(eachLen, types)
-    }
-    // Has no other type
-    assert(2 * byteLens.length == types.typeMap.size)
-    // Just test with one stupid type at least once
-    types.select(128, isSigned = true) match {
-      case Some(unexpectedType) =>
-        fail(s"type u128 should not be known but got $unexpectedType")
-
-      case None =>
-      // Ok
-    }
-  }
-
-  private def assertThatVmTypesSelectAllTypesOfByteLen(byteLen: Int, types: VmTypes): Unit = {
-    assert(types.select(byteLen, isSigned = true).isDefined)
-    assert(types.select(byteLen, isSigned = false).isDefined)
-    types.select(byteLen) match {
-      case seq if vmTypeSequenceContainsSignedAndUnsignedTypes(seq, byteLen) =>
-        ()
-
-      case whatever =>
-        fail(s"failed to select signed or unsigned type with byte length $byteLen: $whatever")
-    }
-  }
-
-  private def vmTypeSequenceContainsSignedAndUnsignedTypes(seq: Seq[VmType], byteLen: Int): Boolean =
-    (seq.length == 2) &&
-      vmTypeSeqContains(seq, byteLen, isSigned = true) &&
-      vmTypeSeqContains(seq, byteLen, isSigned = false) &&
-      vmTypeSeqContainsTypeNameForLength(seq, byteLen)
-
-  private def vmTypeSeqContains(seq: Seq[VmType], byteLen: Int, isSigned: Boolean): Boolean =
-    seq.exists(t => (t.isSigned == isSigned) && (t.byteLen == byteLen))
-
-  private def vmTypeSeqContainsTypeNameForLength(seq: Seq[VmType], byteLen: Int): Boolean =
-    (seq.length == 2) &&
-      seq.exists(t => t.toString == s"s${8 * byteLen}") &&
-      seq.exists(t => t.toString == s"u${8 * byteLen}")
 
   private def aDummyProgramWithOneBasicBlockOfOneInstruction: VmProgram =
     VmProgram.empty ++ aDummyBasicBlockCalled("b0")

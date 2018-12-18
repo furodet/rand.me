@@ -125,7 +125,7 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
             Ok(AsmToken.Mach(vmContext, asmParserContext.lineNumber))
 
           case Err(cause) =>
-            Err(AsmParserError.InvalidMachineSpecification(args.head, cause, asmParserContext.lineNumber))
+            Err(AsmParserError.InvalidMachineSpecification(args.mkString(" "), cause, asmParserContext.lineNumber))
         })
 
       case directive if directive.startsWith(".") =>
