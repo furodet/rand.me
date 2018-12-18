@@ -25,7 +25,7 @@
  */
 package me.rand.vm.engine
 
-import me.rand.commons.idioms.Status.OrElse
+import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.Variable.Scalar
 import me.rand.vm.main.{ExecutionContext, VmError}
 
@@ -37,7 +37,7 @@ sealed trait VmControl {
 object VmControl {
 
   case class TagVariable(variableName: String, variableId: Operand.Source.Variable, initialValue: Operand.Source.Immediate) extends VmControl {
-    override def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): OrElse[VmContext, VmError] = {
+    override def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError = {
       val scalarValue = Scalar(variableName, initialValue.value)
       variableId match {
         case Operand.Source.Variable.InTheHeap(index) =>
@@ -50,6 +50,26 @@ object VmControl {
 
     override def toString: String =
       s".var $variableName $variableId $initialValue"
+  }
+
+  sealed trait FrameOperation extends VmControl
+
+  object FrameOperation {
+
+    case class Push(nrVariables: Int) extends FrameOperation {
+      override def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError = {
+        executionContext.logger >> s"PUSH FRAME $nrVariables"
+        Ok(vmContext.createFrameOfSize(nrVariables))
+      }
+    }
+
+    case object Pop extends FrameOperation {
+      override def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError = {
+        executionContext.logger >> "POP FRAME"
+        vmContext.popFrame()
+      }
+    }
+
   }
 
 }

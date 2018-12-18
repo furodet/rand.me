@@ -71,6 +71,20 @@ object AsmToken {
 
     }
 
+    sealed trait FrameOperation extends Directive
+
+    object FrameOperation {
+
+      case class Push(nrVariables: Int, lineNumber: Int) extends FrameOperation {
+        override def toString: String = s".push $nrVariables"
+      }
+
+      case class Pop(lineNumber: Int) extends FrameOperation {
+        override def toString: String = s".pop"
+      }
+
+    }
+
   }
 
 }

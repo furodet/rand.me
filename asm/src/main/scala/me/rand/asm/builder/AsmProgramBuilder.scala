@@ -109,6 +109,14 @@ class AsmProgramBuilder(initialContext: VmContext) {
           case AsmToken.Directive.TagVariable.InTheStack(name, stackIndex, initialValue, lineNumber) =>
             context.getCurrentBasicBlockOrError(lineNumber) &&
               (context.withInlineDirective(forgeTagVariable(name, Operand.Source.Variable.InTheStack(stackIndex), initialValue), _))
+
+          case AsmToken.Directive.FrameOperation.Push(nrVariables, lineNumber) =>
+            context.getCurrentBasicBlockOrError(lineNumber) &&
+              (context.withInlineDirective(InlineDirective(VmControl.FrameOperation.Push(nrVariables)), _))
+
+          case AsmToken.Directive.FrameOperation.Pop(lineNumber) =>
+            context.getCurrentBasicBlockOrError(lineNumber) &&
+              (context.withInlineDirective(InlineDirective(VmControl.FrameOperation.Pop), _))
         }
     } & updateVmContextWithBootstrap
 

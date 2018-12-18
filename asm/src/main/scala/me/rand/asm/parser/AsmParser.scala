@@ -140,6 +140,12 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
           case ".boot" if args.nonEmpty =>
             Ok(AsmToken.Directive.DefineBootBasicBlock(args.head, asmParserContext.lineNumber))
 
+          case ".push" if args.nonEmpty && args.head.matches("[0-9]+") =>
+            Ok(AsmToken.Directive.FrameOperation.Push(args.head.toInt, asmParserContext.lineNumber))
+
+          case ".pop" =>
+            Ok(AsmToken.Directive.FrameOperation.Pop(asmParserContext.lineNumber))
+
           case _ =>
             Err(AsmParserError.InvalidDirectiveSpecification(keyword, asmParserContext.lineNumber))
         }
