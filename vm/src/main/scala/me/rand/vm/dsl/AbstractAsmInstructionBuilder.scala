@@ -37,10 +37,10 @@ class AbstractAsmInstructionBuilder(instruction: Instruction) {
 
   class AbstractAsmInstructionBuilderWithInputs(instruction: Instruction, sourceOperands: Seq[AbstractAsmOperandBuilder]) {
     def >(targetOperand: AbstractAsmOperandBuilder): InstructionInstance OrElse SyntaxError =
-      buildSourceAndDestinationOperands(sourceOperands, targetOperand) && (operands => new InstructionInstance(instruction, operands))
+      buildSourceAndDestinationOperands(sourceOperands, targetOperand) && (operands => InstructionInstance(instruction, operands))
 
     def >(): InstructionInstance OrElse SyntaxError =
-      buildSourceOperands(sourceOperands) && (operands => new InstructionInstance(instruction, operands))
+      buildSourceOperands(sourceOperands) && (operands => InstructionInstance(instruction, operands))
 
     private def buildSourceAndDestinationOperands(sources: Seq[AbstractAsmOperandBuilder], target: AbstractAsmOperandBuilder) =
       for {

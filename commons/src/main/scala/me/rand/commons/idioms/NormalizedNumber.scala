@@ -60,7 +60,7 @@ object NormalizedNumber {
     override val asBigEndianByteArray: Array[Byte] = ByteBuffer.allocate(8).putLong(value).array()
   }
 
-  implicit def BigEndianIntListOfBytesToNormalizedNumber(value: Iterator[Int]) = new NormalizedNumber {
+  implicit def BigEndianIntListOfBytesToNormalizedNumber(value: Iterator[Int]): NormalizedNumber = new NormalizedNumber {
     override val asBigEndianByteArray: Array[Byte] = value.map(_.toByte).toArray
   }
 }

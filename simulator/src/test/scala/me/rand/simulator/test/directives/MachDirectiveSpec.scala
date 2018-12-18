@@ -26,10 +26,12 @@
 package me.rand.simulator.test.directives
 
 import me.rand.asm.main.AsmError.AsmParserError.{IncompatibleInstructionSet, InvalidDirectiveSpecification, InvalidMachineSpecification, UnspecifiedMachineProfile}
+import me.rand.commons.idioms.Status._
 import me.rand.simulator.main.SimulatorError
 import me.rand.simulator.test.BaseSpec
 import me.rand.vm.engine.VmTypes.VmType
 import me.rand.vm.engine.{VmContext, VmTypes}
+import me.rand.vm.main.VmError.VmContextError.InvalidVmTypeString
 import me.rand.vm.main.VmError.{IncompatibleInstructionSetVersion, VmProfileStringError}
 
 class MachDirectiveSpec extends BaseSpec {
@@ -148,6 +150,51 @@ class MachDirectiveSpec extends BaseSpec {
     ) {
       vmContext =>
         assertThatVmTypesMapExactly(vmContext.vmTypes, 1, 2, 3, 4, 5, 6, 7, 8)
+    }
+  }
+
+  "VM types" should "understand legal type strings and reject illegal type strings" in {
+    successfulAssemblyAndExecutionOf(
+      s"""
+         | ${aMachDirectiveWithMachineWordLengthSetTo(1)}
+         | .bb _boot
+         | exit (00:u8)
+         | .boot _boot
+       """.stripMargin
+    ) {
+      vmContext =>
+        vmContext.vmTypes.valueOf("u8") match {
+          case Ok(vmType) if vmType.byteLen == 1 && vmType.isUnsigned =>
+          // ok
+          case whatever =>
+            fail(s"unexpected result of vmTypes.valueOf(u8): $whatever")
+        }
+
+        vmContext.vmTypes.valueOf("s8") match {
+          case Ok(vmType) if vmType.byteLen == 1 && vmType.isSigned =>
+          // ok
+          case whatever =>
+            fail(s"unexpected result of vmTypes.valueOf(s8): $whatever")
+        }
+    }
+  }
+
+  "VM types" should "reject illegal type strings and reject illegal type strings" in {
+    successfulAssemblyAndExecutionOf(
+      s"""
+         | ${aMachDirectiveWithMachineWordLengthSetTo(1)}
+         | .bb _boot
+         | exit (00:u8)
+         | .boot _boot
+       """.stripMargin
+    ) {
+      vmContext =>
+        vmContext.vmTypes.valueOf("u16") match {
+          case Err(InvalidVmTypeString("u16")) =>
+          // ok
+          case whatever =>
+            fail(s"unexpected result of vmTypes.valueOf(u16): $whatever")
+        }
     }
   }
 
