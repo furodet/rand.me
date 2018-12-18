@@ -30,6 +30,7 @@ import java.io.PrintWriter
 import me.rand.commons.idioms.Status._
 import me.rand.simulator.main.{Main, SimulatorError, SimulatorOptions}
 import me.rand.vm.engine.VmContext
+import me.rand.vm.is.InstructionSetVersion
 import org.scalatest.FlatSpec
 
 class BaseSpec extends FlatSpec {
@@ -83,4 +84,14 @@ class BaseSpec extends FlatSpec {
     }
     output.getAbsoluteFile.toString
   }
+
+  // Pre-defined .mach spec
+  protected def aMachDirectiveWithSpecification(specification: String): String =
+    s".mach ${InstructionSetVersion.current} $specification"
+
+  protected def aMachDirectiveWithMachineWordLengthSetTo(nrBytes: Int): String =
+    aMachDirectiveWithSpecification(s"bl:$nrBytes:heap:${VmContext.maximumNumberOfVariablesInHeap}")
+
+  protected def aStandardMachineConfiguration: String =
+    aMachDirectiveWithMachineWordLengthSetTo(8)
 }

@@ -30,7 +30,6 @@ import me.rand.simulator.main.SimulatorError
 import me.rand.simulator.test.BaseSpec
 import me.rand.vm.engine.VmTypes.VmType
 import me.rand.vm.engine.{VmContext, VmTypes}
-import me.rand.vm.is.InstructionSetVersion
 import me.rand.vm.main.VmError.{IncompatibleInstructionSetVersion, VmProfileStringError}
 
 class MachDirectiveSpec extends BaseSpec {
@@ -151,12 +150,6 @@ class MachDirectiveSpec extends BaseSpec {
         assertThatVmTypesMapExactly(vmContext.vmTypes, 1, 2, 3, 4, 5, 6, 7, 8)
     }
   }
-
-  private def aMachDirectiveWithSpecification(specification: String): String =
-    s".mach ${InstructionSetVersion.current} $specification"
-
-  private def aMachDirectiveWithMachineWordLengthSetTo(nrBytes: Int): String =
-    aMachDirectiveWithSpecification(s"bl:$nrBytes:heap:${VmContext.maximumNumberOfVariablesInHeap}")
 
   private def assertThatVmTypesMapExactly(types: VmTypes, byteLens: Int*): Unit = {
     // Has every expected type

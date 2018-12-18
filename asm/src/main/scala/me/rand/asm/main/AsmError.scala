@@ -142,6 +142,10 @@ object AsmError {
       override def toString: String = s"$lineNumber: duplicate bootstrap definition"
     }
 
+    case class DuplicateBasicBlockDefinition(name: String, lineNumber: Int) extends AsmProgramBuilderError {
+      override def toString: String = s"$lineNumber: basic block '$name' already declared"
+    }
+
   }
 
 }

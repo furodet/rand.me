@@ -52,7 +52,7 @@ class AsmProgramBuilder(initialContext: VmContext) {
       new AsmProgramBuilderContext(newContext, currentBasicBlock, bootBasicBlockName)
 
     def withNewBasicBlockCalled(name: String): AsmProgramBuilderContext =
-      new AsmProgramBuilderContext(registerLastBasicBlockUnderConstructionIfAny, Some(BasicBlockBuilder.aBasicBlockCalled(name)), bootBasicBlockName)
+      new AsmProgramBuilderContext(vmContext, Some(BasicBlockBuilder.aBasicBlockCalled(name)), bootBasicBlockName)
 
     def withInstruction(instruction: InstructionInstance, intoBasicBlock: BasicBlockBuilder): AsmProgramBuilderContext =
       new AsmProgramBuilderContext(vmContext, Some(intoBasicBlock + instruction), bootBasicBlockName)
@@ -64,10 +64,10 @@ class AsmProgramBuilder(initialContext: VmContext) {
       if (bootBasicBlockName.isDefined) Err(AsmProgramBuilderError.DuplicateBootstrapDefinition(lineNumber))
       else Ok(new AsmProgramBuilderContext(vmContext, currentBasicBlock, Some((name, lineNumber))))
 
-    def complete: AsmProgramBuilderContext =
-      new AsmProgramBuilderContext(registerLastBasicBlockUnderConstructionIfAny, None, bootBasicBlockName)
+    def registerLastBasicBlockUnderConstructionIfAny: AsmProgramBuilderContext =
+      new AsmProgramBuilderContext(registerLastBasicBlockUnderConstructionInVmContextIfNeeded, None, bootBasicBlockName)
 
-    private def registerLastBasicBlockUnderConstructionIfAny: VmContext =
+    private def registerLastBasicBlockUnderConstructionInVmContextIfNeeded: VmContext =
       currentBasicBlock match {
         case None =>
           vmContext
@@ -89,8 +89,15 @@ class AsmProgramBuilder(initialContext: VmContext) {
           case instruction: AsmToken.Instruction =>
             context.getCurrentBasicBlockOrError(instruction.lineNumber) && (context.withInstruction(instruction.instance, _))
 
-          case AsmToken.Directive.DeclareBasicBlock(name, _) =>
-            Ok(context.withNewBasicBlockCalled(name))
+          case AsmToken.Directive.DeclareBasicBlock(name, lineNumber) =>
+            val newContext = context.registerLastBasicBlockUnderConstructionIfAny
+            newContext.vmContext.program.basicBlocks.get(name) match {
+              case None =>
+                Ok(newContext.registerLastBasicBlockUnderConstructionIfAny.withNewBasicBlockCalled(name))
+
+              case Some(_) =>
+                Err(AsmError.AsmProgramBuilderError.DuplicateBasicBlockDefinition(name, lineNumber))
+            }
 
           case AsmToken.Directive.DefineBootBasicBlock(name, lineNumber) =>
             context.withBootBasicBlock(name, lineNumber)
@@ -109,7 +116,7 @@ class AsmProgramBuilder(initialContext: VmContext) {
     InlineDirective(VmControl.TagVariable(tag, operand, Operand.Source.Immediate(value)))
 
   private def updateVmContextWithBootstrap(builderContext: AsmProgramBuilderContext): VmContext OrElse AsmProgramBuilderError = {
-    val completed = builderContext.complete
+    val completed = builderContext.registerLastBasicBlockUnderConstructionIfAny
     completed.bootBasicBlockName match {
       case None =>
         Err(AsmProgramBuilderError.UndefinedBootstrapBlock)
