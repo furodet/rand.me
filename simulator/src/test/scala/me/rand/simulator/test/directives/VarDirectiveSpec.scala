@@ -66,6 +66,17 @@ class VarDirectiveSpec extends BaseSpec {
     }
   }
 
+  ".var" should "fail if not within a basic block" in {
+    failureOfAssemblyOrExecutionOf(
+      s"""
+         | $aStandardMachineConfiguration
+         | .var hello %3 (00:u8)
+       """.stripMargin
+    ) {
+      case SimulatorError.FromAsmError(AsmError.AsmProgramBuilderError.NoBasicBlockDeclared(3)) => true
+    }
+  }
+
   ".var" should "fail if creating a variable outside heap limits" in {
     failureOfAssemblyOrExecutionOf(
       s"""
@@ -80,7 +91,7 @@ class VarDirectiveSpec extends BaseSpec {
   }
 
   ".var" should "allow to create variables in the heap" in {
-    successfulAssemblyAndExecutionOf(
+    successfullyAssembleAndExecute(
       s"""
          | $aStandardMachineConfiguration
          | .bb main
@@ -89,39 +100,35 @@ class VarDirectiveSpec extends BaseSpec {
          |   exit (00:u8)
          | .boot main
      """.stripMargin) {
-      vmContext =>
-        assertHeapVariableMatches(vmContext, VmContext.maximumNumberOfVariablesInHeap - 1, "top", isSigned = true, byteLen = 1, intValue = -1)
-        assertHeapVariableMatches(vmContext, 0, "bottom", isSigned = false, byteLen = 1, intValue = 0)
-        // Also, let's take an opportunity to verify that other variables are unset.
-        for (eachHeapIndex <- 1 until VmContext.maximumNumberOfVariablesInHeap - 1) {
-          vmContext.heap.getVariable(eachHeapIndex) match {
-            case Ok(None) =>
-            // ok
-
-            case whatever =>
-              fail(s"unexpected access to heap variable $eachHeapIndex: $whatever")
-          }
-        }
+      case vmContext =>
+        heapVariableMatches(VmContext.maximumNumberOfVariablesInHeap - 1, "top", isSigned = true, byteLen = 1, intValue = -1, vmContext) &&
+          heapVariableMatches(0, "bottom", isSigned = false, byteLen = 1, intValue = 0, vmContext) &&
+          everyHeapVariableIsUnsetInRange(1, VmContext.maximumNumberOfVariablesInHeap - 1, vmContext)
     }
   }
 
-  // TODO: see Vmcontext tests to validate stack accesses.
-  // TODO: declare a heap and stack variable... Need push/pop frames
-  
-  private def assertHeapVariableMatches(vmContext: VmContext, heapIndex: Int, name: String, isSigned: Boolean, byteLen: Int, intValue: Int) = {
+  private def heapVariableMatches(heapIndex: Int, name: String, isSigned: Boolean, byteLen: Int, intValue: Int, vmContext: VmContext): Boolean = {
     vmContext.heap.getVariable(heapIndex) match {
       case Ok(Some(x: Variable.Scalar)) =>
-        assertEquals(x, name, isSigned, byteLen, intValue)
+        (name == x.name) &&
+          (isSigned == x.value.vmType.isSigned) &&
+          (byteLen == x.value.vmType.byteLen) &&
+          (intValue == x.value.toInt)
 
-      case whatever =>
-        fail(s"could not get heap variable %$heapIndex: $whatever")
+      case _ =>
+        false
     }
   }
 
-  private def assertEquals(actual: Variable.Scalar, name: String, isSigned: Boolean, byteLen: Int, intValue: Int) = {
-    assert(name == actual.name)
-    assert(byteLen == actual.value.vmType.byteLen)
-    assert(isSigned == actual.value.vmType.isSigned)
-    assert(intValue == actual.value.toInt)
+  private def everyHeapVariableIsUnsetInRange(from: Int, to: Int, vmContext: VmContext): Boolean = {
+    for (eachHeapIndex <- from until to) {
+      vmContext.heap.getVariable(eachHeapIndex) match {
+        case Ok(None) =>
+        // ok
+        case _ =>
+          return false
+      }
+    }
+    true
   }
 }

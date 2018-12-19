@@ -34,13 +34,19 @@ import me.rand.vm.is.InstructionSetVersion
 import org.scalatest.FlatSpec
 
 class BaseSpec extends FlatSpec {
-  protected def successfulAssemblyAndExecutionOf(source: String)(testResult: VmContext => Unit): Unit =
+  protected def successfullyAssembleAndExecute(source: String)(testResult: PartialFunction[VmContext, Boolean]): Unit =
     Main.main(setupSimulatorOptionsToAssembleAndRun(source)) match {
       case Err(what) =>
         fail(s"simulator error: $what")
 
       case Ok(vmContext) =>
-        testResult(vmContext)
+        testResult.lift(vmContext) match {
+          case Some(true) =>
+          // ok
+
+          case _ =>
+            fail(s"unexpected result: $vmContext")
+        }
     }
 
   protected def failureOfAssemblyOrExecutionOf(source: String)(testResult: PartialFunction[SimulatorError, Boolean]): Unit =
@@ -50,11 +56,11 @@ class BaseSpec extends FlatSpec {
 
       case Err(what) =>
         testResult.lift(what) match {
-          case None =>
-            fail(s"unexpected failure: $what")
-
-          case Some(_) =>
+          case Some(true) =>
             println(what)
+
+          case _ =>
+            fail(s"unexpected failure: $what")
         }
     }
 

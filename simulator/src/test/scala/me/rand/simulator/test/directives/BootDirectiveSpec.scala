@@ -70,7 +70,7 @@ class BootDirectiveSpec extends BaseSpec {
   }
 
   ".boot" should "be specified at any point of the program" in {
-    successfulAssemblyAndExecutionOf(
+    successfullyAssembleAndExecute(
       s"""
          | $aStandardMachineConfiguration
          | .boot block0
@@ -78,8 +78,8 @@ class BootDirectiveSpec extends BaseSpec {
          |   exit (42:u8)
        """.stripMargin
     ) {
-      vmContext =>
-        assert(vmContext.exitCode.isDefined && vmContext.exitCode.get.equals(0x42))
+      case vmContext =>
+        vmContext.exitCode.isDefined && (vmContext.exitCode.get == 0x42)
     }
   }
 

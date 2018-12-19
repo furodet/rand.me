@@ -31,7 +31,6 @@ import me.rand.simulator.main.SimulatorError
 import me.rand.simulator.test.BaseSpec
 import me.rand.vm.engine.VmTypes.VmType
 import me.rand.vm.engine.{VmContext, VmTypes}
-import me.rand.vm.main.VmError.VmContextError.InvalidVmTypeString
 import me.rand.vm.main.VmError.{IncompatibleInstructionSetVersion, VmProfileStringError}
 
 class MachDirectiveSpec extends BaseSpec {
@@ -126,7 +125,7 @@ class MachDirectiveSpec extends BaseSpec {
   }
 
   ".mach" should "properly initialize 8-bits machine" in {
-    successfulAssemblyAndExecutionOf(
+    successfullyAssembleAndExecute(
       s"""
          | ${aMachDirectiveWithMachineWordLengthSetTo(1)}
          | .bb _boot
@@ -134,13 +133,13 @@ class MachDirectiveSpec extends BaseSpec {
          | .boot _boot
        """.stripMargin
     ) {
-      vmContext =>
-        assertThatVmTypesMapExactly(vmContext.vmTypes, 1)
+      case vmContext =>
+        vmTypesMapExactly(vmContext.vmTypes, 1)
     }
   }
 
   ".mach" should "properly initialize 64-bits machine" in {
-    successfulAssemblyAndExecutionOf(
+    successfullyAssembleAndExecute(
       s"""
          | ${aMachDirectiveWithMachineWordLengthSetTo(8)}
          | .bb _boot
@@ -148,13 +147,13 @@ class MachDirectiveSpec extends BaseSpec {
          | .boot _boot
        """.stripMargin
     ) {
-      vmContext =>
-        assertThatVmTypesMapExactly(vmContext.vmTypes, 1, 2, 3, 4, 5, 6, 7, 8)
+      case vmContext =>
+        vmTypesMapExactly(vmContext.vmTypes, 1, 2, 3, 4, 5, 6, 7, 8)
     }
   }
 
-  "VM types" should "understand legal type strings and reject illegal type strings" in {
-    successfulAssemblyAndExecutionOf(
+  "VM types" should "understand legal type strings" in {
+    successfullyAssembleAndExecute(
       s"""
          | ${aMachDirectiveWithMachineWordLengthSetTo(1)}
          | .bb _boot
@@ -162,25 +161,14 @@ class MachDirectiveSpec extends BaseSpec {
          | .boot _boot
        """.stripMargin
     ) {
-      vmContext =>
-        vmContext.vmTypes.valueOf("u8") match {
-          case Ok(vmType) if vmType.byteLen == 1 && vmType.isUnsigned =>
-          // ok
-          case whatever =>
-            fail(s"unexpected result of vmTypes.valueOf(u8): $whatever")
-        }
-
-        vmContext.vmTypes.valueOf("s8") match {
-          case Ok(vmType) if vmType.byteLen == 1 && vmType.isSigned =>
-          // ok
-          case whatever =>
-            fail(s"unexpected result of vmTypes.valueOf(s8): $whatever")
-        }
+      case vmContext =>
+        vmTypesRecognize(vmContext.vmTypes, "u8", 1, expectedIsSigned = false) &&
+          vmTypesRecognize(vmContext.vmTypes, "s8", 1, expectedIsSigned = true)
     }
   }
 
-  "VM types" should "reject illegal type strings and reject illegal type strings" in {
-    successfulAssemblyAndExecutionOf(
+  "VM types" should "reject illegal type strings" in {
+    successfullyAssembleAndExecute(
       s"""
          | ${aMachDirectiveWithMachineWordLengthSetTo(1)}
          | .bb _boot
@@ -188,43 +176,46 @@ class MachDirectiveSpec extends BaseSpec {
          | .boot _boot
        """.stripMargin
     ) {
-      vmContext =>
-        vmContext.vmTypes.valueOf("u16") match {
-          case Err(InvalidVmTypeString("u16")) =>
-          // ok
-          case whatever =>
-            fail(s"unexpected result of vmTypes.valueOf(u16): $whatever")
-        }
+      case vmContext =>
+        vmContext.vmTypes.valueOf("u16").isLeft
     }
   }
 
-  private def assertThatVmTypesMapExactly(types: VmTypes, byteLens: Int*): Unit = {
+  private def vmTypesRecognize(types: VmTypes, typeName: String, expectedByteLen: Int, expectedIsSigned: Boolean): Boolean =
+    types.valueOf(typeName) match {
+      case Ok(vmType) =>
+        (vmType.byteLen == expectedByteLen) && (vmType.isSigned == expectedIsSigned)
+
+      case _ =>
+        false
+    }
+
+  private def vmTypesMapExactly(types: VmTypes, byteLens: Int*): Boolean = {
     // Has every expected type
     byteLens.foreach {
       eachLen =>
-        assertThatVmTypesSelectAllTypesOfByteLen(eachLen, types)
+        if (!vmTypesSelectAllTypesOfByteLen(eachLen, types)) return false;
     }
     // Has no other type
-    assert(2 * byteLens.length == types.typeMap.size)
+    if (2 * byteLens.length != types.typeMap.size) return false
     // Just test with one stupid type at least once
     types.select(128, isSigned = true) match {
-      case Some(unexpectedType) =>
-        fail(s"type u128 should not be known but got $unexpectedType")
+      case Some(_) =>
+        false
 
       case None =>
-      // Ok
+        true
     }
   }
 
-  private def assertThatVmTypesSelectAllTypesOfByteLen(byteLen: Int, types: VmTypes): Unit = {
-    assert(types.select(byteLen, isSigned = true).isDefined)
-    assert(types.select(byteLen, isSigned = false).isDefined)
+  private def vmTypesSelectAllTypesOfByteLen(byteLen: Int, types: VmTypes): Boolean = {
+    if (types.select(byteLen, isSigned = true).isEmpty) return false
+    if (types.select(byteLen, isSigned = false).isEmpty) return false
     types.select(byteLen) match {
       case seq if vmTypeSequenceContainsSignedAndUnsignedTypes(seq, byteLen) =>
-        ()
-
-      case whatever =>
-        fail(s"failed to select signed or unsigned type with byte length $byteLen: $whatever")
+        true
+      case _ =>
+        false
     }
   }
 
