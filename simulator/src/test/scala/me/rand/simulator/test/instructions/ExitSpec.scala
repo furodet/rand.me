@@ -59,6 +59,35 @@ class ExitSpec extends BaseSpec {
     }
   }
 
+  "exit" should "stop the machine with a variable value exit code" in {
+    successfullyAssembleAndExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb main
+         |   .var v %0 (abcd:u16)
+         |   exit %0
+         | .boot main
+       """.stripMargin
+    ).thenVerify {
+      case vmContext =>
+        vmExitedWithCode(0xabcd, vmContext)
+    }
+  }
+
+  "exit" should "fail with pointer variable" in {
+    failToAssembleOrExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb main
+         |   .var v %0 (da5f:u16)
+         |   exit &%0
+         | .boot main
+       """.stripMargin
+    ).thenVerify {
+      case SimulatorError.FromVmError(VmError.SyntaxError.NoMatchingProfile("exit", _)) => true
+    }
+  }
+
   "exit" should "not write into output operand if defined" in {
     successfullyAssembleAndExecute(
       s"""
