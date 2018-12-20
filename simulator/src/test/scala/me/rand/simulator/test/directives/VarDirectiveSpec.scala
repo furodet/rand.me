@@ -34,58 +34,58 @@ import me.rand.vm.main.VmError
 
 class VarDirectiveSpec extends BaseSpec {
   ".var" should "fail with less than 3 arguments" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
          | .var hello %0
       """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(AsmError.AsmParserError.InvalidVariableSpecification("hello %0", 3)) => true
     }
   }
 
   ".var" should "fail with an invalid variable identifier" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
          | .var hello 3 (00:u8)
        """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(AsmError.AsmParserError.InvalidVariableSpecification("hello 3 (00:u8)", 3)) => true
     }
   }
 
   ".var" should "fail with an invalid value specification" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
          | .var hello %3 (00)
        """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(AsmError.AsmParserError.InvalidVariableSpecification("hello %3 (00)", 3)) => true
     }
   }
 
   ".var" should "fail if not within a basic block" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
          | .var hello %3 (00:u8)
        """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(AsmError.AsmProgramBuilderError.NoBasicBlockDeclared(3)) => true
     }
   }
 
   ".var" should "fail if creating a variable outside heap limits" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
          | .bb main
          |   .var hello %${VmContext.maximumNumberOfVariablesInHeap} (00:u8)
          | .boot main
        """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromVmError(VmError.VmContextError.VariableIndexOutOfBounds(VmContext.maximumNumberOfVariablesInHeap)) => true
     }
   }
@@ -99,7 +99,8 @@ class VarDirectiveSpec extends BaseSpec {
          |   .var bottom %0 (00:u8)
          |   exit (00:u8)
          | .boot main
-     """.stripMargin) {
+     """.stripMargin
+    ).thenVerify {
       case vmContext =>
         heapVariableMatches(VmContext.maximumNumberOfVariablesInHeap - 1, "top", isSigned = true, byteLen = 1, intValue = -1, vmContext) &&
           heapVariableMatches(0, "bottom", isSigned = false, byteLen = 1, intValue = 0, vmContext) &&

@@ -35,60 +35,60 @@ import me.rand.vm.main.VmError.VmContextError
 
 class StackDirectiveSpec extends BaseSpec {
   ".push" should "fail if no size is specified" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
          | .bb main
          | .push
       """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(AsmError.AsmParserError.InvalidDirectiveSpecification(".push", 4)) => true
     }
   }
 
   ".push" should "fail with an invalid size specification" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
          | .bb main
          | .push -1
       """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(AsmError.AsmParserError.InvalidDirectiveSpecification(".push", 4)) => true
     }
   }
 
   ".push" should "fail if not within a basic block" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
          | .push 10
        """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(AsmError.AsmProgramBuilderError.NoBasicBlockDeclared(3)) => true
     }
   }
 
   ".pop" should "fail if not within a basic block" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
          | .pop
        """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(AsmError.AsmProgramBuilderError.NoBasicBlockDeclared(3)) => true
     }
   }
 
   ".pop" should "fail if no frame was previously pushed" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
          | .bb main
          | .pop
          | .boot main
        """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromVmError(VmError.VmContextError.EmptyStackAccess("pop")) => true
     }
   }
@@ -102,7 +102,7 @@ class StackDirectiveSpec extends BaseSpec {
          | exit (00:u8)
          | .boot main
       """.stripMargin
-    ) {
+    ).thenVerify {
       case vmContext =>
         stackSizeIs(1, vmContext) && topFrameSizeIs(10, vmContext)
     }
@@ -117,7 +117,7 @@ class StackDirectiveSpec extends BaseSpec {
          | exit (00:u8)
          | .boot main
        """.stripMargin
-    ) {
+    ).thenVerify {
       case vmContext =>
         stackSizeIs(1, vmContext) && topFrameSizeIs(0, vmContext)
     }
@@ -134,7 +134,7 @@ class StackDirectiveSpec extends BaseSpec {
          | exit (00:u8)
          | .boot main
       """.stripMargin
-    ) {
+    ).thenVerify {
       case vmContext =>
         stackSizeIs(1, vmContext) && topFrameSizeIs(1, vmContext)
     }

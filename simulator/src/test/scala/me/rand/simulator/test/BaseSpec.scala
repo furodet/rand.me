@@ -34,33 +34,43 @@ import me.rand.vm.is.InstructionSetVersion
 import org.scalatest.FlatSpec
 
 class BaseSpec extends FlatSpec {
-  protected def successfullyAssembleAndExecute(source: String)(testResult: PartialFunction[VmContext, Boolean]): Unit =
+
+  sealed trait TestVerification[IN] {
+    def thenVerify(testFunction: PartialFunction[IN, Boolean]): Unit
+  }
+
+  protected def successfullyAssembleAndExecute(source: String): TestVerification[VmContext] =
     Main.main(setupSimulatorOptionsToAssembleAndRun(source)) match {
       case Err(what) =>
         fail(s"simulator error: $what")
 
       case Ok(vmContext) =>
-        testResult.lift(vmContext) match {
-          case Some(true) =>
-          // ok
-
-          case _ =>
-            fail(s"unexpected result: $vmContext")
+        new TestVerification[VmContext] {
+          override def thenVerify(testFunction: PartialFunction[VmContext, Boolean]): Unit =
+            testFunction.lift(vmContext) match {
+              case Some(true) =>
+              // ok
+              case _ =>
+                fail(s"unexpected result: $vmContext")
+            }
         }
     }
 
-  protected def failureOfAssemblyOrExecutionOf(source: String)(testResult: PartialFunction[SimulatorError, Boolean]): Unit =
+  protected def failToAssembleOrExecute(source: String): TestVerification[SimulatorError] =
     Main.main(setupSimulatorOptionsToAssembleAndRun(source)) match {
       case Ok(_) =>
         fail("unexpected success")
 
       case Err(what) =>
-        testResult.lift(what) match {
-          case Some(true) =>
-            println(what)
+        new TestVerification[SimulatorError] {
+          override def thenVerify(testFunction: PartialFunction[SimulatorError, Boolean]): Unit =
+            testFunction.lift(what) match {
+              case Some(true) =>
+                println(what)
 
-          case _ =>
-            fail(s"unexpected failure: $what")
+              case _ =>
+                fail(s"unexpected failure: $what")
+            }
         }
     }
 

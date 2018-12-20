@@ -31,30 +31,30 @@ import me.rand.simulator.test.BaseSpec
 
 class BootDirectiveSpec extends BaseSpec {
   "a program" should "fail if no bootstrap is defined" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
          | .bb block0
          |   exit (00:u8)
       """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(AsmError.AsmProgramBuilderError.UndefinedBootstrapBlock) => true
     }
   }
 
   ".boot" should "fail if no basic block is provided" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
          | .boot
       """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(AsmError.AsmParserError.InvalidDirectiveSpecification(".boot", 3)) => true
     }
   }
 
   ".boot" should "fail if multiple bootstrap blocks are defined" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
          | .bb block0
@@ -64,7 +64,7 @@ class BootDirectiveSpec extends BaseSpec {
          | .boot block0
          | .boot block1
       """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(AsmError.AsmProgramBuilderError.DuplicateBootstrapDefinition(8)) => true
     }
   }
@@ -77,21 +77,21 @@ class BootDirectiveSpec extends BaseSpec {
          | .bb block0
          |   exit (42:u8)
        """.stripMargin
-    ) {
+    ).thenVerify {
       case vmContext =>
         vmContext.exitCode.isDefined && (vmContext.exitCode.get == 0x42)
     }
   }
 
   ".boot" should "fail if specified block does not exist" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
          | .boot iDontExist
          | .bb iDoExist
          |   exit (00:u8)
       """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(AsmError.AsmProgramBuilderError.NoSuchBootstrapBlock("iDontExist", 3)) => true
     }
   }

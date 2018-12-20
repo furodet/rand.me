@@ -42,40 +42,6 @@ class VmContextTest extends FlatSpec {
 
   private val aStandardHeapSize = 10
 
-  "VM context" should "not allow to pop frame from empty stack" in {
-    givenAValidVmContext {
-      vmContext =>
-        vmContext.popFrame() match {
-          case Err(EmptyStackAccess(_)) =>
-            ok()
-
-          case whatever =>
-            fail(s"unexpected result for pop frame from empty stack: $whatever")
-        }
-    }
-  }
-
-  "VM context" should "allow to push and pop frames in the stack" in {
-    givenAValidVmContext {
-      c0 =>
-        val c1 = c0.createFrameOfSize(1)
-        assert(c1.stack.frames.length == 1)
-        val c2 = c1.createFrameOfSize(2)
-        assert(c2.stack.frames.length == 2)
-        (for {
-          c3 <- c2.popFrame()
-          _ = assert(c3.stack.frames.length == 1)
-          finalContext <- c3.popFrame()
-        } yield finalContext) match {
-          case Ok(context) if context.stack.frames isEmpty =>
-            ok()
-
-          case whatever =>
-            fail(s"unexpected result from push/pop frames: $whatever")
-        }
-    }
-  }
-
   "VM context" should "not allow to read variables from an empty stack" in {
     givenAValidVmContext {
       vmContext =>

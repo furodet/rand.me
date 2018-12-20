@@ -31,28 +31,29 @@ import me.rand.simulator.test.BaseSpec
 
 class BasicBlockDirectiveSpec extends BaseSpec {
   ".bb" should "fail if no basic block name is provided" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
          | .bb
-      """.stripMargin) {
+      """.stripMargin
+    ).thenVerify {
       case SimulatorError.FromAsmError(AsmError.AsmParserError.InvalidDirectiveSpecification(".bb", 3)) => true
     }
   }
 
   "a program" should "expect a basic block to be defined before any instruction" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
          | exit (00:u8)
       """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(AsmError.AsmProgramBuilderError.NoBasicBlockDeclared(3)) => true
     }
   }
 
   "a program" should "not allow duplicate basic block names" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
          | .bb bb0
@@ -61,7 +62,7 @@ class BasicBlockDirectiveSpec extends BaseSpec {
          |   exit (00:s8)
          | .boot bb0
       """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(AsmError.AsmProgramBuilderError.DuplicateBasicBlockDefinition("bb0", 5)) => true
     }
   }

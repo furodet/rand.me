@@ -35,91 +35,91 @@ import me.rand.vm.main.VmError.{IncompatibleInstructionSetVersion, VmProfileStri
 
 class MachDirectiveSpec extends BaseSpec {
   "a program" should "fail to fetch types if .mach is not set" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       """
         | .var hello %0 (00:u1)
       """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(UnspecifiedMachineProfile(2)) => true
     }
   }
 
   ".mach" should "fail with less than two arguments" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       """
         | .mach xxx
       """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(InvalidDirectiveSpecification(".mach", 2)) => true
     }
   }
 
   ".mach" should "fail if IS type is incompatible" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       """
         | .mach 9999.9999 bl:1:heap:1024
       """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(IncompatibleInstructionSet(IncompatibleInstructionSetVersion(_), 2)) => true
     }
   }
 
   ".mach" should "fail if machine specification is invalid" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | ${aMachDirectiveWithSpecification("karakal")}
       """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(InvalidMachineSpecification(_, VmProfileStringError.InvalidFormat(_, _), 2)) => true
     }
   }
 
   ".mach" should "fail if machine word length is not an integer" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | ${aMachDirectiveWithSpecification("bl:what?:heap:10")}
      """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(InvalidMachineSpecification(_, VmProfileStringError.NotAPositiveNumber(_, "bl"), 2)) => true
     }
   }
 
   ".mach" should "fail if machine word length is null" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | ${aMachDirectiveWithSpecification("bl:0:heap:10")}
      """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(InvalidMachineSpecification(_, VmProfileStringError.NotAPositiveNumber(_, "bl"), 2)) => true
     }
   }
 
   ".mach" should "fail if machine word length is too large" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | ${aMachDirectiveWithSpecification(s"bl:${VmContext.maximumByteSizeAllowed + 1}:heap:10")}
      """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(InvalidMachineSpecification(_, VmProfileStringError.ValueExceedsMaximumAllowed(_, "bl", VmContext.maximumByteSizeAllowed), 2)) => true
     }
   }
 
   ".mach" should "fail if heap size is negative" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | ${aMachDirectiveWithSpecification(s"bl:1:heap:-1")}
      """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(InvalidMachineSpecification(_, VmProfileStringError.NotAPositiveNumber(_, "heap"), 2)) => true
     }
   }
 
   ".mach" should "fail if heap size is too large" in {
-    failureOfAssemblyOrExecutionOf(
+    failToAssembleOrExecute(
       s"""
          | ${aMachDirectiveWithSpecification(s"bl:1:heap:${VmContext.maximumNumberOfVariablesInHeap + 1}")}
        """.stripMargin
-    ) {
+    ).thenVerify {
       case SimulatorError.FromAsmError(InvalidMachineSpecification(_, VmProfileStringError.ValueExceedsMaximumAllowed(_, "heap", VmContext.maximumNumberOfVariablesInHeap), 2)) => true
     }
   }
@@ -132,7 +132,7 @@ class MachDirectiveSpec extends BaseSpec {
          | exit (00:u8)
          | .boot _boot
        """.stripMargin
-    ) {
+    ).thenVerify {
       case vmContext =>
         vmTypesMapExactly(vmContext.vmTypes, 1)
     }
@@ -146,7 +146,7 @@ class MachDirectiveSpec extends BaseSpec {
          | exit (00:u8)
          | .boot _boot
        """.stripMargin
-    ) {
+    ).thenVerify {
       case vmContext =>
         vmTypesMapExactly(vmContext.vmTypes, 1, 2, 3, 4, 5, 6, 7, 8)
     }
@@ -160,7 +160,7 @@ class MachDirectiveSpec extends BaseSpec {
          | exit (00:u8)
          | .boot _boot
        """.stripMargin
-    ) {
+    ).thenVerify {
       case vmContext =>
         vmTypesRecognize(vmContext.vmTypes, "u8", 1, expectedIsSigned = false) &&
           vmTypesRecognize(vmContext.vmTypes, "s8", 1, expectedIsSigned = true)
@@ -175,7 +175,7 @@ class MachDirectiveSpec extends BaseSpec {
          | exit (00:u8)
          | .boot _boot
        """.stripMargin
-    ) {
+    ).thenVerify {
       case vmContext =>
         vmContext.vmTypes.valueOf("u16").isLeft
     }
