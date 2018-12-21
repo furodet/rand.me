@@ -23,46 +23,34 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.vm.engine
+package me.rand.asm.dasm
 
-import me.rand.commons.idioms.Status._
-import me.rand.vm.engine
-import me.rand.vm.main.VmError.VmContextError
-import me.rand.vm.main.VmError.VmContextError.VariableIndexOutOfBounds
+import me.rand.asm.dasm.Disassemble.DisassembledInstruction
+import me.rand.vm.engine.VmControl
+import me.rand.vm.engine.VmProgram.{InlineDirective, InstructionInstance, VirtualInstruction}
 
-// Documentation: doc/vmarchitecture.md
-trait VarSet extends Iterable[Option[Variable]] {
-  private[engine] def putVariable(id: Int, v: Variable): Unit OrElse VmContextError
+class Disassemble(instruction: VirtualInstruction) {
+  def toInstructionKeywordAndOperandStrings: DisassembledInstruction =
+    instruction match {
+      case InlineDirective(VmControl.TagVariable(name, id, initialValue)) =>
+        new DisassembledInstruction(VmControl.TagVariable.name, List(name, id.toString, initialValue.toString), "_")
 
-  def getVariable(id: Int): Option[Variable] OrElse VmContextError
+      case InlineDirective(VmControl.FrameOperation.Push(length)) =>
+        new DisassembledInstruction(VmControl.FrameOperation.Push.name, List(length.toString), "_")
+
+      case InlineDirective(VmControl.FrameOperation.Pop) =>
+        new DisassembledInstruction(VmControl.FrameOperation.Pop.name, List.empty, "_")
+
+      case InstructionInstance(i, operands) =>
+        new DisassembledInstruction(i.name, operands.sources.map(_.toString), operands.destination.toString)
+    }
 }
 
-object VarSet {
+object Disassemble {
+  def instruction(instruction: VirtualInstruction) = new Disassemble(instruction)
 
-  class InArray(val data: Array[Option[Variable]]) extends VarSet {
-    override private[engine] def putVariable(id: Int, v: Variable): Unit OrElse VariableIndexOutOfBounds =
-      try {
-        data(id) = Some(v)
-        Ok(())
-      } catch {
-        case _: ArrayIndexOutOfBoundsException =>
-          Err(VariableIndexOutOfBounds(id))
-      }
-
-    override def getVariable(id: Int): Option[Variable] OrElse VariableIndexOutOfBounds =
-      try {
-        Ok(data(id))
-      } catch {
-        case _: ArrayIndexOutOfBoundsException =>
-          Err(VariableIndexOutOfBounds(id))
-      }
-
-    override def iterator: Iterator[Option[Variable]] = data.toIterator
-  }
-
-  object InArray {
-    // Note: we assume that nrVariables will never be negative or null.
-    def ofSize(nrVariables: Int) = new engine.VarSet.InArray(Array.fill(nrVariables)(None))
+  class DisassembledInstruction(val keyword: String, val operands: List[String], val destination: String) {
+    override def toString: String = s"$keyword ${operands.mkString(" ")} > $destination"
   }
 
 }

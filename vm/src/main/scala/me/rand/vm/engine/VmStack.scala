@@ -61,6 +61,14 @@ class VmStack(val frames: List[VmFrame]) extends VarSet {
 
   private def getTopFrameOrErrorForAction(action: String): VmFrame OrElse EmptyStackAccess =
     if (frames nonEmpty) Ok(frames head) else Err(EmptyStackAccess(action))
+
+  override def iterator: Iterator[Option[Variable]] = frames match {
+    case head :: _ =>
+      head.vars.toIterator
+
+    case _ =>
+      List.empty.iterator
+  }
 }
 
 object VmStack {

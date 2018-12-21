@@ -51,7 +51,11 @@ object VmControl {
     }
 
     override def toString: String =
-      s".var $variableName $variableId $initialValue"
+      s"${TagVariable.name} $variableName $variableId $initialValue"
+  }
+
+  object TagVariable {
+    lazy val name: String = ".var"
   }
 
   sealed trait FrameOperation extends VmControl
@@ -63,13 +67,23 @@ object VmControl {
         executionContext.logger >> s"PUSH FRAME $nrVariables"
         Ok(vmContext.createFrameOfSize(nrVariables))
       }
+
+      override def toString: String = s"${Push.name} $nrVariables"
+    }
+
+    object Push {
+      lazy val name: String = ".push"
     }
 
     case object Pop extends FrameOperation {
+      lazy val name: String = ".pop"
+
       override def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError = {
         executionContext.logger >> "POP FRAME"
         vmContext.popFrame()
       }
+
+      override def toString: String = name
     }
 
   }

@@ -32,9 +32,13 @@ sealed trait SimulatorError
 
 object SimulatorError {
 
-  case class FromAsmError(cause: AsmError) extends SimulatorError
+  case class FromAsmError(cause: AsmError) extends SimulatorError {
+    override def toString: String = s"ASM error: $cause"
+  }
 
-  case class FromVmError(cause: VmError) extends SimulatorError
+  case class FromVmError(cause: VmError) extends SimulatorError {
+    override def toString: String = s"VM error: $cause"
+  }
 
   case class CantOpenTraceFile(fileName: String, cause: Throwable) extends SimulatorError {
     override def toString: String = s"could not open trace file $fileName: ${cause.getMessage}"

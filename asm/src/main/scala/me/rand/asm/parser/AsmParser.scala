@@ -33,7 +33,7 @@ import me.rand.vm.alu.VmRegister
 import me.rand.vm.engine.Operands.OperandsBuilder
 import me.rand.vm.engine.VmProgram.InstructionInstance
 import me.rand.vm.engine.VmTypes.VmType
-import me.rand.vm.engine.{Operand, Operands, VmContext}
+import me.rand.vm.engine.{Operand, Operands, VmContext, VmControl}
 import me.rand.vm.is.{InstructionSet, InstructionSetVersion}
 
 class AsmParser(input: Iterable[String], prefix: Option[String]) {
@@ -134,16 +134,16 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
           case ".bb" if args.nonEmpty =>
             Ok(AsmToken.Directive.DeclareBasicBlock(args.head, asmParserContext.lineNumber))
 
-          case ".var" =>
+          case VmControl.TagVariable.name =>
             translateVariableDeclarationDirective(args)
 
           case ".boot" if args.nonEmpty =>
             Ok(AsmToken.Directive.DefineBootBasicBlock(args.head, asmParserContext.lineNumber))
 
-          case ".push" if args.nonEmpty && args.head.matches("[0-9]+") =>
+          case VmControl.FrameOperation.Push.name if args.nonEmpty && args.head.matches("[0-9]+") =>
             Ok(AsmToken.Directive.FrameOperation.Push(args.head.toInt, asmParserContext.lineNumber))
 
-          case ".pop" =>
+          case VmControl.FrameOperation.Pop.name =>
             Ok(AsmToken.Directive.FrameOperation.Pop(asmParserContext.lineNumber))
 
           case _ =>

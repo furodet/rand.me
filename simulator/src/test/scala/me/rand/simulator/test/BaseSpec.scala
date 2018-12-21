@@ -27,6 +27,7 @@ package me.rand.simulator.test
 
 import java.io.PrintWriter
 
+import me.rand.asm.dasm.VmContextSnapshot
 import me.rand.commons.idioms.Status._
 import me.rand.simulator.main.{Main, SimulatorError, SimulatorOptions}
 import me.rand.vm.engine.VmContext
@@ -49,9 +50,10 @@ class BaseSpec extends FlatSpec {
           override def thenVerify(testFunction: PartialFunction[VmContext, Boolean]): Unit =
             testFunction.lift(vmContext) match {
               case Some(true) =>
-              // ok
+                println(VmContextSnapshot.of(vmContext).all.mkString("\n"))
+
               case _ =>
-                fail(s"unexpected result: $vmContext")
+                fail(s"unexpected result: ${VmContextSnapshot.of(vmContext).all.mkString("\n")}")
             }
         }
     }

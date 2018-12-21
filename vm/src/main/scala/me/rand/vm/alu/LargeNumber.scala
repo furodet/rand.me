@@ -51,11 +51,13 @@ case class LargeNumber(vmType: VmType, value: Array[Byte]) extends VmRegister {
   private[alu] def mostSignificantBitIsSet: Boolean =
     (mostSignificantByte & 0x80.toByte) == 0x80.toByte
 
-  override def toString: String =
-    value.reverse.map {
+  override def toString: String = {
+    val valueString = value.reverse.map {
       eachByte =>
         "%02x".format(eachByte)
-    }.mkString("0x", ".", "")
+    }.mkString("")
+    s"($valueString:$vmType)"
+  }
 }
 
 case object LargeNumberOperations extends VmRegisterOperations[LargeNumber] {

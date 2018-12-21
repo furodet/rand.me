@@ -85,7 +85,7 @@ object Operand {
   object Destination {
 
     object NoDestination extends Destination {
-      override def toString: String = "none"
+      override def toString: String = "_"
     }
 
     sealed trait Variable extends Destination
