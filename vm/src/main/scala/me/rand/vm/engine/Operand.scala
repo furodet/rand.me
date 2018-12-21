@@ -50,7 +50,10 @@ object Operand {
     }
 
     case class Indirect(pointer: Source.Variable, depth: Int) extends Source {
-      override def toString: String = s"*[$depth]$pointer"
+      override def toString: String = {
+        val prefix = (0 until depth).foldLeft("") { (string, _) => string + "*" }
+        s"$prefix$pointer"
+      }
     }
 
     case class Indexed(pointer: Source.Variable, offset: Int) extends Source {
@@ -100,7 +103,10 @@ object Operand {
     }
 
     case class Redirect(pointer: Destination.Variable, depth: Int) extends Destination {
-      override def toString: String = s"*[$depth]$pointer"
+      override def toString: String = {
+        val prefix = (0 until depth).foldLeft("") { (string, _) => string + "*" }
+        s"$prefix$pointer"
+      }
     }
 
     case class Indexed(pointer: Destination.Variable, offset: Int) extends Destination {

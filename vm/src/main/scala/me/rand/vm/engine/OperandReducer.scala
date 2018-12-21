@@ -110,7 +110,7 @@ class OperandReducer(operands: Operands) {
           )
 
       case Operand.Source.Reference.InTheStack(stackIndex) =>
-        reduceSourceVariable("stack", vmContext.heap, stackIndex) && (
+        reduceSourceVariable("stack", vmContext.stack, stackIndex) && (
           referenced => Variable.Pointer.ToVariable.InTheStack(referenced.name, stackIndex)
           )
     }

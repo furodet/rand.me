@@ -41,9 +41,11 @@ object VmControl {
       val scalarValue = Scalar(variableName, initialValue.value)
       variableId match {
         case Operand.Source.Variable.InTheHeap(index) =>
+          executionContext.logger ~> s"SET HEAP[$index] $scalarValue"
           vmContext.putHeapVariable(index, scalarValue)
 
         case Operand.Source.Variable.InTheStack(index) =>
+          executionContext.logger ~> s"SET STACK[$index] $scalarValue"
           vmContext.putStackVariable(index, scalarValue)
       }
     }
