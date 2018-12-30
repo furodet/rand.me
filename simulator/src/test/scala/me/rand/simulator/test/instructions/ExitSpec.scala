@@ -45,7 +45,7 @@ class ExitSpec extends BaseSpec {
     }
   }
 
-  "exit" should "stop the machine with an immediate exit code" in {
+  "exit" should "pass imm" in {
     successfullyAssembleAndExecute(
       s"""
          | $aStandardMachineConfiguration
@@ -59,7 +59,7 @@ class ExitSpec extends BaseSpec {
     }
   }
 
-  "exit" should "stop the machine with a variable value exit code" in {
+  "exit" should "pass %x" in {
     successfullyAssembleAndExecute(
       s"""
          | $aStandardMachineConfiguration
@@ -74,7 +74,7 @@ class ExitSpec extends BaseSpec {
     }
   }
 
-  "exit" should "fail with pointer variable" in {
+  "exit" should "fail &%x" in {
     failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
@@ -88,7 +88,7 @@ class ExitSpec extends BaseSpec {
     }
   }
 
-  "exit" should "not write into output operand if defined" in {
+  "exit" should "pass imm > %x (%x not updated)" in {
     successfullyAssembleAndExecute(
       s"""
          | $aStandardMachineConfiguration

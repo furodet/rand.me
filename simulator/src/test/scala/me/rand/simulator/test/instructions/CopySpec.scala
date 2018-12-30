@@ -36,7 +36,7 @@ import me.rand.vm.main.VmError
 class CopySpec extends BaseSpec {
   private lazy val exit = "exit (00:u8)"
 
-  "copy" should "not be fruitless" in {
+  "copy" should "fail x > _" in {
     failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
@@ -50,7 +50,7 @@ class CopySpec extends BaseSpec {
     }
   }
 
-  "copy" should "set heap variable to immediate value" in {
+  "copy" should "pass imm > %x" in {
     successfullyAssembleAndExecute(
       s"""
          | $aStandardMachineConfiguration
@@ -66,7 +66,7 @@ class CopySpec extends BaseSpec {
     }
   }
 
-  "copy" should "set stack variable to immediate value" in {
+  "copy" should "pass imm > $x" in {
     successfullyAssembleAndExecute(
       s"""
          | $aStandardMachineConfiguration
@@ -84,7 +84,7 @@ class CopySpec extends BaseSpec {
   }
 
   // TODO: would be awesome to be able to say: .var px %1 &%0, .var ppx %2 &%1...
-  "copy" should "set indirect heap variable to immediate value" in {
+  "copy" should "pass imm > **%x " in {
     successfullyAssembleAndExecute(
       s"""
          | $aStandardMachineConfiguration
@@ -107,7 +107,7 @@ class CopySpec extends BaseSpec {
   }
 
   // TODO: would be awesome to be able to say: .var px $1 &$0, .var ppx $2 &$1...
-  "copy" should "set indirect stack variable to immediate value" in {
+  "copy" should "pass imm > **$x" in {
     successfullyAssembleAndExecute(
       s"""
          | $aStandardMachineConfiguration
@@ -130,7 +130,7 @@ class CopySpec extends BaseSpec {
     }
   }
 
-  "copy" should "set indexed heap variable to immediate value" in {
+  "copy" should "pass imm > %x[y]" in {
     successfullyAssembleAndExecute(
       s"""
          | $aStandardMachineConfiguration
@@ -148,7 +148,7 @@ class CopySpec extends BaseSpec {
     }
   }
 
-  "copy" should "set indexed stack variable to immediate value" in {
+  "copy" should "pass imm > $x[y]" in {
     successfullyAssembleAndExecute(
       s"""
          | $aStandardMachineConfiguration
@@ -168,7 +168,7 @@ class CopySpec extends BaseSpec {
   }
 
   // TODO: all the error cases: indirection to something undefined, *scalar...
-  "copy" should "set heap variable to pointer value" in {
+  "copy" should "pass &%x > %y" in {
     successfullyAssembleAndExecute(
       s"""
          | $aStandardMachineConfiguration
@@ -185,7 +185,7 @@ class CopySpec extends BaseSpec {
     }
   }
 
-  "copy" should "set stack variable to pointer value" in {
+  "copy" should "pass &%x > $y" in {
     successfullyAssembleAndExecute(
       s"""
          | $aStandardMachineConfiguration
