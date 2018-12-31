@@ -183,9 +183,9 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
 
   private def matchesImmediateValue(string: String) = string.matches("\\(([0-9a-fA-F][0-9a-fA-F])+:[su][0-9]+\\)")
 
-  private def matchesIndexedHeapVariable(string: String) = string.matches("%[0-9]+\\[[0-9]+\\]")
+  private def matchesIndexedHeapVariable(string: String) = string.matches("%[0-9]+\\[-?[0-9]+\\]")
 
-  private def matchesIndexedStackVariable(string: String) = string.matches("\\$[0-9]+\\[[0-9]+\\]")
+  private def matchesIndexedStackVariable(string: String) = string.matches("\\$[0-9]+\\[-?[0-9]+\\]")
 
   private def translateVariableDeclarationDirective(args: List[String])(implicit asmParserContext: AsmParserContext): AsmToken.Directive.TagVariable OrElse AsmParserError =
     args match {

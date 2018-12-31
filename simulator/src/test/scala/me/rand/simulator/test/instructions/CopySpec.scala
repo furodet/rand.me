@@ -265,6 +265,21 @@ class CopySpec extends BaseSpec {
     }
   }
 
+  "copy" should "fail imm > %x[y] (oob)" in {
+    failToAssembleOrExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb main
+         |   .var x0 %0 (00:u8)
+         |   copy (deadbeef:u32) > %0[-1]
+         |   $exit
+         | .boot main
+      """.stripMargin
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidTargetReference(Some("&x0[-1]"), -1, Some(VariableIndexOutOfBounds(-1)))) => true
+    }
+  }
+
   "copy" should "pass imm > $x[y]" in {
     successfullyAssembleAndExecute(
       s"""
