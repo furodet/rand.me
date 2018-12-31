@@ -29,7 +29,9 @@ import me.rand.commons.idioms.Status._
 import me.rand.simulator.main.SimulatorError
 import me.rand.simulator.test.BaseSpec
 import me.rand.vm.engine.{VarSet, Variable, VmContext}
-import me.rand.vm.main.VmError
+import me.rand.vm.main.VmError.VmContextError.EmptyStackAccess
+import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError.UnspecifiedDestinationOperand
+import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue.InvalidTargetReference
 
 // The is the best opportunity to validate operand translation, since copy accepts any kind
 // of input variable and writes to any kind of output.
@@ -46,7 +48,7 @@ class CopySpec extends BaseSpec {
          | .boot main
       """.stripMargin
     ).thenVerify {
-      case SimulatorError.FromVmError(VmError.VmExecutionError.IllegalEncodingError.UnspecifiedDestinationOperand) => true
+      case SimulatorError.FromVmError(UnspecifiedDestinationOperand) => true
     }
   }
 
@@ -66,6 +68,20 @@ class CopySpec extends BaseSpec {
     }
   }
 
+  "copy" should "fail imm > %undef" in {
+    failToAssembleOrExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb main
+         |   copy (deadbeef:u32) > %0
+         |   $exit
+         | .boot main
+      """.stripMargin
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidTargetReference(None, 0, None)) => true
+    }
+  }
+
   "copy" should "pass imm > $x" in {
     successfullyAssembleAndExecute(
       s"""
@@ -80,6 +96,35 @@ class CopySpec extends BaseSpec {
     ).thenVerify {
       case vmContext =>
         hasStackVariableSetToImmediate(("x", 0xdeadbeef), 0, vmContext)
+    }
+  }
+
+  "copy" should "fail imm > $undef (empty stack)" in {
+    failToAssembleOrExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb main
+         |   copy (deadbeef:u32) > $$0
+         |   $exit
+         | .boot main
+      """.stripMargin
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidTargetReference(None, 0, Some(EmptyStackAccess(_)))) => true
+    }
+  }
+
+  "copy" should "fail imm > $undef" in {
+    failToAssembleOrExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb main
+         |   .push 1
+         |   copy (deadbeef:u32) > $$0
+         |   $exit
+         | .boot main
+      """.stripMargin
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidTargetReference(None, 0, None)) => true
     }
   }
 
