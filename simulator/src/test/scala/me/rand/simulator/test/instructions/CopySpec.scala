@@ -31,7 +31,7 @@ import me.rand.simulator.test.BaseSpec
 import me.rand.vm.engine.{VarSet, Variable, VmContext}
 import me.rand.vm.main.VmError.VmContextError.{EmptyStackAccess, VariableIndexOutOfBounds}
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError.UnspecifiedDestinationOperand
-import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue.InvalidTargetReference
+import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue.{InvalidSourceReference, InvalidTargetReference}
 
 // The is the best opportunity to validate operand translation, since copy accepts any kind
 // of input variable and writes to any kind of output.
@@ -392,7 +392,6 @@ class CopySpec extends BaseSpec {
     }
   }
 
-  // TODO: all the error cases: indirection to something undefined, *scalar...
   "copy" should "pass &%x > %y" in {
     successfullyAssembleAndExecute(
       s"""
@@ -410,23 +409,87 @@ class CopySpec extends BaseSpec {
     }
   }
 
-  "copy" should "pass &%x > $y" in {
+  "copy" should "fail &%undef > %y" in {
+    failToAssembleOrExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb main
+         |   .var x %0 ptr
+         |   copy &%1 > %0
+         |   $exit
+         | .boot main
+      """.stripMargin
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidSourceReference("heap", 1, None)) => true
+    }
+  }
+
+  "copy" should "fail &%undef > %y (oob)" in {
+    failToAssembleOrExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb main
+         |   .var x %0 ptr
+         |   copy &%${VmContext.maximumNumberOfVariablesInHeap} > %0
+         |   $exit
+         | .boot main
+      """.stripMargin
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidSourceReference("heap", _, Some(VariableIndexOutOfBounds(VmContext.maximumNumberOfVariablesInHeap)))) => true
+    }
+  }
+
+  "copy" should "pass &$x > %y" in {
     successfullyAssembleAndExecute(
       s"""
          | $aStandardMachineConfiguration
          | .bb main
          |   .push 1
-         |   .var x %0 u32
-         |   .var y $$0 ptr
-         |   copy &%0 > $$0
+         |   .var x $$0 u32
+         |   .var y %0 ptr
+         |   copy &$$0 > %0
          |   $exit
          | .boot main
       """.stripMargin
     ).thenVerify {
       case vmContext =>
-        hasStackVariableSetToHeapPointer(("y", 0), 0, vmContext)
+        hasHeapVariableSetToStackPointer(("y", 0), 0, vmContext)
     }
   }
+
+  "copy" should "fail &$undef > %y" in {
+    failToAssembleOrExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb main
+         |   .push 1
+         |   .var y %0 ptr
+         |   copy &$$0 > %0
+         |   $exit
+         | .boot main
+      """.stripMargin
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidSourceReference("stack", 0, None)) => true
+    }
+  }
+
+  "copy" should "fail &$undef > %y (oob)" in {
+    failToAssembleOrExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb main
+         |   .push 1
+         |   .var y %0 ptr
+         |   copy &$$1 > %0
+         |   $exit
+         | .boot main
+      """.stripMargin
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidSourceReference("stack", _, Some(VariableIndexOutOfBounds(1)))) => true
+    }
+  }
+
+  // TODO: instruction pointers?
 
   private def hasHeapVariableSetToImmediate(nameValue: (String, Int), variableIndex: Int, vmContext: VmContext): Boolean =
     testVariable(vmContext.heap, variableIndex)(nameValue._1, nameValue._2) {
@@ -443,14 +506,14 @@ class CopySpec extends BaseSpec {
       case Variable.Pointer.ToVariable.InTheHeap(name, value) => (name, value)
     }
 
-  private def hasStackVariableSetToStackPointer(nameValue: (String, Int), variableIndex: Int, vmContext: VmContext): Boolean =
-    testVariable(vmContext.stack, variableIndex)(nameValue._1, nameValue._2) {
+  private def hasHeapVariableSetToStackPointer(nameValue: (String, Int), variableIndex: Int, vmContext: VmContext): Boolean =
+    testVariable(vmContext.heap, variableIndex)(nameValue._1, nameValue._2) {
       case Variable.Pointer.ToVariable.InTheStack(name, value) => (name, value)
     }
 
-  private def hasStackVariableSetToHeapPointer(nameValue: (String, Int), variableIndex: Int, vmContext: VmContext): Boolean =
+  private def hasStackVariableSetToStackPointer(nameValue: (String, Int), variableIndex: Int, vmContext: VmContext): Boolean =
     testVariable(vmContext.stack, variableIndex)(nameValue._1, nameValue._2) {
-      case Variable.Pointer.ToVariable.InTheHeap(name, value) => (name, value)
+      case Variable.Pointer.ToVariable.InTheStack(name, value) => (name, value)
     }
 
   private def testVariable(fromVarSet: VarSet, atIndex: Int)
