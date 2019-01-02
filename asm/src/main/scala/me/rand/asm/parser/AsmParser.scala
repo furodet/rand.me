@@ -33,7 +33,7 @@ import me.rand.vm.alu.VmRegister
 import me.rand.vm.engine.Operands.OperandsBuilder
 import me.rand.vm.engine.VmProgram.InstructionInstance
 import me.rand.vm.engine.VmTypes.VmType
-import me.rand.vm.engine.{Operand, Operands, VmContext, VmControl}
+import me.rand.vm.engine._
 import me.rand.vm.is.{InstructionSet, InstructionSetVersion}
 
 class AsmParser(input: Iterable[String], prefix: Option[String]) {
@@ -181,6 +181,10 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
 
   private def matchesStackVariable(string: String) = string.matches("\\$[0-9]+")
 
+  private def matchesVmType(string: String): Boolean = string.matches("[su][0-9]+")
+
+  private def matchesPtrType(string: String): Boolean = string.equals("ptr")
+
   private def matchesImmediateValue(string: String) = string.matches("\\(([0-9a-fA-F][0-9a-fA-F])+:[su][0-9]+\\)")
 
   private def matchesIndexedHeapVariable(string: String) = string.matches("%[0-9]+\\[-?[0-9]+\\]")
@@ -189,11 +193,19 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
 
   private def translateVariableDeclarationDirective(args: List[String])(implicit asmParserContext: AsmParserContext): AsmToken.Directive.TagVariable OrElse AsmParserError =
     args match {
-      case name :: id :: value :: Nil if matchesHeapVariable(id) && matchesImmediateValue(value) =>
-        translateImmediateValue(value.tail.init) && (v => AsmToken.Directive.TagVariable.InTheHeap(name, id.tail.toInt, v, asmParserContext.lineNumber))
+      case name :: id :: vmt :: Nil if matchesHeapVariable(id) && matchesVmType(vmt) =>
+        decodeType(vmt, asmParserContext.vmContext, asmParserContext.lineNumber) &&
+          (t => AsmToken.Directive.TagVariable.InTheHeap(name, id.tail.toInt, Variable.BasicType._Scalar(t), asmParserContext.lineNumber))
 
-      case name :: id :: value :: Nil if matchesStackVariable(id) && matchesImmediateValue(value) =>
-        translateImmediateValue(value.tail.init) && (v => AsmToken.Directive.TagVariable.InTheStack(name, id.tail.toInt, v, asmParserContext.lineNumber))
+      case name :: id :: vmt :: Nil if matchesStackVariable(id) && matchesVmType(vmt) =>
+        decodeType(vmt, asmParserContext.vmContext, asmParserContext.lineNumber) &&
+          (t => AsmToken.Directive.TagVariable.InTheStack(name, id.tail.toInt, Variable.BasicType._Scalar(t), asmParserContext.lineNumber))
+
+      case name :: id :: vmt :: Nil if matchesHeapVariable(id) && matchesPtrType(vmt) =>
+        Ok(AsmToken.Directive.TagVariable.InTheHeap(name, id.tail.toInt, Variable.BasicType._Pointer, asmParserContext.lineNumber))
+
+      case name :: id :: vmt :: Nil if matchesStackVariable(id) && matchesPtrType(vmt) =>
+        Ok(AsmToken.Directive.TagVariable.InTheStack(name, id.tail.toInt, Variable.BasicType._Pointer, asmParserContext.lineNumber))
 
       case _ =>
         Err(AsmParserError.InvalidVariableSpecification(args.mkString(" "), asmParserContext.lineNumber))

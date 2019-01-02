@@ -37,7 +37,7 @@ class MachDirectiveSpec extends BaseSpec {
   "a program" should "fail to fetch types if .mach is not set" in {
     failToAssembleOrExecute(
       """
-        | .var hello %0 (00:u1)
+        | .var hello %0 u1
       """.stripMargin
     ).thenVerify {
       case SimulatorError.FromAsmError(UnspecifiedMachineProfile(2)) => true

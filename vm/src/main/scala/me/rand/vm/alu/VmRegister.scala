@@ -31,7 +31,7 @@ import me.rand.vm.engine.VmTypes.VmType
 trait VmRegister {
   def vmType: VmType
 
-  private[alu] def operations: VmRegisterOperations[VmRegister]
+  def operations: VmRegisterOperations[VmRegister]
 
   def toInt: Int
 }
@@ -60,6 +60,8 @@ trait VmRegisterOperations[T <: VmRegister] {
   def isGreater(x: T, y: T): Boolean
 
   def isGreaterOrEqual(x: T, y: T): Boolean
+
+  def cast(x: T, t: VmType): T
 }
 
 object VmRegister {

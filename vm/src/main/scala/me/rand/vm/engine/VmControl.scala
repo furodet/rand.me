@@ -25,8 +25,11 @@
  */
 package me.rand.vm.engine
 
-import me.rand.commons.idioms.Status._
+import me.rand.commons.idioms.NormalizedNumber._
+import me.rand.commons.idioms.Status.{OrElse, _}
+import me.rand.vm.alu.VmRegister
 import me.rand.vm.engine.Variable.Scalar
+import me.rand.vm.engine.VmTypes.VmType
 import me.rand.vm.main.{ExecutionContext, VmError}
 
 sealed trait VmControl {
@@ -36,22 +39,34 @@ sealed trait VmControl {
 // Documentation: doc/vmarchitecture.md
 object VmControl {
 
-  case class TagVariable(variableName: String, variableId: Operand.Source.Variable, initialValue: Operand.Source.Immediate) extends VmControl {
-    override def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError = {
-      val scalarValue = Scalar(variableName, initialValue.value)
+  case class TagVariable(variableName: String, variableId: Operand.Source.Variable, vmt: Variable.BasicType) extends VmControl {
+    // Some sort of universal null pointer
+    private lazy val nullptr = Variable.Pointer.ToVariable.InTheHeap(variableName, 0)
+
+    override def execute(vmContext: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError =
+      vmt match {
+        case Variable.BasicType._Scalar(vmType) =>
+          initializeVariable(vmContext, zero(vmType))
+
+        case Variable.BasicType._Pointer =>
+          initializeVariable(vmContext, nullptr)
+      }
+
+    private def zero(vmType: VmType): Scalar = Scalar(variableName, VmRegister.ofType(vmType).withValue(0))
+
+    private def initializeVariable(vmContext: VmContext, initialValue: Variable)(implicit executionContext: ExecutionContext): VmContext OrElse VmError =
       variableId match {
         case Operand.Source.Variable.InTheHeap(index) =>
-          executionContext.logger ~> s"SET HEAP[$index] $scalarValue"
-          vmContext.putHeapVariable(index, scalarValue)
+          executionContext.logger ~> s"SET HEAP[$index] $initialValue"
+          vmContext.putHeapVariable(index, initialValue)
 
         case Operand.Source.Variable.InTheStack(index) =>
-          executionContext.logger ~> s"SET STACK[$index] $scalarValue"
-          vmContext.putStackVariable(index, scalarValue)
+          executionContext.logger ~> s"SET STACK[$index] $initialValue"
+          vmContext.putStackVariable(index, initialValue)
       }
-    }
 
     override def toString: String =
-      s"${TagVariable.name} $variableName $variableId $initialValue"
+      s"${TagVariable.name} $variableName $variableId $vmt"
   }
 
   object TagVariable {

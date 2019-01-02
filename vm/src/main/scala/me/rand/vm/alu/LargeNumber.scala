@@ -202,4 +202,6 @@ case object LargeNumberOperations extends VmRegisterOperations[LargeNumber] {
     }
     LargeNumber(x.vmType, z)
   }
+
+  override def cast(x: LargeNumber, t: VmType): LargeNumber = build(t, x.value.reverse)
 }

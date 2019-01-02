@@ -74,6 +74,10 @@ object VmError {
         override def toString: String = "destination operand is not specified"
       }
 
+      case class IllegalCast(source: Variable, destination: Variable) extends IllegalEncodingError {
+        override def toString: String = s"could not cast source $source to type of $destination"
+      }
+
     }
 
     sealed trait VmFetchOperandError extends IllegalEncodingError

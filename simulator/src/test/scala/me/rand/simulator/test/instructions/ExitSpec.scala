@@ -37,7 +37,7 @@ class ExitSpec extends BaseSpec {
       s"""
          | $aStandardMachineConfiguration
          | .bb main
-         |   .var dummy %0 (abcd:u16)
+         |   .var dummy %0 u16
          | .boot main
       """.stripMargin
     ).thenVerify {
@@ -64,7 +64,8 @@ class ExitSpec extends BaseSpec {
       s"""
          | $aStandardMachineConfiguration
          | .bb main
-         |   .var v %0 (abcd:u16)
+         |   .var v %0 u16
+         |   copy (abcd:u16) > %0
          |   exit %0
          | .boot main
        """.stripMargin
@@ -79,7 +80,7 @@ class ExitSpec extends BaseSpec {
       s"""
          | $aStandardMachineConfiguration
          | .bb main
-         |   .var v %0 (da5f:u16)
+         |   .var v %0 u16
          |   exit &%0
          | .boot main
        """.stripMargin
@@ -93,14 +94,15 @@ class ExitSpec extends BaseSpec {
       s"""
          | $aStandardMachineConfiguration
          | .bb main
-         |   .var dummy %0 (abcd:u16)
+         |   .var dummy %0 u8
+         |   copy (ab:u8) > %0
          |   exit (00:u8) > %0
          | .boot main
        """.stripMargin
     ).thenVerify {
       case vmContext =>
         vmExitedWithCode(0, vmContext) && (vmContext.heap.getVariable(0) match {
-          case Ok(Some(Variable.Scalar(_, value))) if value.toInt == 0xabcd =>
+          case Ok(Some(Variable.Scalar(_, value))) if value.toInt == 0xab =>
             true
           case _ =>
             false

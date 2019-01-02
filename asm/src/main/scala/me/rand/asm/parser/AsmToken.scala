@@ -25,9 +25,8 @@
  */
 package me.rand.asm.parser
 
-import me.rand.vm.alu.VmRegister
-import me.rand.vm.engine.VmContext
 import me.rand.vm.engine.VmProgram.InstructionInstance
+import me.rand.vm.engine.{Variable, VmContext}
 
 sealed trait AsmToken {
   def lineNumber: Int
@@ -61,12 +60,12 @@ object AsmToken {
 
     object TagVariable {
 
-      case class InTheHeap(name: String, heapIndex: Int, initialValue: VmRegister, lineNumber: Int) extends TagVariable {
-        override def toString: String = s".var(%$heapIndex:$name=$initialValue)"
+      case class InTheHeap(name: String, heapIndex: Int, vmt: Variable.BasicType, lineNumber: Int) extends TagVariable {
+        override def toString: String = s".var(%$heapIndex:$name:$vmt)"
       }
 
-      case class InTheStack(name: String, stackIndex: Int, initialValue: VmRegister, lineNumber: Int) extends TagVariable {
-        override def toString: String = s".var($$$stackIndex:$name=$initialValue)"
+      case class InTheStack(name: String, stackIndex: Int, vmt: Variable.BasicType, lineNumber: Int) extends TagVariable {
+        override def toString: String = s".var($$$stackIndex:$name:$vmt)"
       }
 
     }

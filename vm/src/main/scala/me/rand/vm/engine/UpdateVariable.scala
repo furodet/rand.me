@@ -29,9 +29,7 @@ import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.Variable.Pointer
 import me.rand.vm.main.ExecutionContext
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError
-import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue.{IllegalDestinationPointer, InvalidRedirect, InvalidTargetReference}
-
-import scala.annotation.tailrec
+import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue.{IllegalDestinationPointer, InvalidTargetReference}
 
 class UpdateVariable(maybePointer: Option[Pointer]) {
   // Instruction Helpers: update a destination variable
@@ -64,9 +62,10 @@ class UpdateVariable(maybePointer: Option[Pointer]) {
     for {
       targetVariable <- fetchTargetVariable(varSet, Some(pointerName), variableIndex)
       mergedVariable = newValue.rename(targetVariable.name)
+      castedVariable <- castSourceToTargetVariable(mergedVariable, targetVariable)
       // putVariable could not fail here: we just fetched the name at the same index.
-      _ = varSet.putVariable(variableIndex, mergedVariable)
-    } yield mergedVariable
+      _ = varSet.putVariable(variableIndex, castedVariable)
+    } yield castedVariable
 
   private def fetchTargetVariable(varSet: VarSet, pointerName: Option[String], variableIndex: Int): Variable OrElse IllegalEncodingError =
     varSet.getVariable(variableIndex) match {
@@ -80,22 +79,31 @@ class UpdateVariable(maybePointer: Option[Pointer]) {
         Ok(variable)
     }
 
-  @tailrec
-  private def fetchRedirect(pointer: Variable, depth: Int)(implicit vmContext: VmContext): Pointer.ToVariable OrElse IllegalEncodingError =
-    pointer match {
-      case ptr: Pointer.ToVariable =>
-        if (depth == 0)
-          Ok(ptr)
-        else fetchTargetVariable(ptr.getContainingVarSet(vmContext), Some(ptr.name), ptr.index) match {
-          case Err(error) =>
-            Err(error)
+  private def castSourceToTargetVariable(source: Variable, target: Variable): Variable OrElse IllegalEncodingError =
+    (source, target) match {
+      case (Variable.Scalar(_, newValue), Variable.Scalar(name, oldValue)) =>
+        val normalized = oldValue.operations.cast(newValue, oldValue.vmType)
+        Ok(Variable.Scalar(name, normalized))
 
-          case Ok(nextPointer) =>
-            fetchRedirect(nextPointer, depth - 1)
-        }
+      case (Variable.Pointer.ToInstruction(_, sourceValue), Variable.Pointer.ToInstruction(name, _)) =>
+        Ok(Variable.Pointer.ToInstruction(name, sourceValue))
 
-      case _ =>
-        Err(InvalidRedirect)
+      case (Variable.Pointer.ToVariable.InTheHeap(_, sourceValue), Variable.Pointer.ToVariable.InTheHeap(name, _)) =>
+        Ok(Variable.Pointer.ToVariable.InTheHeap(name, sourceValue))
+
+      case (Variable.Pointer.ToVariable.InTheStack(_, sourceValue), Variable.Pointer.ToVariable.InTheStack(name, _)) =>
+        Ok(Variable.Pointer.ToVariable.InTheStack(name, sourceValue))
+
+      case (Variable.Pointer.ToVariable.InTheHeap(_, sourceValue), Variable.Pointer.ToVariable.InTheStack(name, _)) =>
+        // For pointers, the source type prevail (clobber the pointer)
+        Ok(Variable.Pointer.ToVariable.InTheHeap(name, sourceValue))
+
+      case (Variable.Pointer.ToVariable.InTheStack(_, sourceValue), Variable.Pointer.ToVariable.InTheHeap(name, _)) =>
+        // For pointers, the source type prevail (clobber the pointer)
+        Ok(Variable.Pointer.ToVariable.InTheStack(name, sourceValue))
+
+      case (anyOtherSource, anyOtherDestination) =>
+        Err(IllegalEncodingError.IllegalCast(anyOtherSource, anyOtherDestination))
     }
 }
 

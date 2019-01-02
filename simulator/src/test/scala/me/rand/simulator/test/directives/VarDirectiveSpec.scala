@@ -70,7 +70,7 @@ class VarDirectiveSpec extends BaseSpec {
     failToAssembleOrExecute(
       s"""
          | $aStandardMachineConfiguration
-         | .var hello %3 (00:u8)
+         | .var hello %3 u8
        """.stripMargin
     ).thenVerify {
       case SimulatorError.FromAsmError(AsmError.AsmProgramBuilderError.NoBasicBlockDeclared(3)) => true
@@ -82,7 +82,7 @@ class VarDirectiveSpec extends BaseSpec {
       s"""
          | $aStandardMachineConfiguration
          | .bb main
-         |   .var hello %${VmContext.maximumNumberOfVariablesInHeap} (00:u8)
+         |   .var hello %${VmContext.maximumNumberOfVariablesInHeap} u8
          | .boot main
        """.stripMargin
     ).thenVerify {
@@ -90,21 +90,71 @@ class VarDirectiveSpec extends BaseSpec {
     }
   }
 
-  ".var" should "allow to create variables in the heap" in {
+  ".var" should "allow to declare heap variables initialized to 0" in {
     successfullyAssembleAndExecute(
       s"""
          | $aStandardMachineConfiguration
          | .bb main
-         |   .var top %${VmContext.maximumNumberOfVariablesInHeap - 1} (ff:s8)
-         |   .var bottom %0 (00:u8)
+         |   .var top %${VmContext.maximumNumberOfVariablesInHeap - 1} s8
+         |   .var bottom %0 u8
          |   exit (00:u8)
          | .boot main
      """.stripMargin
     ).thenVerify {
       case vmContext =>
-        heapVariableMatches(VmContext.maximumNumberOfVariablesInHeap - 1, "top", isSigned = true, byteLen = 1, intValue = -1, vmContext) &&
+        heapVariableMatches(VmContext.maximumNumberOfVariablesInHeap - 1, "top", isSigned = true, byteLen = 1, intValue = 0, vmContext) &&
           heapVariableMatches(0, "bottom", isSigned = false, byteLen = 1, intValue = 0, vmContext) &&
           everyHeapVariableIsUnsetInRange(1, VmContext.maximumNumberOfVariablesInHeap - 1, vmContext)
+    }
+  }
+
+  ".var" should "allow to declare heap variables initialized to nullptr" in {
+    successfullyAssembleAndExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb main
+         |   .var top %${VmContext.maximumNumberOfVariablesInHeap - 1} ptr
+         |   .var bottom %0 ptr
+         |   exit (00:u8)
+         | .boot main
+     """.stripMargin
+    ).thenVerify {
+      case vmContext =>
+        heapVariableMatchesPointer(VmContext.maximumNumberOfVariablesInHeap - 1, "top", vmContext) &&
+          heapVariableMatchesPointer(0, "bottom", vmContext) &&
+          everyHeapVariableIsUnsetInRange(1, VmContext.maximumNumberOfVariablesInHeap - 1, vmContext)
+    }
+  }
+
+  ".var" should "allow to declare stack variables initialized to 0" in {
+    successfullyAssembleAndExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb main
+         |   .push 1
+         |   .var x $$0 s8
+         |   exit (00:u8)
+         | .boot main
+     """.stripMargin
+    ).thenVerify {
+      case vmContext =>
+        stackVariableMatches(0, "x", isSigned = true, byteLen = 1, intValue = 0, vmContext)
+    }
+  }
+
+  ".var" should "allow to declare stack variables initialized to nullptr" in {
+    successfullyAssembleAndExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb main
+         |   .push 1
+         |   .var x $$0 ptr
+         |   exit (00:u8)
+         | .boot main
+     """.stripMargin
+    ).thenVerify {
+      case vmContext =>
+        stackVariableMatchesPointer(0, "x", vmContext)
     }
   }
 
@@ -115,6 +165,39 @@ class VarDirectiveSpec extends BaseSpec {
           (isSigned == x.value.vmType.isSigned) &&
           (byteLen == x.value.vmType.byteLen) &&
           (intValue == x.value.toInt)
+
+      case _ =>
+        false
+    }
+  }
+
+  private def stackVariableMatches(stackIndex: Int, name: String, isSigned: Boolean, byteLen: Int, intValue: Int, vmContext: VmContext): Boolean = {
+    vmContext.stack.getVariable(stackIndex) match {
+      case Ok(Some(x: Variable.Scalar)) =>
+        (name == x.name) &&
+          (isSigned == x.value.vmType.isSigned) &&
+          (byteLen == x.value.vmType.byteLen) &&
+          (intValue == x.value.toInt)
+
+      case _ =>
+        false
+    }
+  }
+
+  private def heapVariableMatchesPointer(heapIndex: Int, name: String, vmContext: VmContext): Boolean = {
+    vmContext.heap.getVariable(heapIndex) match {
+      case Ok(Some(x: Variable.Pointer)) =>
+        name == x.name
+
+      case _ =>
+        false
+    }
+  }
+
+  private def stackVariableMatchesPointer(stackIndex: Int, name: String, vmContext: VmContext): Boolean = {
+    vmContext.stack.getVariable(stackIndex) match {
+      case Ok(Some(x: Variable.Pointer)) =>
+        name == x.name
 
       case _ =>
         false

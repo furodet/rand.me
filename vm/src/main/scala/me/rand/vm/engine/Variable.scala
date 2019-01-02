@@ -26,6 +26,7 @@
 package me.rand.vm.engine
 
 import me.rand.vm.alu.VmRegister
+import me.rand.vm.engine.VmTypes.VmType
 
 // Documentation: doc/vmarchitecture.md
 sealed trait Variable {
@@ -37,6 +38,20 @@ sealed trait Variable {
 }
 
 object Variable {
+
+  sealed trait BasicType
+
+  object BasicType {
+
+    case class _Scalar(vmType: VmType) extends BasicType {
+      override def toString: String = vmType.toString
+    }
+
+    case object _Pointer extends BasicType {
+      override def toString: String = "ptr"
+    }
+
+  }
 
   case class Scalar(name: String, value: VmRegister) extends Variable {
     override def rename(newName: String): Variable = copy(name = newName)

@@ -30,9 +30,8 @@ import me.rand.asm.main.AsmError.AsmProgramBuilderError
 import me.rand.asm.parser.AsmToken
 import me.rand.commons.idioms.Logger
 import me.rand.commons.idioms.Status._
-import me.rand.vm.alu.VmRegister
 import me.rand.vm.engine.VmProgram.{BasicBlockBuilder, InlineDirective, InstructionInstance}
-import me.rand.vm.engine.{Operand, VmContext, VmControl}
+import me.rand.vm.engine.{Operand, Variable, VmContext, VmControl}
 
 class AsmProgramBuilder(initialContext: VmContext) {
 
@@ -102,13 +101,13 @@ class AsmProgramBuilder(initialContext: VmContext) {
           case AsmToken.Directive.DefineBootBasicBlock(name, lineNumber) =>
             context.withBootBasicBlock(name, lineNumber)
 
-          case AsmToken.Directive.TagVariable.InTheHeap(name, heapIndex, initialValue, lineNumber) =>
+          case AsmToken.Directive.TagVariable.InTheHeap(name, heapIndex, vmt, lineNumber) =>
             context.getCurrentBasicBlockOrError(lineNumber) &&
-              (context.withInlineDirective(forgeTagVariable(name, Operand.Source.Variable.InTheHeap(heapIndex), initialValue), _))
+              (context.withInlineDirective(forgeTagVariable(name, Operand.Source.Variable.InTheHeap(heapIndex), vmt), _))
 
-          case AsmToken.Directive.TagVariable.InTheStack(name, stackIndex, initialValue, lineNumber) =>
+          case AsmToken.Directive.TagVariable.InTheStack(name, stackIndex, vmt, lineNumber) =>
             context.getCurrentBasicBlockOrError(lineNumber) &&
-              (context.withInlineDirective(forgeTagVariable(name, Operand.Source.Variable.InTheStack(stackIndex), initialValue), _))
+              (context.withInlineDirective(forgeTagVariable(name, Operand.Source.Variable.InTheStack(stackIndex), vmt), _))
 
           case AsmToken.Directive.FrameOperation.Push(nrVariables, lineNumber) =>
             context.getCurrentBasicBlockOrError(lineNumber) &&
@@ -120,8 +119,8 @@ class AsmProgramBuilder(initialContext: VmContext) {
         }
     } & updateVmContextWithBootstrap
 
-  private def forgeTagVariable(tag: String, operand: Operand.Source.Variable, value: VmRegister): InlineDirective =
-    InlineDirective(VmControl.TagVariable(tag, operand, Operand.Source.Immediate(value)))
+  private def forgeTagVariable(tag: String, operand: Operand.Source.Variable, vmt: Variable.BasicType): InlineDirective =
+    InlineDirective(VmControl.TagVariable(tag, operand, vmt))
 
   private def updateVmContextWithBootstrap(builderContext: AsmProgramBuilderContext): VmContext OrElse AsmProgramBuilderError = {
     val completed = builderContext.registerLastBasicBlockUnderConstructionIfAny

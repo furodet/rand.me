@@ -52,19 +52,51 @@ class CopySpec extends BaseSpec {
     }
   }
 
-  "copy" should "pass imm > %x" in {
+  "copy" should "pass imm > %x (truncate store)" in {
     successfullyAssembleAndExecute(
       s"""
          | $aStandardMachineConfiguration
          | .bb main
-         |   .var x %0 (00:u8)
+         |   .var x %0 u8
          |   copy (deadbeef:u32) > %0
          |   $exit
          | .boot main
       """.stripMargin
     ).thenVerify {
       case vmContext =>
-        hasHeapVariableSetToImmediate(("x", 0xdeadbeef), 0, vmContext)
+        hasHeapVariableSetToImmediate(("x", 0xef), 0, vmContext)
+    }
+  }
+
+  "copy" should "pass imm > %x (unsigned extend)" in {
+    successfullyAssembleAndExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb main
+         |   .var x %0 u32
+         |   copy (f1:s8) > %0
+         |   $exit
+         | .boot main
+      """.stripMargin
+    ).thenVerify {
+      case vmContext =>
+        hasHeapVariableSetToImmediate(("x", 0xf1), 0, vmContext)
+    }
+  }
+
+  "copy" should "pass imm > %x (signed extend)" in {
+    successfullyAssembleAndExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb main
+         |   .var x %0 s32
+         |   copy (f1:u8) > %0
+         |   $exit
+         | .boot main
+      """.stripMargin
+    ).thenVerify {
+      case vmContext =>
+        hasHeapVariableSetToImmediate(("x", 0xfffffff1), 0, vmContext)
     }
   }
 
@@ -88,7 +120,7 @@ class CopySpec extends BaseSpec {
          | $aStandardMachineConfiguration
          | .bb main
          |   .push 1
-         |   .var x $$0 (00:u8)
+         |   .var x $$0 u32
          |   copy (deadbeef:u32) > $$0
          |   $exit
          | .boot main
@@ -134,9 +166,9 @@ class CopySpec extends BaseSpec {
       s"""
          | $aStandardMachineConfiguration
          | .bb main
-         |   .var x   %0 (00:u8)
-         |   .var px  %1 (00:u8)
-         |   .var ppx %2 (00:u8)
+         |   .var x   %0 u32
+         |   .var px  %1 ptr
+         |   .var ppx %2 ptr
          |   copy &%0 > %1
          |   copy &%1 > %2
          |   copy (deadbeef:u32) > **%2
@@ -172,9 +204,9 @@ class CopySpec extends BaseSpec {
          | $aStandardMachineConfiguration
          | .bb main
          |   .push 3
-         |   .var x   $$0 (00:u8)
-         |   .var px  $$1 (00:u8)
-         |   .var ppx $$2 (00:u8)
+         |   .var x   $$0 u32
+         |   .var px  $$1 ptr
+         |   .var ppx $$2 ptr
          |   copy &$$0 > $$1
          |   copy &$$1 > $$2
          |   copy (deadbeef:u32) > **$$2
@@ -223,9 +255,9 @@ class CopySpec extends BaseSpec {
       s"""
          | $aStandardMachineConfiguration
          | .bb main
-         |   .var x0 %0 (00:u8)
-         |   .var x1 %1 (00:u8)
-         |   .var x2 %2 (00:u8)
+         |   .var x0 %0 u32
+         |   .var x1 %1 u32
+         |   .var x2 %2 u32
          |   copy (deadbeef:u32) > %0[2]
          |   $exit
          | .boot main
@@ -241,7 +273,7 @@ class CopySpec extends BaseSpec {
       s"""
          | $aStandardMachineConfiguration
          | .bb main
-         |   .var x0 %1 (00:u8)
+         |   .var x0 %1 u32
          |   copy (deadbeef:u32) > %1[2]
          |   $exit
          | .boot main
@@ -270,7 +302,7 @@ class CopySpec extends BaseSpec {
       s"""
          | $aStandardMachineConfiguration
          | .bb main
-         |   .var x0 %0 (00:u8)
+         |   .var x0 %0 u32
          |   copy (deadbeef:u32) > %0[-1]
          |   $exit
          | .boot main
@@ -286,9 +318,9 @@ class CopySpec extends BaseSpec {
          | $aStandardMachineConfiguration
          | .bb main
          |   .push 3
-         |   .var x0 $$0 (00:u8)
-         |   .var x1 $$1 (00:u8)
-         |   .var x2 $$2 (00:u8)
+         |   .var x0 $$0 u32
+         |   .var x1 $$1 u32
+         |   .var x2 $$2 u32
          |   copy (deadbeef:u32) > $$0[2]
          |   $exit
          | .boot main
@@ -305,7 +337,7 @@ class CopySpec extends BaseSpec {
          | $aStandardMachineConfiguration
          | .bb main
          |   .push 4
-         |   .var x0 $$1 (00:u8)
+         |   .var x0 $$1 u32
          |   copy (deadbeef:u32) > $$1[2]
          |   $exit
          | .boot main
@@ -335,7 +367,7 @@ class CopySpec extends BaseSpec {
          | $aStandardMachineConfiguration
          | .bb main
          |   .push 3
-         |   .var x0 $$1 (00:u8)
+         |   .var x0 $$1 u32
          |   copy (deadbeef:u32) > $$1[2]
          |   $exit
          | .boot main
@@ -366,8 +398,8 @@ class CopySpec extends BaseSpec {
       s"""
          | $aStandardMachineConfiguration
          | .bb main
-         |   .var x %0 (de:u8)
-         |   .var y %1 (ad:u8)
+         |   .var x %0 ptr
+         |   .var y %1 u32
          |   copy &%1 > %0
          |   $exit
          | .boot main
@@ -384,8 +416,8 @@ class CopySpec extends BaseSpec {
          | $aStandardMachineConfiguration
          | .bb main
          |   .push 1
-         |   .var x %0 (de:u8)
-         |   .var y $$0 (ad:u8)
+         |   .var x %0 u32
+         |   .var y $$0 ptr
          |   copy &%0 > $$0
          |   $exit
          | .boot main
