@@ -115,6 +115,11 @@ object VmError {
           }
         }
 
+        case class InvalidBasicBlockReference(basicBlockName: String) extends InvalidPointerValue {
+          override def toString: String =
+            s"basic block pointer is invalid: no such basic block '$basicBlockName'"
+        }
+
         case class InvalidIndirect(operandId: Int) extends IllegalEncodingError {
           override def toString: String =
             s"source operand #$operandId redirects to an unexpected type of variable"

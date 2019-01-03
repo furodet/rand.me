@@ -72,6 +72,9 @@ object Operand {
         override def toString: String = s"&$$$index"
       }
 
+      case class InInstructionMemory(basicBlockName: String) extends Source.Reference {
+        override def toString: String = s"&@index"
+      }
     }
 
     case class Immediate(value: VmRegister) extends Source {

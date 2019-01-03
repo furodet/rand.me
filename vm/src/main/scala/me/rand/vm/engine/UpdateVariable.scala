@@ -85,22 +85,14 @@ class UpdateVariable(maybePointer: Option[Pointer]) {
         val normalized = oldValue.operations.cast(newValue, oldValue.vmType)
         Ok(Variable.Scalar(name, normalized))
 
-      case (Variable.Pointer.ToInstruction(_, sourceValue), Variable.Pointer.ToInstruction(name, _)) =>
-        Ok(Variable.Pointer.ToInstruction(name, sourceValue))
+      case (Variable.Pointer.ToVariable.InTheHeap(_, sourceValue), ptr: Variable.Pointer) =>
+        Ok(Variable.Pointer.ToVariable.InTheHeap(ptr.name, sourceValue))
 
-      case (Variable.Pointer.ToVariable.InTheHeap(_, sourceValue), Variable.Pointer.ToVariable.InTheHeap(name, _)) =>
-        Ok(Variable.Pointer.ToVariable.InTheHeap(name, sourceValue))
+      case (Variable.Pointer.ToVariable.InTheStack(_, sourceValue), ptr: Variable.Pointer) =>
+        Ok(Variable.Pointer.ToVariable.InTheStack(ptr.name, sourceValue))
 
-      case (Variable.Pointer.ToVariable.InTheStack(_, sourceValue), Variable.Pointer.ToVariable.InTheStack(name, _)) =>
-        Ok(Variable.Pointer.ToVariable.InTheStack(name, sourceValue))
-
-      case (Variable.Pointer.ToVariable.InTheHeap(_, sourceValue), Variable.Pointer.ToVariable.InTheStack(name, _)) =>
-        // For pointers, the source type prevail (clobber the pointer)
-        Ok(Variable.Pointer.ToVariable.InTheHeap(name, sourceValue))
-
-      case (Variable.Pointer.ToVariable.InTheStack(_, sourceValue), Variable.Pointer.ToVariable.InTheHeap(name, _)) =>
-        // For pointers, the source type prevail (clobber the pointer)
-        Ok(Variable.Pointer.ToVariable.InTheStack(name, sourceValue))
+      case (Variable.Pointer.ToInstruction(_, counter), ptr: Variable.Pointer) =>
+        Ok(Variable.Pointer.ToInstruction(ptr.name, counter))
 
       case (anyOtherSource, anyOtherDestination) =>
         Err(IllegalEncodingError.IllegalCast(anyOtherSource, anyOtherDestination))

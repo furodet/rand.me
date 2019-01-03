@@ -131,13 +131,13 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
       case directive if directive.startsWith(".") =>
         logger >> s"applying directive '$directive'"
         directive match {
-          case ".bb" if args.nonEmpty =>
+          case ".bb" if args.nonEmpty && matchesBasicBlockName(args.head) =>
             Ok(AsmToken.Directive.DeclareBasicBlock(args.head, asmParserContext.lineNumber))
 
           case VmControl.TagVariable.name =>
             translateVariableDeclarationDirective(args)
 
-          case ".boot" if args.nonEmpty =>
+          case ".boot" if args.nonEmpty && matchesBasicBlockName(args.head) =>
             Ok(AsmToken.Directive.DefineBootBasicBlock(args.head, asmParserContext.lineNumber))
 
           case VmControl.FrameOperation.Push.name if args.nonEmpty && args.head.matches("[0-9]+") =>
@@ -180,6 +180,8 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
   private def matchesHeapVariable(string: String) = string.matches("%[0-9]+")
 
   private def matchesStackVariable(string: String) = string.matches("\\$[0-9]+")
+
+  private def matchesBasicBlockName(string: String) = string.matches("[_a-zA-Z][_a-zA-Z0-9]*")
 
   private def matchesVmType(string: String): Boolean = string.matches("[su][0-9]+")
 
@@ -268,6 +270,9 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
 
           case aStackVariable if matchesStackVariable(aStackVariable) =>
             Ok(Operand.Source.Reference.InTheStack(aStackVariable.tail.toInt))
+
+          case aBasicBlock if aBasicBlock.startsWith("@") && matchesBasicBlockName(aBasicBlock.tail) =>
+            Ok(Operand.Source.Reference.InInstructionMemory(aBasicBlock.tail))
 
           case _ =>
             Err(AsmParserError.InvalidReference(anAddress, asmParserContext.lineNumber))

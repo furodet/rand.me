@@ -31,7 +31,7 @@ import me.rand.simulator.test.BaseSpec
 import me.rand.vm.engine.{VarSet, Variable, VmContext}
 import me.rand.vm.main.VmError.VmContextError.{EmptyStackAccess, VariableIndexOutOfBounds}
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError.UnspecifiedDestinationOperand
-import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue.{InvalidSourceReference, InvalidTargetReference}
+import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue.{InvalidBasicBlockReference, InvalidSourceReference, InvalidTargetReference}
 
 // The is the best opportunity to validate operand translation, since copy accepts any kind
 // of input variable and writes to any kind of output.
@@ -489,7 +489,36 @@ class CopySpec extends BaseSpec {
     }
   }
 
-  // TODO: instruction pointers?
+  "copy" should "pass &@x > %y" in {
+    successfullyAssembleAndExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb main
+         |   .var ptr %0 ptr
+         |   copy &@main > %0
+         |   $exit
+         | .boot main
+       """.stripMargin
+    ).thenVerify {
+      case vmContext =>
+        hasHeapVariableSetToInstructionPointer("main", 0, vmContext)
+    }
+  }
+
+  "copy" should "fail &@undef > %y" in {
+    failToAssembleOrExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb main
+         |   .var ptr %0 ptr
+         |   copy &@none > %0
+         |   $exit
+         | .boot main
+       """.stripMargin
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidBasicBlockReference("none")) => true
+    }
+  }
 
   private def hasHeapVariableSetToImmediate(nameValue: (String, Int), variableIndex: Int, vmContext: VmContext): Boolean =
     testVariable(vmContext.heap, variableIndex)(nameValue._1, nameValue._2) {
@@ -514,6 +543,15 @@ class CopySpec extends BaseSpec {
   private def hasStackVariableSetToStackPointer(nameValue: (String, Int), variableIndex: Int, vmContext: VmContext): Boolean =
     testVariable(vmContext.stack, variableIndex)(nameValue._1, nameValue._2) {
       case Variable.Pointer.ToVariable.InTheStack(name, value) => (name, value)
+    }
+
+  private def hasHeapVariableSetToInstructionPointer(basicBlockName: String, variableIndex: Int, vmContext: VmContext): Boolean =
+    vmContext.heap.getVariable(variableIndex) match {
+      case Ok(Some(Variable.Pointer.ToInstruction(_, counter))) =>
+        counter.basicBlock.isDefined && (counter.basicBlock.get.name == basicBlockName)
+
+      case _ =>
+        false
     }
 
   private def testVariable(fromVarSet: VarSet, atIndex: Int)

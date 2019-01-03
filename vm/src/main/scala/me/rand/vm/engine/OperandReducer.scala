@@ -30,7 +30,7 @@ import me.rand.vm.engine.OperandReducer.Result
 import me.rand.vm.engine.Variable.{Pointer, Scalar}
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError
 import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue
-import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue.{InvalidIndirect, InvalidRedirect, InvalidSourceReference, InvalidTargetReference}
+import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue._
 
 import scala.annotation.tailrec
 
@@ -113,6 +113,15 @@ class OperandReducer(operands: Operands) {
         reduceSourceVariable("stack", vmContext.stack, stackIndex) && (
           referenced => Variable.Pointer.ToVariable.InTheStack(referenced.name, stackIndex)
           )
+
+      case Operand.Source.Reference.InInstructionMemory(basicBlockName) =>
+        vmContext.program.basicBlocks.get(basicBlockName) match {
+          case None =>
+            Err(InvalidBasicBlockReference(basicBlockName))
+
+          case Some(basicBlock) =>
+            Ok(Variable.Pointer.ToInstruction(basicBlockName, VmProgram.Counter.atTheBeginningOf(basicBlock)))
+        }
     }
 
   @tailrec

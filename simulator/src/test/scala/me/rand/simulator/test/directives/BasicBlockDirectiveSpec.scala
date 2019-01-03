@@ -41,6 +41,17 @@ class BasicBlockDirectiveSpec extends BaseSpec {
     }
   }
 
+  ".bb" should "fail with an invalid basic block name" in {
+    failToAssembleOrExecute(
+      s"""
+         | $aStandardMachineConfiguration
+         | .bb 0
+       """.stripMargin
+    ).thenVerify {
+      case SimulatorError.FromAsmError(AsmError.AsmParserError.InvalidDirectiveSpecification(".bb", 3)) => true
+    }
+  }
+
   "a program" should "expect a basic block to be defined before any instruction" in {
     failToAssembleOrExecute(
       s"""
