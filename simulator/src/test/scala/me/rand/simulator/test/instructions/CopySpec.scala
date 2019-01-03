@@ -36,17 +36,22 @@ import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPoint
 // This is the best opportunity to validate operand translation, since copy accepts any kind
 // of input variable and writes to any kind of output.
 class CopySpec extends BaseSpec {
-  private lazy val exit = "exit (00:u8)"
+  private def main(body: String): String =
+    s"""
+       | $aStandardMachineConfiguration
+       | .bb main
+     """.stripMargin +
+      body +
+      s"""
+         |  exit (00:u8)
+         | .boot main
+     """.stripMargin
 
   "copy" should "fail x > _" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   copy (deadbeef:u32) > _
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        "copy (deadbeef:u32) > _"
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(UnspecifiedDestinationOperand) => true
     }
@@ -54,14 +59,12 @@ class CopySpec extends BaseSpec {
 
   "copy" should "pass imm > %x (truncate store)" in {
     successfullyAssembleAndExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x %0 u8
-         |   copy (deadbeef:u32) > %0
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .var x %0 u8
+           | copy (deadbeef:u32) > %0
+         """.stripMargin
+      )
     ).thenVerify {
       case vmContext =>
         hasHeapVariableSetToImmediate(("x", 0xef), 0, vmContext)
@@ -70,14 +73,12 @@ class CopySpec extends BaseSpec {
 
   "copy" should "pass imm > %x (unsigned extend)" in {
     successfullyAssembleAndExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x %0 u32
-         |   copy (f1:s8) > %0
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .var x %0 u32
+           | copy (f1:s8) > %0
+         """.stripMargin
+      )
     ).thenVerify {
       case vmContext =>
         hasHeapVariableSetToImmediate(("x", 0xf1), 0, vmContext)
@@ -86,14 +87,12 @@ class CopySpec extends BaseSpec {
 
   "copy" should "pass imm > %x (signed extend)" in {
     successfullyAssembleAndExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x %0 s32
-         |   copy (f1:u8) > %0
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .var x %0 s32
+           | copy (f1:u8) > %0
+        """.stripMargin
+      )
     ).thenVerify {
       case vmContext =>
         hasHeapVariableSetToImmediate(("x", 0xfffffff1), 0, vmContext)
@@ -102,13 +101,11 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail imm > %undef" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   copy (deadbeef:u32) > %0
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | copy (deadbeef:u32) > %0
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidTargetReference(None, 0, None)) => true
     }
@@ -116,15 +113,13 @@ class CopySpec extends BaseSpec {
 
   "copy" should "pass imm > $x" in {
     successfullyAssembleAndExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .push 1
-         |   .var x $$0 u32
-         |   copy (deadbeef:u32) > $$0
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .push 1
+           | .var x $$0 u32
+           | copy (deadbeef:u32) > $$0
+        """.stripMargin
+      )
     ).thenVerify {
       case vmContext =>
         hasStackVariableSetToImmediate(("x", 0xdeadbeef), 0, vmContext)
@@ -133,13 +128,11 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail imm > $undef (empty stack)" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   copy (deadbeef:u32) > $$0
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | copy (deadbeef:u32) > $$0
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidTargetReference(None, 0, Some(EmptyStackAccess(_)))) => true
     }
@@ -147,14 +140,12 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail imm > $undef" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .push 1
-         |   copy (deadbeef:u32) > $$0
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .push 1
+           | copy (deadbeef:u32) > $$0
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidTargetReference(None, 0, None)) => true
     }
@@ -163,18 +154,16 @@ class CopySpec extends BaseSpec {
   // TODO: would be awesome to be able to say: .var px %1 &%0, .var ppx %2 &%1...
   "copy" should "pass imm > **%x " in {
     successfullyAssembleAndExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x   %0 u32
-         |   .var px  %1 ptr
-         |   .var ppx %2 ptr
-         |   copy &%0 > %1
-         |   copy &%1 > %2
-         |   copy (deadbeef:u32) > **%2
-         |   $exit
-         | .boot main
+      main(body =
+        s"""
+           | .var x   %0 u32
+           | .var px  %1 ptr
+           | .var ppx %2 ptr
+           | copy &%0 > %1
+           | copy &%1 > %2
+           | copy (deadbeef:u32) > **%2
        """.stripMargin
+      )
     ).thenVerify {
       case vmContext: VmContext =>
         hasHeapVariableSetToHeapPointer(("px", 0), 1, vmContext) &&
@@ -185,13 +174,11 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail imm > *%undef" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   copy (deadbeef:u32) > *%0
-         |   $exit
-         | .boot main
+      main(body =
+        s"""
+           | copy (deadbeef:u32) > *%0
        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidTargetReference(None, 0, None)) => true
     }
@@ -199,15 +186,13 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail imm > *%undef (pointer type)" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var ptr %0 ptr
-         |   copy &@main > %0
-         |   copy (deadbeef:u32) > *%0
-         |   $exit
-         | .boot main
-       """.stripMargin
+      main(body =
+        s"""
+           | .var ptr %0 ptr
+           | copy &@main > %0
+           | copy (deadbeef:u32) > *%0
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidRedirect) => true
     }
@@ -216,19 +201,17 @@ class CopySpec extends BaseSpec {
   // TODO: would be awesome to be able to say: .var px $1 &$0, .var ppx $2 &$1...
   "copy" should "pass imm > **$x" in {
     successfullyAssembleAndExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .push 3
-         |   .var x   $$0 u32
-         |   .var px  $$1 ptr
-         |   .var ppx $$2 ptr
-         |   copy &$$0 > $$1
-         |   copy &$$1 > $$2
-         |   copy (deadbeef:u32) > **$$2
-         |   $exit
-         | .boot main
-       """.stripMargin
+      main(body =
+        s"""
+           | .push 3
+           | .var x   $$0 u32
+           | .var px  $$1 ptr
+           | .var ppx $$2 ptr
+           | copy &$$0 > $$1
+           | copy &$$1 > $$2
+           | copy (deadbeef:u32) > **$$2
+        """.stripMargin
+      )
     ).thenVerify {
       case vmContext =>
         hasStackVariableSetToStackPointer(("px", 0), 1, vmContext) &&
@@ -239,13 +222,11 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail imm > *$undef (empty stack)" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   copy (deadbeef:u32) > *$$0
-         |   $exit
-         | .boot main
-       """.stripMargin
+      main(body =
+        s"""
+           | copy (deadbeef:u32) > *$$0
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidTargetReference(None, 0, Some(EmptyStackAccess(_)))) => true
     }
@@ -253,14 +234,12 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail imm > *$undef" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .push 3
-         |   copy (deadbeef:u32) > *$$0
-         |   $exit
-         | .boot main
-       """.stripMargin
+      main(body =
+        s"""
+           | .push 3
+           | copy (deadbeef:u32) > *$$0
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidTargetReference(None, 0, None)) => true
     }
@@ -268,16 +247,14 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail imm > *$undef (pointer type)" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .push 3
-         |   .var ptr $$0 ptr
-         |   copy &@main > $$0
-         |   copy (deadbeef:u32) > *$$0
-         |   $exit
-         | .boot main
-       """.stripMargin
+      main(body =
+        s"""
+           | .push 3
+           | .var ptr $$0 ptr
+           | copy &@main > $$0
+           | copy (deadbeef:u32) > *$$0
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidRedirect) => true
     }
@@ -285,16 +262,14 @@ class CopySpec extends BaseSpec {
 
   "copy" should "pass imm > %x[y]" in {
     successfullyAssembleAndExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x0 %0 u32
-         |   .var x1 %1 u32
-         |   .var x2 %2 u32
-         |   copy (deadbeef:u32) > %0[2]
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .var x0 %0 u32
+           | .var x1 %1 u32
+           | .var x2 %2 u32
+           | copy (deadbeef:u32) > %0[2]
+        """.stripMargin
+      )
     ).thenVerify {
       case vmContext =>
         hasHeapVariableSetToImmediate(("x2", 0xdeadbeef), 2, vmContext)
@@ -303,14 +278,12 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail imm > %x[y] (undef)" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x0 %1 u32
-         |   copy (deadbeef:u32) > %1[2]
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .var x0 %1 u32
+           | copy (deadbeef:u32) > %1[2]
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidTargetReference(Some("&x0[2]"), 3, None)) => true
     }
@@ -318,13 +291,11 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail imm > %undef[y]" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   copy (deadbeef:u32) > %0[2]
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | copy (deadbeef:u32) > %0[2]
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidTargetReference(None, 0, None)) => true
     }
@@ -332,14 +303,12 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail imm > %x[y] (oob)" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x0 %0 u32
-         |   copy (deadbeef:u32) > %0[-1]
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .var x0 %0 u32
+           | copy (deadbeef:u32) > %0[-1]
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidTargetReference(Some("&x0[-1]"), -1, Some(VariableIndexOutOfBounds(-1)))) => true
     }
@@ -347,17 +316,15 @@ class CopySpec extends BaseSpec {
 
   "copy" should "pass imm > $x[y]" in {
     successfullyAssembleAndExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .push 3
-         |   .var x0 $$0 u32
-         |   .var x1 $$1 u32
-         |   .var x2 $$2 u32
-         |   copy (deadbeef:u32) > $$0[2]
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .push 3
+           | .var x0 $$0 u32
+           | .var x1 $$1 u32
+           | .var x2 $$2 u32
+           | copy (deadbeef:u32) > $$0[2]
+        """.stripMargin
+      )
     ).thenVerify {
       case vmContext =>
         hasStackVariableSetToImmediate(("x2", 0xdeadbeef), 2, vmContext)
@@ -366,15 +333,13 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail imm > $x[y] (undef)" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .push 4
-         |   .var x0 $$1 u32
-         |   copy (deadbeef:u32) > $$1[2]
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .push 4
+           | .var x0 $$1 u32
+           | copy (deadbeef:u32) > $$1[2]
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidTargetReference(Some("&x0[2]"), 3, None)) => true
     }
@@ -382,13 +347,11 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail imm > $undef[y] (empty stack)" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   copy (deadbeef:u32) > $$0[2]
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | copy (deadbeef:u32) > $$0[2]
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidTargetReference(None, 0, Some(EmptyStackAccess(_)))) => true
     }
@@ -396,15 +359,13 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail imm > $undef[y] (oob)" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .push 3
-         |   .var x0 $$1 u32
-         |   copy (deadbeef:u32) > $$1[2]
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .push 3
+           | .var x0 $$1 u32
+           | copy (deadbeef:u32) > $$1[2]
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidTargetReference(Some("&x0[2]"), 3, Some(VariableIndexOutOfBounds(3)))) => true
     }
@@ -412,14 +373,12 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail imm > $undef[y]" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .push 3
-         |   copy (deadbeef:u32) > $$0[2]
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .push 3
+           | copy (deadbeef:u32) > $$0[2]
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidTargetReference(None, 0, None)) => true
     }
@@ -427,15 +386,13 @@ class CopySpec extends BaseSpec {
 
   "copy" should "pass &%x > %y" in {
     successfullyAssembleAndExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x %0 ptr
-         |   .var y %1 u32
-         |   copy &%1 > %0
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .var x %0 ptr
+           | .var y %1 u32
+           | copy &%1 > %0
+        """.stripMargin
+      )
     ).thenVerify {
       case vmContext =>
         hasHeapVariableSetToHeapPointer(("x", 1), 0, vmContext)
@@ -444,14 +401,12 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail &%undef > %y" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x %0 ptr
-         |   copy &%1 > %0
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .var x %0 ptr
+           | copy &%1 > %0
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidSourceReference("heap", 1, None)) => true
     }
@@ -459,14 +414,12 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail &%undef > %y (oob)" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x %0 ptr
-         |   copy &%${VmContext.maximumNumberOfVariablesInHeap} > %0
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .var x %0 ptr
+           | copy &%${VmContext.maximumNumberOfVariablesInHeap} > %0
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidSourceReference("heap", _, Some(VariableIndexOutOfBounds(VmContext.maximumNumberOfVariablesInHeap)))) => true
     }
@@ -474,16 +427,14 @@ class CopySpec extends BaseSpec {
 
   "copy" should "pass &$x > %y" in {
     successfullyAssembleAndExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .push 1
-         |   .var x $$0 u32
-         |   .var y %0 ptr
-         |   copy &$$0 > %0
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .push 1
+           | .var x $$0 u32
+           | .var y %0 ptr
+           | copy &$$0 > %0
+        """.stripMargin
+      )
     ).thenVerify {
       case vmContext =>
         hasHeapVariableSetToStackPointer(("y", 0), 0, vmContext)
@@ -492,15 +443,13 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail &$undef > %y" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .push 1
-         |   .var y %0 ptr
-         |   copy &$$0 > %0
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .push 1
+           | .var y %0 ptr
+           | copy &$$0 > %0
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidSourceReference("stack", 0, None)) => true
     }
@@ -508,15 +457,13 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail &$undef > %y (oob)" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .push 1
-         |   .var y %0 ptr
-         |   copy &$$1 > %0
-         |   $exit
-         | .boot main
-      """.stripMargin
+      main(body =
+        s"""
+           | .push 1
+           | .var y %0 ptr
+           | copy &$$1 > %0
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidSourceReference("stack", _, Some(VariableIndexOutOfBounds(1)))) => true
     }
@@ -524,14 +471,12 @@ class CopySpec extends BaseSpec {
 
   "copy" should "pass &@x > %y" in {
     successfullyAssembleAndExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var ptr %0 ptr
-         |   copy &@main > %0
-         |   $exit
-         | .boot main
-       """.stripMargin
+      main(body =
+        s"""
+           |   .var ptr %0 ptr
+           |   copy &@main > %0
+        """.stripMargin
+      )
     ).thenVerify {
       case vmContext =>
         hasHeapVariableSetToInstructionPointer("main", 0, vmContext)
@@ -540,14 +485,12 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail &@undef > %y" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var ptr %0 ptr
-         |   copy &@none > %0
-         |   $exit
-         | .boot main
-       """.stripMargin
+      main(body =
+        s"""
+           |   .var ptr %0 ptr
+           |   copy &@none > %0
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidBasicBlockReference("none")) => true
     }
@@ -555,20 +498,18 @@ class CopySpec extends BaseSpec {
 
   "copy" should "pass **%x > %y" in {
     successfullyAssembleAndExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x   %0 u32
-         |   .var px  %1 ptr
-         |   .var ppx %2 ptr
-         |   .var y   %3 u32
-         |   copy (feedcafe:u32) > %0
-         |   copy &%0 > %1
-         |   copy &%1 > %2
-         |   copy **%2 > %3
-         |   $exit
-         | .boot main
-       """.stripMargin
+      main(body =
+        s"""
+           | .var x   %0 u32
+           | .var px  %1 ptr
+           | .var ppx %2 ptr
+           | .var y   %3 u32
+           | copy (feedcafe:u32) > %0
+           | copy &%0 > %1
+           | copy &%1 > %2
+           | copy **%2 > %3
+        """.stripMargin
+      )
     ).thenVerify {
       case vmContext =>
         hasHeapVariableSetToImmediate(("y", 0xfeedcafe), 3, vmContext)
@@ -577,15 +518,13 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail *%undef > %y" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x   %0 u32
-         |   .var y   %3 u32
-         |   copy *%2 > %3
-         |   $exit
-         | .boot main
-       """.stripMargin
+      main(body =
+        s"""
+           | .var x   %0 u32
+           | .var y   %3 u32
+           | copy *%2 > %3
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidSourceReference("heap", 2, None)) => true
     }
@@ -593,15 +532,13 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail *%undef > %y (oob)" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x   %0 u32
-         |   .var y   %3 u32
-         |   copy *%${VmContext.maximumNumberOfVariablesInHeap} > %3
-         |   $exit
-         | .boot main
-       """.stripMargin
+      main(body =
+        s"""
+           | .var x   %0 u32
+           | .var y   %3 u32
+           | copy *%${VmContext.maximumNumberOfVariablesInHeap} > %3
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidSourceReference("heap", VmContext.maximumNumberOfVariablesInHeap, Some(VariableIndexOutOfBounds(VmContext.maximumNumberOfVariablesInHeap)))) => true
     }
@@ -609,16 +546,14 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail *%undef > %y (pointer type)" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x %0 u32
-         |   .var ptr %1 ptr
-         |   copy &@main > %1
-         |   copy *%1 > %0
-         |   $exit
-         | .boot main
-       """.stripMargin
+      main(body =
+        s"""
+           | .var x %0 u32
+           | .var ptr %1 ptr
+           | copy &@main > %1
+           | copy *%1 > %0
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidIndirect(0)) => true
     }
@@ -626,21 +561,19 @@ class CopySpec extends BaseSpec {
 
   "copy" should "pass **$x > %y" in {
     successfullyAssembleAndExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x   %0 u32
-         |   .var y   %3 u32
-         |   .push 2
-         |   .var px  $$0 ptr
-         |   .var ppx $$1 ptr
-         |   copy (feedcafe:u32) > %0
-         |   copy &%0  > $$0
-         |   copy &$$0 > $$1
-         |   copy **$$1 > %3
-         |   $exit
-         | .boot main
-       """.stripMargin
+      main(body =
+        s"""
+           | .var x   %0 u32
+           | .var y   %3 u32
+           | .push 2
+           | .var px  $$0 ptr
+           | .var ppx $$1 ptr
+           | copy (feedcafe:u32) > %0
+           | copy &%0  > $$0
+           | copy &$$0 > $$1
+           | copy **$$1 > %3
+        """.stripMargin
+      )
     ).thenVerify {
       case vmContext =>
         hasHeapVariableSetToImmediate(("y", 0xfeedcafe), 3, vmContext)
@@ -649,15 +582,13 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail *$undef > %y" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x %0 u32
-         |   .push 1
-         |   copy *$$0 > %0
-         |   $exit
-         | .boot main
-       """.stripMargin
+      main(body =
+        s"""
+           | .var x %0 u32
+           | .push 1
+           | copy *$$0 > %0
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidSourceReference("stack", 0, None)) => true
     }
@@ -665,15 +596,13 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail *$undef > %y (oob)" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x %0 u32
-         |   .push 1
-         |   copy *$$1 > %0
-         |   $exit
-         | .boot main
-       """.stripMargin
+      main(body =
+        s"""
+           | .var x %0 u32
+           | .push 1
+           | copy *$$1 > %0
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidSourceReference("stack", 1, Some(VariableIndexOutOfBounds(1)))) => true
     }
@@ -681,14 +610,12 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail *$undef > %y (empty stack)" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x %0 u32
-         |   copy *$$0 > %0
-         |   $exit
-         | .boot main
-       """.stripMargin
+      main(body =
+        s"""
+           |   .var x %0 u32
+           |   copy *$$0 > %0
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidSourceReference("stack", 0, Some(EmptyStackAccess(_)))) => true
     }
@@ -696,17 +623,15 @@ class CopySpec extends BaseSpec {
 
   "copy" should "fail *$undef > %y (pointer type)" in {
     failToAssembleOrExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .push 1
-         |   .var x %0 u32
-         |   .var ptr $$0 ptr
-         |   copy &@main > $$0
-         |   copy *$$0 > %0
-         |   $exit
-         | .boot main
-       """.stripMargin
+      main(body =
+        s"""
+           | .push 1
+           | .var x %0 u32
+           | .var ptr $$0 ptr
+           | copy &@main > $$0
+           | copy *$$0 > %0
+        """.stripMargin
+      )
     ).thenVerify {
       case SimulatorError.FromVmError(InvalidIndirect(0)) => true
     }
