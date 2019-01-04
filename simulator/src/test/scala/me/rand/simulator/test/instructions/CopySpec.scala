@@ -31,6 +31,7 @@ import me.rand.simulator.test.BaseSpec
 import me.rand.vm.engine.{VarSet, Variable, VmContext}
 import me.rand.vm.main.VmError.VmContextError.{EmptyStackAccess, VariableIndexOutOfBounds}
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError.UnspecifiedDestinationOperand
+import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue
 import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue._
 
 // This is the best opportunity to validate operand translation, since copy accepts any kind
@@ -151,7 +152,6 @@ class CopySpec extends BaseSpec {
     }
   }
 
-  // TODO: would be awesome to be able to say: .var px %1 &%0, .var ppx %2 &%1...
   "copy" should "pass imm > **%x " in {
     successfullyAssembleAndExecute(
       main(body =
@@ -198,7 +198,6 @@ class CopySpec extends BaseSpec {
     }
   }
 
-  // TODO: would be awesome to be able to say: .var px $1 &$0, .var ppx $2 &$1...
   "copy" should "pass imm > **$x" in {
     successfullyAssembleAndExecute(
       main(body =
@@ -636,6 +635,148 @@ class CopySpec extends BaseSpec {
       case SimulatorError.FromVmError(InvalidIndirect(0)) => true
     }
   }
+
+  "copy" should "pass %x[y] > %z" in {
+    successfullyAssembleAndExecute(
+      main(body =
+        s"""
+           | .var y  %0 u32
+           | .var x0 %1 u32
+           | .var x1 %2 u32
+           | copy (cafefade:u32) > %2
+           | copy %1[1] > %0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case vmContext =>
+        hasHeapVariableSetToImmediate(("y", 0xcafefade), 0, vmContext)
+    }
+  }
+
+  "copy" should "fail %undef[y] > %z" in {
+    failToAssembleOrExecute(
+      main(body =
+        s"""
+           | .var y  %0 u32
+           | .var x1 %2 u32
+           | copy (cafefade:u32) > %2
+           | copy %1[1] > %0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidPointerValue.InvalidSourceReference("heap", 1, None)) => true
+    }
+  }
+
+  "copy" should "fail %x[y] > %z (undef)" in {
+    failToAssembleOrExecute(
+      main(body =
+        s"""
+           | .var y  %0 u32
+           | .var x0 %1 u32
+           | copy (cafefade:u32) > %1
+           | copy %1[1] > %0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidPointerValue.InvalidSourceReference("heap", 2, None)) => true
+    }
+  }
+
+  "copy" should "fail %undef[y] > %z (oob)" in {
+    val base = VmContext.maximumNumberOfVariablesInHeap - 3
+    failToAssembleOrExecute(
+      main(body =
+        s"""
+           | .var y  %0 u32
+           | .var x1 %$base u32
+           | copy (cafefade:u32) > %$base
+           | copy %$base[3] > %0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidPointerValue.InvalidSourceReference("heap", VmContext.maximumNumberOfVariablesInHeap, Some(VariableIndexOutOfBounds(VmContext.maximumNumberOfVariablesInHeap)))) => true
+    }
+  }
+
+  "copy" should "pass $x[y] > %z" in {
+    successfullyAssembleAndExecute(
+      main(body =
+        s"""
+           | .var y %0 u32
+           | .push 2
+           | .var x0 $$0 u32
+           | .var x1 $$1 u32
+           | copy (cafefade:u32) > $$1
+           | copy $$0[1] > %0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case vmContext =>
+        hasHeapVariableSetToImmediate(("y", 0xcafefade), 0, vmContext)
+    }
+  }
+
+  "copy" should "fail $undef[y] > %z" in {
+    failToAssembleOrExecute(
+      main(body =
+        s"""
+           | .var y %0 u32
+           | .push 2
+           | .var x1 $$1 u32
+           | copy (cafefade:u32) > $$1
+           | copy $$0[1] > %0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidPointerValue.InvalidSourceReference("stack", 0, None)) => true
+    }
+  }
+
+  "copy" should "fail $x[y] > %z (undef)" in {
+    failToAssembleOrExecute(
+      main(body =
+        s"""
+           | .var y %0 u32
+           | .push 2
+           | .var x0 $$0 u32
+           | copy $$0[1] > %0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidPointerValue.InvalidSourceReference("stack", 1, None)) => true
+    }
+  }
+
+  "copy" should "fail $x[y] > %z (empty stack)" in {
+    failToAssembleOrExecute(
+      main(body =
+        s"""
+           | .var y %0 u32
+           | copy $$0[1] > %0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidPointerValue.InvalidSourceReference("stack", 0, Some(EmptyStackAccess(_)))) => true
+    }
+  }
+
+  "copy" should "fail $x[y] > %z (oob)" in {
+    failToAssembleOrExecute(
+      main(body =
+        s"""
+           | .var y %0 u32
+           | .push 1
+           | .var x $$0 u32
+           | copy $$0[1] > %0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidPointerValue.InvalidSourceReference("stack", 1, Some(VariableIndexOutOfBounds(1)))) => true
+    }
+  }
+
+  // TODO: source = instruction pointer
 
   private def hasHeapVariableSetToImmediate(nameValue: (String, Int), variableIndex: Int, vmContext: VmContext): Boolean =
     testVariable(vmContext.heap, variableIndex)(nameValue._1, nameValue._2) {

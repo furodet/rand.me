@@ -64,12 +64,24 @@ class OperandReducer(operands: Operands) {
 
       case Operand.Source.Indexed(pointer, index) =>
         for {
-          pointerVariable <- reduceSourceVariableOperand(pointer)
+          pointerVariable <- fetchSourceVariableOperandToArrayBase(pointer)
           afterIndexing <- reduceIndexedVariableReference(pointerVariable, index)
         } yield afterIndexing
 
       case referenceOperand: Operand.Source.Reference =>
         reduceReferenceVariableOperand(referenceOperand)
+    }
+
+  private def fetchSourceVariableOperandToArrayBase(variable: Operand.Source.Variable)(implicit vmContext: VmContext): Pointer.ToVariable OrElse IllegalEncodingError =
+    variable match {
+      case Operand.Source.Variable.InTheHeap(index) =>
+        reduceSourceVariable("heap", vmContext.heap, index) && (x => Pointer.ToVariable.InTheHeap(x.name, index))
+
+      case Operand.Source.Variable.InTheStack(index) =>
+        reduceSourceVariable("stack", vmContext.stack, index) && (x => Pointer.ToVariable.InTheStack(x.name, index))
+
+      case _ =>
+        Err(InvalidPointerValue.InvalidArrayBase("<undef>"))
     }
 
   private def reduceDestinationOrNone(operands: Operands)(implicit vmContext: VmContext): Option[Pointer.ToVariable] OrElse IllegalEncodingError =
