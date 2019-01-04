@@ -34,12 +34,14 @@ import scala.language.postfixOps
 
 // Documentation: doc/vmarchitecture.md
 class VmStack(val frames: List[VmFrame]) extends VarSet {
+  override def name: String = "stack"
+
   private def push(newFrame: VmFrame): VmStack =
   // Note: scala List prepend is the most efficient.
     new VmStack(newFrame +: frames)
 
   private[engine] def createFrameOfSize(nrVariables: Int): VmStack =
-    push(new VmFrame(VarSet.InArray.ofSize(nrVariables)))
+    push(new VmFrame(VarSet.InArray.ofSize(nrVariables, s"frame#${frames.length}")))
 
   private[engine] def popFrame(): VmStack OrElse VmContextError =
     for {

@@ -29,8 +29,8 @@ import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.OperandReducer.Result
 import me.rand.vm.engine.Variable.{Pointer, Scalar}
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError
-import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue
 import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue._
+import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.{InvalidPointerValue, UndefinedVariable}
 
 import scala.annotation.tailrec
 
@@ -38,214 +38,208 @@ class OperandReducer(operands: Operands) {
   def execute(implicit vmContext: VmContext): Result OrElse IllegalEncodingError =
     for {
       sources <- reduceSourceOperands(operands)
-      destination <- reduceDestinationOrNone(operands)
+      destination <- DestinationOperandReducer.forOperand(operands.destination).toVariableOrNone
     } yield new Result(sources, destination)
 
   private def reduceSourceOperands(operands: Operands)(implicit vmContext: VmContext): List[Variable] OrElse IllegalEncodingError = {
     operands.sources.indices.tryFoldLeft(List.empty[Variable]) {
       case (list, eachOperandIndex) =>
-        reduceImmediateOrVariable(eachOperandIndex, operands.sources(eachOperandIndex)) && (v => list :+ v)
+        SourceOperandReducer.forOperand(operands.sources(eachOperandIndex)).toVariable && (v => list :+ v)
     }
   }
 
-  private def reduceImmediateOrVariable(operandId: Int, operand: Operand.Source)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
-    operand match {
-      case Operand.Source.Immediate(value) =>
-        Ok(Scalar("imm", value))
+  private class SourceOperandReducer(operand: Operand.Source)(implicit vmContext: VmContext) {
+    def toVariable: Variable OrElse IllegalEncodingError =
+      operand match {
+        case Operand.Source.Immediate(value) =>
+          Ok(Scalar("imm", value))
 
-      case variableOperand: Operand.Source.Variable =>
-        reduceSourceVariableOperand(variableOperand)
+        case variableOperand: Operand.Source.Variable =>
+          matchVariable(variableOperand)
 
-      case Operand.Source.Indirect(pointer, depth) =>
-        for {
-          pointerVariable <- reduceSourceVariableOperand(pointer)
-          afterIndirect <- reduceIndirect(pointerVariable, depth, operandId)
-        } yield afterIndirect
+        case Operand.Source.Indirect(pointer, depth) =>
+          matchVariable(pointer) & (reduceIndirect(_, depth))
 
-      case Operand.Source.Indexed(pointer, index) =>
-        for {
-          pointerVariable <- fetchSourceVariableOperandToArrayBase(pointer)
-          afterIndexing <- reduceIndexedVariableReference(pointerVariable, index)
-        } yield afterIndexing
+        case Operand.Source.Indexed(pointer, index) =>
+          matchArrayBase(pointer) & (reduceIndexed(_, index))
 
-      case referenceOperand: Operand.Source.Reference =>
-        reduceReferenceVariableOperand(referenceOperand)
-    }
+        case referenceOperand: Operand.Source.Reference =>
+          matchReference(referenceOperand)
+      }
 
-  private def fetchSourceVariableOperandToArrayBase(variable: Operand.Source.Variable)(implicit vmContext: VmContext): Pointer.ToVariable OrElse IllegalEncodingError =
-    variable match {
-      case Operand.Source.Variable.InTheHeap(index) =>
-        reduceSourceVariable("heap", vmContext.heap, index) && (x => Pointer.ToVariable.InTheHeap(x.name, index))
+    private def matchVariable(operand: Operand.Source.Variable): Variable OrElse IllegalEncodingError =
+      operand match {
+        case Operand.Source.Variable.InTheHeap(heapIndex) =>
+          getVariable(vmContext.heap, heapIndex)
 
-      case Operand.Source.Variable.InTheStack(index) =>
-        reduceSourceVariable("stack", vmContext.stack, index) && (x => Pointer.ToVariable.InTheStack(x.name, index))
+        case Operand.Source.Variable.InTheStack(stackIndex) =>
+          getVariable(vmContext.stack, stackIndex)
+      }
 
-      case _ =>
-        Err(InvalidPointerValue.InvalidArrayBase("<undef>"))
-    }
+    private def matchReference(reference: Operand.Source.Reference): Variable.Pointer OrElse IllegalEncodingError =
+      reference match {
+        case Operand.Source.Reference.InTheHeap(heapIndex) =>
+          getVariable(vmContext.heap, heapIndex) && (
+            referenced => Variable.Pointer.ToVariable.InTheHeap(referenced.name, heapIndex)
+            )
 
-  private def reduceDestinationOrNone(operands: Operands)(implicit vmContext: VmContext): Option[Pointer.ToVariable] OrElse IllegalEncodingError =
-    operands.destination match {
-      case target: Operand.Destination.Variable =>
-        reduceDestinationVariableOperand(target) && (Some(_))
+        case Operand.Source.Reference.InTheStack(stackIndex) =>
+          getVariable(vmContext.stack, stackIndex) && (
+            referenced => Variable.Pointer.ToVariable.InTheStack(referenced.name, stackIndex)
+            )
 
-      case Operand.Destination.Redirect(pointer, depth) =>
-        for {
-          firstPointer <- reduceDestinationVariableOperand(pointer)
-          redirected <- reduceRedirect(firstPointer, depth)
-        } yield Some(redirected)
+        case Operand.Source.Reference.InInstructionMemory(basicBlockName) =>
+          getBasicBlock(basicBlockName)
+      }
 
-      case Operand.Destination.Indexed(pointer, index) =>
-        for {
-          baseVariable <- reduceDestinationVariableOperand(pointer)
-          variable <- reduceIndexedVariableReferenceToPointer(baseVariable, index)
-        } yield Some(variable)
+    private def matchArrayBase(variable: Operand.Source.Variable): Pointer.ToVariable OrElse IllegalEncodingError =
+      variable match {
+        case Operand.Source.Variable.InTheHeap(index) =>
+          getVariable(vmContext.heap, index) && (x => Pointer.ToVariable.InTheHeap(x.name, index))
 
-      case Operand.Destination.NoDestination =>
-        Ok(None)
-    }
+        case Operand.Source.Variable.InTheStack(index) =>
+          getVariable(vmContext.stack, index) && (x => Pointer.ToVariable.InTheStack(x.name, index))
 
-  private def reduceSourceVariableOperand(operand: Operand.Source.Variable)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
-    operand match {
-      case Operand.Source.Variable.InTheHeap(heapIndex) =>
-        reduceSourceVariable("heap", vmContext.heap, heapIndex)
+        case _ =>
+          Err(InvalidPointerValue.InvalidArrayBase("<undef>"))
+      }
 
-      case Operand.Source.Variable.InTheStack(stackIndex) =>
-        reduceSourceVariable("stack", vmContext.stack, stackIndex)
-    }
+    @tailrec
+    private def reduceIndirect(variable: Variable, depth: Int): Variable OrElse IllegalEncodingError =
+      if (depth == 0) Ok(variable)
+      else variable match {
+        case pointer: Pointer.ToVariable =>
+          val varSet = pointer.getContainingVarSet(vmContext)
+          getVariable(varSet, pointer.index) match {
+            case err@Err(_) =>
+              err
 
-  private def reduceReferenceVariableOperand(reference: Operand.Source.Reference)(implicit vmContext: VmContext): Variable.Pointer OrElse IllegalEncodingError =
-    reference match {
-      case Operand.Source.Reference.InTheHeap(heapIndex) =>
-        reduceSourceVariable("heap", vmContext.heap, heapIndex) && (
-          referenced => Variable.Pointer.ToVariable.InTheHeap(referenced.name, heapIndex)
-          )
+            case Ok(target) =>
+              reduceIndirect(target, depth - 1)
+          }
 
-      case Operand.Source.Reference.InTheStack(stackIndex) =>
-        reduceSourceVariable("stack", vmContext.stack, stackIndex) && (
-          referenced => Variable.Pointer.ToVariable.InTheStack(referenced.name, stackIndex)
-          )
+        case _: Scalar =>
+          Err(InvalidIndirect(variable.name))
 
-      case Operand.Source.Reference.InInstructionMemory(basicBlockName) =>
-        vmContext.program.basicBlocks.get(basicBlockName) match {
-          case None =>
-            Err(InvalidBasicBlockReference(basicBlockName))
+        case _: Pointer.ToInstruction =>
+          Err(InvalidIndirect(variable.name))
+      }
 
-          case Some(basicBlock) =>
-            Ok(Variable.Pointer.ToInstruction(basicBlockName, VmProgram.Counter.atTheBeginningOf(basicBlock)))
-        }
-    }
+    private def reduceIndexed(root: Variable, offset: Int)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
+      root match {
+        case Variable.Pointer.ToVariable.InTheHeap(_, baseIndex) =>
+          getVariable(vmContext.heap, baseIndex + offset)
 
-  @tailrec
-  private def reduceIndirect(variable: Variable, depth: Int, operandId: Int)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
-    if (depth == 0) Ok(variable)
-    else variable match {
-      case pointer: Pointer.ToVariable =>
-        reduceTargetVariable(pointer.getContainingVarSet(vmContext), Some(pointer.name), pointer.index) match {
-          case err@Err(_) =>
-            err
+        case Variable.Pointer.ToVariable.InTheStack(_, baseIndex) =>
+          getVariable(vmContext.stack, baseIndex + offset)
 
-          case Ok(target) =>
-            reduceIndirect(target, depth - 1, operandId)
-        }
+        case _ =>
+          Err(InvalidPointerValue.InvalidArrayBase(root.name))
+      }
 
-      case _: Scalar =>
-        Err(InvalidIndirect(operandId))
 
-      case _: Pointer.ToInstruction =>
-        Err(InvalidIndirect(operandId))
-    }
+    private def getVariable(varSet: VarSet, variableIndex: Int): Variable OrElse IllegalEncodingError =
+      varSet.getVariable(variableIndex) match {
+        case Err(error) =>
+          Err(InvalidSourceReference(varSet.name, variableIndex, error))
 
-  private def reduceIndexedVariableReference(root: Variable, offset: Int)(implicit vmContext: VmContext): Variable OrElse IllegalEncodingError =
-    root match {
-      case Variable.Pointer.ToVariable.InTheHeap(_, baseIndex) =>
-        reduceSourceVariable("heap", vmContext.heap, baseIndex + offset)
+        case Ok(None) =>
+          Err(InvalidSourceReference(varSet.name, variableIndex, UndefinedVariable))
 
-      case Variable.Pointer.ToVariable.InTheStack(_, baseIndex) =>
-        reduceSourceVariable("stack", vmContext.stack, baseIndex + offset)
+        case Ok(Some(variable)) =>
+          Ok(variable)
+      }
 
-      case _ =>
-        Err(InvalidPointerValue.InvalidArrayBase(root.name))
-    }
+    private def getBasicBlock(basicBlockName: String): Pointer.ToInstruction OrElse InvalidBasicBlockReference =
+      vmContext.program.basicBlocks.get(basicBlockName) match {
+        case None =>
+          Err(InvalidBasicBlockReference(basicBlockName))
 
-  private def reduceIndexedVariableReferenceToPointer(root: Variable, offset: Int)(implicit vmContext: VmContext): Variable.Pointer.ToVariable OrElse IllegalEncodingError =
-    root match {
-      case Variable.Pointer.ToVariable.InTheHeap(_, baseIndex) =>
-        reduceDestinationVariable(s"${root.name}[$offset]", vmContext.heap, baseIndex + offset) && (v => Variable.Pointer.ToVariable.InTheHeap(v.name, baseIndex + offset))
+        case Some(basicBlock) =>
+          Ok(Variable.Pointer.ToInstruction(basicBlockName, VmProgram.Counter.atTheBeginningOf(basicBlock)))
+      }
+  }
 
-      case Variable.Pointer.ToVariable.InTheStack(_, baseIndex) =>
-        reduceDestinationVariable(s"${root.name}[$offset]", vmContext.stack, baseIndex + offset) && (v => Variable.Pointer.ToVariable.InTheStack(v.name, baseIndex + offset))
+  private object SourceOperandReducer {
+    def forOperand(operand: Operand.Source)(implicit vmContext: VmContext) = new SourceOperandReducer(operand)
+  }
 
-      case _ =>
-        Err(InvalidPointerValue.InvalidArrayBase(root.name))
-    }
+  private class DestinationOperandReducer(operand: Operand.Destination)(implicit vmContext: VmContext) {
+    def toVariableOrNone: Option[Pointer.ToVariable] OrElse IllegalEncodingError =
+      operand match {
+        case target: Operand.Destination.Variable =>
+          matchVariable(target) && (Some(_))
 
-  private def reduceTargetVariable(varSet: VarSet, pointerName: Option[String], variableIndex: Int): Variable OrElse IllegalEncodingError =
-    varSet.getVariable(variableIndex) match {
-      case Err(error) =>
-        Err(InvalidTargetReference(pointerName, variableIndex, Some(error)))
+        case Operand.Destination.Redirect(pointer, depth) =>
+          matchVariable(pointer) & (reduceRedirect(_, depth)) && (Some(_))
 
-      case Ok(None) =>
-        Err(InvalidTargetReference(pointerName, variableIndex, None))
+        case Operand.Destination.Indexed(pointer, index) =>
+          matchVariable(pointer) & (reduceIndexed(_, index)) && (Some(_))
 
-      case Ok(Some(variable)) =>
-        Ok(variable)
-    }
+        case Operand.Destination.NoDestination =>
+          Ok(None)
+      }
 
-  private def reduceSourceVariable(sourceName: String, varSet: VarSet, variableIndex: Int): Variable OrElse IllegalEncodingError =
-    varSet.getVariable(variableIndex) match {
-      case Err(error) =>
-        Err(InvalidSourceReference(sourceName, variableIndex, Some(error)))
+    private def matchVariable(operand: Operand.Destination.Variable): Pointer.ToVariable OrElse IllegalEncodingError =
+      operand match {
+        case Operand.Destination.Variable.InTheHeap(heapIndex) =>
+          getVariable(vmContext.heap, None, heapIndex) && (
+            v => Variable.Pointer.ToVariable.InTheHeap(s"&${v.name}", heapIndex)
+            )
 
-      case Ok(None) =>
-        Err(InvalidSourceReference(sourceName, variableIndex, None))
+        case Operand.Destination.Variable.InTheStack(stackIndex) =>
+          getVariable(vmContext.stack, None, stackIndex) && (
+            v => Variable.Pointer.ToVariable.InTheStack(s"&${v.name}", stackIndex)
+            )
+      }
 
-      case Ok(Some(variable)) =>
-        Ok(variable)
-    }
+    private def reduceIndexed(root: Variable, offset: Int): Variable.Pointer.ToVariable OrElse IllegalEncodingError =
+      root match {
+        case Variable.Pointer.ToVariable.InTheHeap(_, baseIndex) =>
+          getVariable(vmContext.heap, Some(s"${root.name}[$offset]"), baseIndex + offset) && (v => Variable.Pointer.ToVariable.InTheHeap(v.name, baseIndex + offset))
 
-  private def reduceDestinationVariable(sourceName: String, varSet: VarSet, variableIndex: Int): Variable OrElse IllegalEncodingError =
-    varSet.getVariable(variableIndex) match {
-      case Err(error) =>
-        Err(InvalidTargetReference(Some(sourceName), variableIndex, Some(error)))
+        case Variable.Pointer.ToVariable.InTheStack(_, baseIndex) =>
+          getVariable(vmContext.stack, Some(s"${root.name}[$offset]"), baseIndex + offset) && (v => Variable.Pointer.ToVariable.InTheStack(v.name, baseIndex + offset))
 
-      case Ok(None) =>
-        Err(InvalidTargetReference(Some(sourceName), variableIndex, None))
+        case _ =>
+          Err(InvalidPointerValue.InvalidArrayBase(root.name))
+      }
 
-      case Ok(Some(variable)) =>
-        Ok(variable)
-    }
+    @tailrec
+    private def reduceRedirect(pointer: Variable, depth: Int)(implicit vmContext: VmContext): Pointer.ToVariable OrElse IllegalEncodingError =
+      pointer match {
+        case ptr: Pointer.ToVariable =>
+          if (depth == 0)
+            Ok(ptr)
+          else getVariable(ptr.getContainingVarSet(vmContext), Some(ptr.name), ptr.index) match {
+            case Err(error) =>
+              Err(error)
 
-  private def reduceDestinationVariableOperand(operand: Operand.Destination.Variable)(implicit vmContext: VmContext): Pointer.ToVariable OrElse IllegalEncodingError =
-    operand match {
-      case Operand.Destination.Variable.InTheHeap(heapIndex) =>
-        reduceTargetVariable(vmContext.heap, None, heapIndex) && (
-          v => Variable.Pointer.ToVariable.InTheHeap(s"&${v.name}", heapIndex)
-          )
+            case Ok(nextPointer) =>
+              reduceRedirect(nextPointer, depth - 1)
+          }
 
-      case Operand.Destination.Variable.InTheStack(stackIndex) =>
-        reduceTargetVariable(vmContext.stack, None, stackIndex) && (
-          v => Variable.Pointer.ToVariable.InTheStack(s"&${v.name}", stackIndex)
-          )
-    }
+        case _ =>
+          Err(InvalidRedirect)
+      }
 
-  @tailrec
-  private def reduceRedirect(pointer: Variable, depth: Int)(implicit vmContext: VmContext): Pointer.ToVariable OrElse IllegalEncodingError =
-    pointer match {
-      case ptr: Pointer.ToVariable =>
-        if (depth == 0)
-          Ok(ptr)
-        else reduceTargetVariable(ptr.getContainingVarSet(vmContext), Some(ptr.name), ptr.index) match {
-          case Err(error) =>
-            Err(error)
+    private def getVariable(varSet: VarSet, pointerName: Option[String], variableIndex: Int): Variable OrElse IllegalEncodingError =
+      varSet.getVariable(variableIndex) match {
+        case Err(error) =>
+          Err(InvalidTargetReference(pointerName, variableIndex, Some(error)))
 
-          case Ok(nextPointer) =>
-            reduceRedirect(nextPointer, depth - 1)
-        }
+        case Ok(None) =>
+          Err(InvalidTargetReference(pointerName, variableIndex, None))
 
-      case _ =>
-        Err(InvalidRedirect)
-    }
+        case Ok(Some(variable)) =>
+          Ok(variable)
+      }
+  }
+
+  private object DestinationOperandReducer {
+    def forOperand(operand: Operand.Destination)(implicit vmContext: VmContext) = new DestinationOperandReducer(operand)
+  }
+
 }
 
 object OperandReducer {

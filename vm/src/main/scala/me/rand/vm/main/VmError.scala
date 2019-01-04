@@ -83,6 +83,9 @@ object VmError {
     sealed trait VmFetchOperandError extends IllegalEncodingError
 
     object VmFetchOperandError {
+      object UndefinedVariable extends VmFetchOperandError {
+        override def toString: String = "undefined variable"
+      }
 
       sealed trait InvalidPointerValue extends VmFetchOperandError
 
@@ -102,17 +105,8 @@ object VmError {
           }
         }
 
-        case class InvalidSourceReference(varSetName: String, variableIndex: Int, cause: Option[VmError]) extends InvalidPointerValue {
-          override def toString: String = {
-            val explanation = cause match {
-              case Some(error) =>
-                error.toString
-
-              case None =>
-                "value not set"
-            }
-            s"pointer [$varSetName=$variableIndex] is invalid: $explanation"
-          }
+        case class InvalidSourceReference(varSetName: String, variableIndex: Int, cause: VmError) extends InvalidPointerValue {
+          override def toString: String = s"pointer [$varSetName=$variableIndex] is invalid: $cause"
         }
 
         case class InvalidBasicBlockReference(basicBlockName: String) extends InvalidPointerValue {
@@ -120,9 +114,9 @@ object VmError {
             s"basic block pointer is invalid: no such basic block '$basicBlockName'"
         }
 
-        case class InvalidIndirect(operandId: Int) extends IllegalEncodingError {
+        case class InvalidIndirect(variableName: String) extends IllegalEncodingError {
           override def toString: String =
-            s"source operand #$operandId redirects to an unexpected type of variable"
+            s"source operand '$variableName' redirects to an unexpected type of variable"
         }
 
         case object InvalidRedirect extends IllegalEncodingError {

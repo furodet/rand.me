@@ -32,6 +32,8 @@ import me.rand.vm.main.VmError.VmContextError.VariableIndexOutOfBounds
 
 // Documentation: doc/vmarchitecture.md
 trait VarSet extends Iterable[Option[Variable]] {
+  def name: String
+
   private[engine] def putVariable(id: Int, v: Variable): Unit OrElse VmContextError
 
   def getVariable(id: Int): Option[Variable] OrElse VmContextError
@@ -39,7 +41,7 @@ trait VarSet extends Iterable[Option[Variable]] {
 
 object VarSet {
 
-  class InArray(val data: Array[Option[Variable]]) extends VarSet {
+  class InArray(val data: Array[Option[Variable]], val name: String) extends VarSet {
     override private[engine] def putVariable(id: Int, v: Variable): Unit OrElse VariableIndexOutOfBounds =
       try {
         data(id) = Some(v)
@@ -62,7 +64,7 @@ object VarSet {
 
   object InArray {
     // Note: we assume that nrVariables will never be negative or null.
-    def ofSize(nrVariables: Int) = new engine.VarSet.InArray(Array.fill(nrVariables)(None))
+    def ofSize(nrVariables: Int, name: String) = new engine.VarSet.InArray(Array.fill(nrVariables)(None), name)
   }
 
 }

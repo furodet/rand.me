@@ -31,8 +31,8 @@ import me.rand.simulator.test.BaseSpec
 import me.rand.vm.engine.{VarSet, Variable, VmContext}
 import me.rand.vm.main.VmError.VmContextError.{EmptyStackAccess, VariableIndexOutOfBounds}
 import me.rand.vm.main.VmError.VmExecutionError.IllegalEncodingError.UnspecifiedDestinationOperand
-import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue
 import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue._
+import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.UndefinedVariable
 
 // This is the best opportunity to validate operand translation, since copy accepts any kind
 // of input variable and writes to any kind of output.
@@ -407,7 +407,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidSourceReference("heap", 1, None)) => true
+      case SimulatorError.FromVmError(InvalidSourceReference("heap", 1, UndefinedVariable)) => true
     }
   }
 
@@ -420,7 +420,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidSourceReference("heap", _, Some(VariableIndexOutOfBounds(VmContext.maximumNumberOfVariablesInHeap)))) => true
+      case SimulatorError.FromVmError(InvalidSourceReference("heap", _, VariableIndexOutOfBounds(VmContext.maximumNumberOfVariablesInHeap))) => true
     }
   }
 
@@ -450,7 +450,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidSourceReference("stack", 0, None)) => true
+      case SimulatorError.FromVmError(InvalidSourceReference("stack", 0, UndefinedVariable)) => true
     }
   }
 
@@ -464,7 +464,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidSourceReference("stack", _, Some(VariableIndexOutOfBounds(1)))) => true
+      case SimulatorError.FromVmError(InvalidSourceReference("stack", _, VariableIndexOutOfBounds(1))) => true
     }
   }
 
@@ -525,7 +525,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidSourceReference("heap", 2, None)) => true
+      case SimulatorError.FromVmError(InvalidSourceReference("heap", 2, UndefinedVariable)) => true
     }
   }
 
@@ -539,7 +539,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidSourceReference("heap", VmContext.maximumNumberOfVariablesInHeap, Some(VariableIndexOutOfBounds(VmContext.maximumNumberOfVariablesInHeap)))) => true
+      case SimulatorError.FromVmError(InvalidSourceReference("heap", VmContext.maximumNumberOfVariablesInHeap, VariableIndexOutOfBounds(VmContext.maximumNumberOfVariablesInHeap))) => true
     }
   }
 
@@ -554,7 +554,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidIndirect(0)) => true
+      case SimulatorError.FromVmError(InvalidIndirect("ptr")) => true
     }
   }
 
@@ -589,7 +589,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidSourceReference("stack", 0, None)) => true
+      case SimulatorError.FromVmError(InvalidSourceReference("stack", 0, UndefinedVariable)) => true
     }
   }
 
@@ -603,7 +603,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidSourceReference("stack", 1, Some(VariableIndexOutOfBounds(1)))) => true
+      case SimulatorError.FromVmError(InvalidSourceReference("stack", 1, VariableIndexOutOfBounds(1))) => true
     }
   }
 
@@ -616,7 +616,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidSourceReference("stack", 0, Some(EmptyStackAccess(_)))) => true
+      case SimulatorError.FromVmError(InvalidSourceReference("stack", 0, EmptyStackAccess(_))) => true
     }
   }
 
@@ -632,7 +632,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidIndirect(0)) => true
+      case SimulatorError.FromVmError(InvalidIndirect("ptr")) => true
     }
   }
 
@@ -664,7 +664,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidPointerValue.InvalidSourceReference("heap", 1, None)) => true
+      case SimulatorError.FromVmError(InvalidSourceReference("heap", 1, UndefinedVariable)) => true
     }
   }
 
@@ -679,7 +679,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidPointerValue.InvalidSourceReference("heap", 2, None)) => true
+      case SimulatorError.FromVmError(InvalidSourceReference("heap", 2, UndefinedVariable)) => true
     }
   }
 
@@ -695,7 +695,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidPointerValue.InvalidSourceReference("heap", VmContext.maximumNumberOfVariablesInHeap, Some(VariableIndexOutOfBounds(VmContext.maximumNumberOfVariablesInHeap)))) => true
+      case SimulatorError.FromVmError(InvalidSourceReference("heap", VmContext.maximumNumberOfVariablesInHeap, VariableIndexOutOfBounds(VmContext.maximumNumberOfVariablesInHeap))) => true
     }
   }
 
@@ -729,7 +729,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidPointerValue.InvalidSourceReference("stack", 0, None)) => true
+      case SimulatorError.FromVmError(InvalidSourceReference("stack", 0, UndefinedVariable)) => true
     }
   }
 
@@ -744,7 +744,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidPointerValue.InvalidSourceReference("stack", 1, None)) => true
+      case SimulatorError.FromVmError(InvalidSourceReference("stack", 1, UndefinedVariable)) => true
     }
   }
 
@@ -757,7 +757,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidPointerValue.InvalidSourceReference("stack", 0, Some(EmptyStackAccess(_)))) => true
+      case SimulatorError.FromVmError(InvalidSourceReference("stack", 0, EmptyStackAccess(_))) => true
     }
   }
 
@@ -772,7 +772,7 @@ class CopySpec extends BaseSpec {
         """.stripMargin
       )
     ).thenVerify {
-      case SimulatorError.FromVmError(InvalidPointerValue.InvalidSourceReference("stack", 1, Some(VariableIndexOutOfBounds(1)))) => true
+      case SimulatorError.FromVmError(InvalidSourceReference("stack", 1, VariableIndexOutOfBounds(1))) => true
     }
   }
 
