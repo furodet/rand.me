@@ -776,8 +776,6 @@ class CopySpec extends BaseSpec {
     }
   }
 
-  // TODO: source = instruction pointer
-
   private def hasHeapVariableSetToImmediate(nameValue: (String, Int), variableIndex: Int, vmContext: VmContext): Boolean =
     testVariable(vmContext.heap, variableIndex)(nameValue._1, nameValue._2) {
       case Variable.Scalar(name, value) => (name, value.toInt)
