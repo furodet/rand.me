@@ -41,7 +41,7 @@ class VmStack(val frames: List[VmFrame]) extends VarSet {
     new VmStack(newFrame +: frames)
 
   private[engine] def createFrameOfSize(nrVariables: Int): VmStack =
-    push(new VmFrame(VarSet.InArray.ofSize(nrVariables, s"frame#${frames.length}")))
+    push(new VmFrame(VarSet.InArray.called(s"frame#${frames.length}").ofSize(nrVariables)))
 
   private[engine] def popFrame(): VmStack OrElse VmContextError =
     for {

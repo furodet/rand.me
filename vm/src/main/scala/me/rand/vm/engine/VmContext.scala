@@ -101,7 +101,7 @@ object VmContext {
 
   def usingProfile(vmProfile: VmProfile): VmContext = {
     val vmTypes = VmTypes.forMachineWordByteLength(vmProfile.machineWordByteLen)
-    new VmContext(vmTypes, VarSet.InArray.ofSize(vmProfile.varSetSize, "heap"), VmStack.empty, VmProgram.empty, None)
+    new VmContext(vmTypes, VarSet.InArray.called("heap").ofSize(vmProfile.varSetSize), VmStack.empty, VmProgram.empty, None)
   }
 
   def usingProfileString(profileString: String): VmContext OrElse VmProfileStringError =

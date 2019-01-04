@@ -63,8 +63,13 @@ object VarSet {
   }
 
   object InArray {
-    // Note: we assume that nrVariables will never be negative or null.
-    def ofSize(nrVariables: Int, name: String) = new engine.VarSet.InArray(Array.fill(nrVariables)(None), name)
+
+    class InArrayBuilder(name: String) {
+      // Note: we assume that nrVariables will never be negative or null.
+      def ofSize(nrVariables: Int) = new engine.VarSet.InArray(Array.fill(nrVariables)(None), name)
+    }
+
+    def called(name: String) = new InArrayBuilder(name)
   }
 
 }
