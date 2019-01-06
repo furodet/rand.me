@@ -38,7 +38,7 @@ sealed trait Comparator {
 object Comparator {
 
   object ?= extends Comparator {
-    override def name: String = "?="
+    override def name: String = "?=="
 
     override def aluComparator: (VmRegister, VmRegister) => Boolean = Alu.isEqual
 
@@ -46,7 +46,7 @@ object Comparator {
   }
 
   object ?≠ extends Comparator {
-    override def name: String = "?≠"
+    override def name: String = "?!="
 
     override def aluComparator: (VmRegister, VmRegister) => Boolean = Alu.isNotEqual
 
@@ -70,7 +70,7 @@ object Comparator {
   }
 
   object ?≤ extends Comparator {
-    override def name: String = "?≤"
+    override def name: String = "?<="
 
     override def aluComparator: (VmRegister, VmRegister) => Boolean = Alu.isLowerOrEqual
 
@@ -78,7 +78,7 @@ object Comparator {
   }
 
   object ?≥ extends Comparator {
-    override def name: String = "?≥"
+    override def name: String = "?>="
 
     override def aluComparator: (VmRegister, VmRegister) => Boolean = Alu.isGreaterOrEqual
 
