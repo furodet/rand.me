@@ -76,7 +76,7 @@ object VmTypes {
   def forMachineWordByteLength(byteLen: Int): VmTypes =
     new VmTypes(new VmTypeFactory(byteLen).build)
 
-  class VmType(val byteLen: Int, val isSigned: Boolean) {
+  class VmType(val byteLen: Int, val isSigned: Boolean, unsignedCounterpart: Option[VmType]) {
     def bitLen: Int = byteLen * 8
 
     lazy val isUnsigned: Boolean = !isSigned
@@ -91,11 +91,7 @@ object VmTypes {
 
     def <=>(other: VmType): Boolean = hasSameByteLenAs(other) && hasSameSignAs(other)
 
-    def <~>(other: VmType): Boolean = hasSameByteLenAs(other) && !hasSameSignAs(other)
-
-    def <(other: VmType): Boolean = byteLen < other.byteLen
-
-    def >(other: VmType): Boolean = byteLen > other.byteLen
+    def asUnsigned: VmType = unsignedCounterpart.getOrElse(this)
 
     override def toString: String = name
   }
@@ -111,8 +107,8 @@ object VmTypes {
     private def buildAndRegisterSignedAndUnsignedVmType(byteLen: Int, vmTypes: Map[String, VmType]): Map[String, VmType] =
       if (byteLen > machineWordByteLen) vmTypes
       else {
-        val unsignedType = new VmType(byteLen, _unsigned)
-        val signedType = new VmType(byteLen, _signed)
+        val unsignedType = new VmType(byteLen, _unsigned, None)
+        val signedType = new VmType(byteLen, _signed, Some(unsignedType))
         val newVmTypes = (vmTypes + (unsignedType.name -> unsignedType)) + (signedType.name -> signedType)
         buildAndRegisterSignedAndUnsignedVmType(byteLen + 1, newVmTypes)
       }

@@ -37,7 +37,7 @@ trait VmRegister {
 }
 
 trait VmRegisterOperations[T <: VmRegister] {
-  def build(vmType: VmType, value: Array[Byte]): T
+  def buildFromBigEndian(vmType: VmType, value: Array[Byte]): T
 
   def bitFlip(x: T): T
 
@@ -67,7 +67,7 @@ trait VmRegisterOperations[T <: VmRegister] {
 object VmRegister {
   def normalize(vmType: VmType, value: NormalizedNumber): VmRegister =
   // TODO: to speed up processing, use specific types of VmRegister for given lengths (e.g. longs for x32...)
-    LargeNumberOperations.build(vmType, value.asBigEndianByteArray)
+    LargeNumberOperations.buildFromBigEndian(vmType, value.asBigEndianByteArray)
 
   class VmRegisterBuilder(vmType: VmType) {
     def withValue(data: NormalizedNumber): VmRegister = normalize(vmType, data)

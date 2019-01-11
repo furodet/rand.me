@@ -61,7 +61,7 @@ case class LargeNumber(vmType: VmType, value: Array[Byte]) extends VmRegister {
 }
 
 case object LargeNumberOperations extends VmRegisterOperations[LargeNumber] {
-  override def build(vmType: VmType, value: Array[Byte]): LargeNumber = {
+  override def buildFromBigEndian(vmType: VmType, value: Array[Byte]): LargeNumber = {
     def copyBigEndian(source: Array[Byte], destination: Array[Byte]): Array[Byte] = {
       // Example:
       // 0  1  2  3       0  1  2  3  4  5  6  7    0  1  2  3  4  5  6  7
@@ -89,23 +89,50 @@ case object LargeNumberOperations extends VmRegisterOperations[LargeNumber] {
     LargeNumber(vmType, data.reverse)
   }
 
-  def equalize(x: LargeNumber, y: LargeNumber): (LargeNumber, LargeNumber, VmRegisterOperations[LargeNumber]) =
-    (x.vmType, x.vmType) match {
+  def equalize(x: LargeNumber, y: LargeNumber): (LargeNumber, LargeNumber, VmRegisterOperations[LargeNumber]) = {
+    def cast_y2x = (x, buildFromBigEndian(x.vmType, y.value.reverse), this)
+
+    def cast_x2y = (buildFromBigEndian(y.vmType, x.value.reverse), y, this)
+    // Applying rules of STDC 6.3.1.8.
+    (x.vmType, y.vmType) match {
       case (t0, t1) if t0 <=> t1 =>
+        // ... If both operands have the same type, then no further conversion is needed.
         (x, y, this)
 
-      case (t0, t1) if t0 <~> t1 && t0.isUnsigned =>
-        (x, build(t0, y.value), this)
+      case (tx, ty) if tx.hasSameSignAs(ty) =>
+        // ... if both operands have signed integer types or both have unsigned integer types,
+        //     the operand with the type of lesser integer conversion rank
+        //       is converted to the type of the operand with greater rank.
+        if (x.vmType.byteLen > y.vmType.byteLen)
+          cast_y2x
+        else
+          cast_x2y
 
-      case (t0, t1) if t0 <~> t1 && t1.isUnsigned =>
-        (build(t1, x.value), y, this)
-
-      case (t0, t1) if t0 < t1 =>
-        (build(t1, x.value), y, this)
-
-      case (t0, t1) if t0 > t1 =>
-        (x, build(t0, y.value), this)
+      case (tx, ty) =>
+        // ... if the operand that has unsigned integer type has rank greater or equal
+        //       to the rank of the type of the other operand,
+        //     then the operand with signed integer type is converted to the type
+        //       of the operand with unsigned integer type.
+        if (tx.isUnsigned && tx.byteLen >= ty.byteLen)
+          cast_y2x
+        else if (ty.isUnsigned && ty.byteLen >= tx.byteLen)
+          cast_x2y
+        // ... if the type of the operand with signed integer type can represent
+        //       all of the values of the type of the operand with unsigned integer type,
+        //     then the operand with unsigned integer type is converted
+        //       to the type of the operand with signed integer type.
+        else if (tx.isSigned && tx.byteLen > ty.byteLen)
+          cast_y2x
+        else if (ty.isSigned && ty.byteLen > ty.byteLen)
+          cast_x2y
+        // ... both operands are converted to the unsigned integer type corresponding to the type of the operand
+        //       with signed integer type.
+        else if (tx.isSigned)
+          (buildFromBigEndian(x.vmType.asUnsigned, x.value.reverse), buildFromBigEndian(x.vmType.asUnsigned, y.value.reverse), this)
+        else
+          (buildFromBigEndian(y.vmType.asUnsigned, x.value.reverse), buildFromBigEndian(y.vmType.asUnsigned, y.value.reverse), this)
     }
+  }
 
   override def bitFlip(x: LargeNumber): LargeNumber = {
     val result = x.value.map(b => (b ^ 0xff).toByte)
@@ -203,5 +230,5 @@ case object LargeNumberOperations extends VmRegisterOperations[LargeNumber] {
     LargeNumber(x.vmType, z)
   }
 
-  override def cast(x: LargeNumber, t: VmType): LargeNumber = build(t, x.value.reverse)
+  override def cast(x: LargeNumber, t: VmType): LargeNumber = buildFromBigEndian(t, x.value.reverse)
 }
