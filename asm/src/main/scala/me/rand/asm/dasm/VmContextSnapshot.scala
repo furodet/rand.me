@@ -31,7 +31,7 @@ import scala.collection.mutable.ListBuffer
 
 class VmContextSnapshot(vmContext: VmContext) {
   def generics: List[String] = List(
-    s"TYPES: ${vmContext.vmTypes}",
+    s"PROFILE: ${vmContext.profile}",
     s"STATE: ${explainState(vmContext.exitCode)}"
   )
 

@@ -91,6 +91,11 @@ object AsmError {
         s"$lineNumber: invalid machine specification '$text': $cause"
     }
 
+    case class InvalidPointerType(text: String, lineNumber: Int) extends AsmParserError {
+      override def toString: String =
+        s"$lineNumber: invalid type of pointer '$text'"
+    }
+
     case class UnspecifiedMachineProfile(lineNumber: Int) extends AsmParserError {
       override def toString: String =
         s"$lineNumber: no machine specification provided - could not decode type"

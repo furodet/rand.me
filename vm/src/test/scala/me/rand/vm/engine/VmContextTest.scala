@@ -171,7 +171,7 @@ class VmContextTest extends FlatSpec {
   }
 
   private def aVariable(c: VmContext) = {
-    Scalar("x", VmRegister.ofType(c.vmTypes.select(1, isSigned = true).get).withValue(0L))
+    Scalar("x", VmRegister.ofType(c.profile.vmTypes.select(1, isSigned = true).get).withValue(0L))
   }
 
   private def givenAValidVmContext(action: VmContext => Unit): Unit =

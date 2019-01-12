@@ -128,6 +128,9 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
             Err(AsmParserError.InvalidMachineSpecification(args.mkString(" "), cause, asmParserContext.lineNumber))
         })
 
+      case ".machptr" if args.length == 2 && matchesVmType(args(1)) =>
+        applyMachPointer(args.head, args(1))
+
       case directive if directive.startsWith(".") =>
         logger >> s"applying directive '$directive'"
         directive match {
@@ -161,6 +164,26 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
               (operands => AsmToken.Instruction(InstructionInstance(instruction, operands), asmParserContext.lineNumber))
         }
     }
+
+  private def applyMachPointer(pointerId: String, pointerType: String)(implicit logger: Logger, asmParserContext: AsmParserContext): AsmToken OrElse AsmParserError = {
+    logger >> s"applying machine heap for pointer '$pointerId' = $pointerType"
+    decodeType(pointerType, asmParserContext.vmContext, asmParserContext.lineNumber) & {
+      t =>
+        pointerId match {
+          case "instruction" =>
+            Ok(AsmToken.MachPtr.ToInstruction(t, asmParserContext.lineNumber))
+
+          case "heap" =>
+            Ok(AsmToken.MachPtr.ToHeapVariable(t, asmParserContext.lineNumber))
+
+          case "stack" =>
+            Ok(AsmToken.MachPtr.ToStackVariable(t, asmParserContext.lineNumber))
+
+          case _ =>
+            Err(AsmParserError.InvalidPointerType(pointerId, asmParserContext.lineNumber))
+        }
+    }
+  }
 
   private def verifyInstructionSetVersion(string: String, lineNumber: Int): Unit OrElse AsmParserError =
     InstructionSetVersion.fromString(string) match {
@@ -349,7 +372,7 @@ class AsmParser(input: Iterable[String], prefix: Option[String]) {
 
   private def decodeType(radix: String, isSigned: Boolean, vmContext: VmContext, lineNumber: Int): VmType OrElse AsmParserError =
     decodeTypeLen(radix, lineNumber) & {
-      vmContext.vmTypes.select(_, isSigned) match {
+      vmContext.profile.vmTypes.select(_, isSigned) match {
         case None =>
           Err(AsmParserError.InvalidTypeLen(radix, lineNumber))
 

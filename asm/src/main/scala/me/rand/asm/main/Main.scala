@@ -28,7 +28,7 @@ package me.rand.asm.main
 import java.io.{FileOutputStream, IOException, PrintWriter}
 
 import me.rand.asm.builder.AsmProgramBuilder
-import me.rand.asm.out.VmContextDump
+import me.rand.asm.dasm.VmContextSnapshot
 import me.rand.asm.parser.{AsmParser, AsmToken}
 import me.rand.commons.idioms.Logger
 import me.rand.commons.idioms.Logger._
@@ -99,7 +99,8 @@ object Main {
   private def printVmContext(vmContext: VmContext, out: Option[java.io.File]): Unit OrElse AsmError =
     for {
       writer <- openWriterTo(out)
-      _ = VmContextDump.forContext(vmContext).into(writer)
+      snapshot = VmContextSnapshot.of(vmContext).all
+      _ = writer.print(snapshot)
       _ = writer.flush()
       _ = writer.close()
     } yield ()

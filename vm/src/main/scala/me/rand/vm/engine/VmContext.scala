@@ -26,14 +26,16 @@
 package me.rand.vm.engine
 
 import me.rand.commons.idioms.Status._
+import me.rand.vm.engine
+import me.rand.vm.engine.VmTypes.VmType
 import me.rand.vm.main.VmError._
 
 // Documentation: doc/vmarchitecture.md
-case class VmContext(vmTypes: VmTypes,
-                     heap: VarSet,
+case class VmContext(heap: VarSet,
                      stack: VmStack,
                      program: VmProgram,
-                     exitCode: Option[Int]) {
+                     exitCode: Option[Int],
+                     profile: VmContext.VmContextProfile) {
   def createFrameOfSize(nrVariables: Int): VmContext = copy(stack = stack.createFrameOfSize(nrVariables))
 
   def popFrame(): VmContext OrElse VmContextError =
@@ -56,6 +58,11 @@ case class VmContext(vmTypes: VmTypes,
 
   def putStackVariable(id: Int, v: Variable): VmContext OrElse VmContextError =
     stack.putVariable(id, v) && (_ => this)
+
+  def withProfile(newProfile: VmContext.VmContextProfile): VmContext = copy(profile = newProfile)
+
+  def withPointerTypes(newTypes: VmContext.VmContextProfile.PointerTypes): VmContext =
+    withProfile(profile.withPointerTypes(newTypes))
 }
 
 object VmContext {
@@ -101,9 +108,40 @@ object VmContext {
 
   def usingProfile(vmProfile: VmProfile): VmContext = {
     val vmTypes = VmTypes.forMachineWordByteLength(vmProfile.machineWordByteLen)
-    new VmContext(vmTypes, VarSet.InArray.called("heap").ofSize(vmProfile.varSetSize), VmStack.empty, VmProgram.empty, None)
+    new VmContext(VarSet.InArray.called("heap").ofSize(vmProfile.varSetSize),
+      VmStack.empty,
+      VmProgram.empty,
+      None,
+      VmContextProfile.default(vmTypes)
+    )
   }
 
   def usingProfileString(profileString: String): VmContext OrElse VmProfileStringError =
     VmProfile.fromString(profileString) && { profile => VmContext.usingProfile(profile) }
+
+  class VmContextProfile(val vmTypes: VmTypes, val pointerTypes: VmContextProfile.PointerTypes) {
+    def withPointerTypes(sizes: VmContextProfile.PointerTypes): VmContextProfile =
+      new VmContextProfile(vmTypes, sizes)
+
+    override def toString: String = s"${vmTypes.toString}:${pointerTypes.toString}"
+  }
+
+  object VmContextProfile {
+    def default(vmTypes: VmTypes) = new VmContextProfile(
+      vmTypes,
+      new engine.VmContext.VmContextProfile.PointerTypes(vmTypes.maxUnsignedType, vmTypes.maxUnsignedType, vmTypes.maxUnsignedType)
+    )
+
+    class PointerTypes(val toInstruction: VmType, val toHeap: VmType, val toStack: VmType) {
+      def withInstructionPointerType(newSize: VmType): PointerTypes = new PointerTypes(newSize, toHeap, toStack)
+
+      def withHeapPointerType(newSize: VmType): PointerTypes = new PointerTypes(toInstruction, newSize, toStack)
+
+      def withStackPointerType(newSize: VmType): PointerTypes = new PointerTypes(toInstruction, toHeap, newSize)
+
+      override def toString: String = s"iptr=$toInstruction:hptr=$toHeap:sptr=$toStack)"
+    }
+
+  }
+
 }

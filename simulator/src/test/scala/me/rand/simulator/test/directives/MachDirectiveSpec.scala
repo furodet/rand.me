@@ -134,7 +134,7 @@ class MachDirectiveSpec extends BaseSpec {
        """.stripMargin
     ).thenVerify {
       case vmContext =>
-        vmTypesMapExactly(vmContext.vmTypes, 1)
+        vmTypesMapExactly(vmContext.profile.vmTypes, 1)
     }
   }
 
@@ -148,7 +148,7 @@ class MachDirectiveSpec extends BaseSpec {
        """.stripMargin
     ).thenVerify {
       case vmContext =>
-        vmTypesMapExactly(vmContext.vmTypes, 1, 2, 3, 4, 5, 6, 7, 8)
+        vmTypesMapExactly(vmContext.profile.vmTypes, 1, 2, 3, 4, 5, 6, 7, 8)
     }
   }
 
@@ -162,8 +162,8 @@ class MachDirectiveSpec extends BaseSpec {
        """.stripMargin
     ).thenVerify {
       case vmContext =>
-        vmTypesRecognize(vmContext.vmTypes, "u8", 1, expectedIsSigned = false) &&
-          vmTypesRecognize(vmContext.vmTypes, "s8", 1, expectedIsSigned = true)
+        vmTypesRecognize(vmContext.profile.vmTypes, "u8", 1, expectedIsSigned = false) &&
+          vmTypesRecognize(vmContext.profile.vmTypes, "s8", 1, expectedIsSigned = true)
     }
   }
 
@@ -177,7 +177,7 @@ class MachDirectiveSpec extends BaseSpec {
        """.stripMargin
     ).thenVerify {
       case vmContext =>
-        vmContext.vmTypes.valueOf("u16").isLeft
+        vmContext.profile.vmTypes.valueOf("u16").isLeft
     }
   }
 

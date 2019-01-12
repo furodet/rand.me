@@ -69,7 +69,7 @@ object Compare {
 
 
   private def booleanToScalar(b: Boolean)(vmContext: VmContext): Scalar = {
-    val asRegister = VmRegister.ofType(vmContext.vmTypes.minUnsignedType)
+    val asRegister = VmRegister.ofType(vmContext.profile.vmTypes.minUnsignedType)
       .withValue(if (b) 1 else 0)
     Scalar.anonymous(asRegister)
   }

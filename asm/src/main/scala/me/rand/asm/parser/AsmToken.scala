@@ -26,6 +26,7 @@
 package me.rand.asm.parser
 
 import me.rand.vm.engine.VmProgram.InstructionInstance
+import me.rand.vm.engine.VmTypes.VmType
 import me.rand.vm.engine.{Variable, VmContext}
 
 sealed trait AsmToken {
@@ -36,7 +37,26 @@ object AsmToken {
 
   case class Mach(vmContext: VmContext, lineNumber: Int) extends AsmToken {
     override def toString: String =
-      s"@$lineNumber ${vmContext.vmTypes}"
+      s"@$lineNumber ${vmContext.profile.vmTypes}"
+  }
+
+  sealed trait MachPtr[PTRT <: Variable.Pointer] extends AsmToken {
+    def nativeType: VmType
+
+    def lineNumber: Int
+
+    override def toString: String =
+      s"@$lineNumber $nativeType"
+  }
+
+  object MachPtr {
+
+    case class ToInstruction(nativeType: VmType, lineNumber: Int) extends MachPtr[Variable.Pointer.ToInstruction]
+
+    case class ToHeapVariable(nativeType: VmType, lineNumber: Int) extends MachPtr[Variable.Pointer.ToVariable.InTheHeap]
+
+    case class ToStackVariable(nativeType: VmType, lineNumber: Int) extends MachPtr[Variable.Pointer.ToVariable.InTheStack]
+
   }
 
   case class Instruction(instance: InstructionInstance, lineNumber: Int) extends AsmToken {

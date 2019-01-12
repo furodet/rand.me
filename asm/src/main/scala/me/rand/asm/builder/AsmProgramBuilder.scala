@@ -85,6 +85,18 @@ class AsmProgramBuilder(initialContext: VmContext) {
             // The VM is already setup with its specification
             Ok(context)
 
+          case AsmToken.MachPtr.ToInstruction(nativeType, _) =>
+            val newPointerTypes = context.vmContext.profile.pointerTypes.withInstructionPointerType(nativeType)
+            Ok(context.withVmContext(context.vmContext.withPointerTypes(newPointerTypes)))
+
+          case AsmToken.MachPtr.ToHeapVariable(nativeType, _) =>
+            val newPointerTypes = context.vmContext.profile.pointerTypes.withHeapPointerType(nativeType)
+            Ok(context.withVmContext(context.vmContext.withPointerTypes(newPointerTypes)))
+
+          case AsmToken.MachPtr.ToStackVariable(nativeType, _) =>
+            val newPointerTypes = context.vmContext.profile.pointerTypes.withStackPointerType(nativeType)
+            Ok(context.withVmContext(context.vmContext.withPointerTypes(newPointerTypes)))
+
           case instruction: AsmToken.Instruction =>
             context.getCurrentBasicBlockOrError(instruction.lineNumber) && (context.withInstruction(instruction.instance, _))
 

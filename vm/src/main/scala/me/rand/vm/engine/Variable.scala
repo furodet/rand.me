@@ -69,7 +69,7 @@ object Variable {
       val nrEncodingBytes = (nrEncodingBits + 7) / 8
       // It is safe to promote to the proper byte length: no machine would support N bytes and
       // log2(N) is not encodable on a machine word.
-      VmRegister.normalize(vmContext.vmTypes.select(nrEncodingBytes, isSigned = false).get, value)
+      VmRegister.normalize(vmContext.profile.vmTypes.select(nrEncodingBytes, isSigned = false).get, value)
     }
   }
 
