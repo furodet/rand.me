@@ -23,28 +23,50 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.vm.is
+package me.rand.simulator.test.instructions
 
 import me.rand.commons.idioms.Status._
-import me.rand.vm.alu.Alu
-import me.rand.vm.engine.Instruction
-import me.rand.vm.engine.Variable.{Pointer, Scalar}
+import me.rand.simulator.test.BaseSpec
+import me.rand.vm.engine.Variable.Scalar
+import me.rand.vm.engine.VmContext
 
-object Increment {
-  lazy val shortName = "++"
+class IncrementSpec extends BaseSpec {
+  private def main(body: String): String =
+    s"""
+       | $aStandardMachineConfiguration
+       | .bb main
+     """.stripMargin +
+      body +
+      s"""
+         |  exit (00:u8)
+         | .boot main
+     """.stripMargin
 
-  def apply(): Instruction =
-    Instruction.called(shortName)
-      .|(
-        Instruction.Monadic(classOf[Scalar]).withComputeFunction {
-          (x, _, _) =>
-            Ok(Scalar.anonymous(Alu.increment(x.value)))
-        }.withDefaultUpdateFunction
+  "++" should "pass %x > %y" in {
+    successfullyAssembleAndExecute(
+      main(body =
+        s"""
+           | .var xu8 %0 u8
+           | .var xs8 %1 s8
+           | copy (ff:u8) > %0
+           | copy (fe:s8) > %1
+           | ++ %0 > %0
+           | ++ %1 > %1
+         """.stripMargin
       )
-      .|(
-        Instruction.Monadic(classOf[Pointer.ToVariable]).withComputeFunction {
-          (x, vmContext, _) =>
-            Ok(Scalar.anonymous(x.index + 1, vmContext))
-        }.withDefaultUpdateFunction
-      )
+    ).thenVerify {
+      case vmContext =>
+        hasHeapVariable(0, 0, vmContext) &&
+          hasHeapVariable(1, -1, vmContext)
+    }
+  }
+
+  private def hasHeapVariable(index: Int, value: Int, vmContext: VmContext): Boolean =
+    vmContext.heap.getVariable(index) match {
+      case Ok(Some(Scalar(_, result))) =>
+        result.toInt == value
+
+      case _ =>
+        false
+    }
 }
