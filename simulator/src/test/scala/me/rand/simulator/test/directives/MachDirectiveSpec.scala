@@ -148,7 +148,7 @@ class MachDirectiveSpec extends BaseSpec {
        """.stripMargin
     ).thenVerify {
       case vmContext =>
-        vmTypesMapExactly(vmContext.profile.vmTypes, 1, 2, 3, 4, 5, 6, 7, 8)
+        vmTypesMapExactly(vmContext.profile.vmTypes, 1, 2, 4, 8)
     }
   }
 

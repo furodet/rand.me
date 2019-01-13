@@ -31,7 +31,6 @@ import me.rand.vm.engine.Variable.Scalar
 import me.rand.vm.engine.VmContext
 
 class SizeofSpec extends BaseSpec {
-  // TODO: for types u/s24,40,48;56 I'm quite sure that sizeof does not return the number of bytes! To be tested
   "sizeof" should "pass %x > %y (scalar types)" in {
     successfullyAssembleAndExecute(
       s"""
@@ -41,18 +40,10 @@ class SizeofSpec extends BaseSpec {
          |   .var xs8  %1 s8
          |   .var xu16 %2 u16
          |   .var xs16 %3 s16
-         |   .var xu24 %4 u24
-         |   .var xs24 %5 s24
-         |   .var xu32 %6 u32
-         |   .var xs32 %7 s32
-         |   .var xu40 %8 u40
-         |   .var xs40 %9 s40
-         |   .var xu48 %10 u48
-         |   .var xs48 %11 s48
-         |   .var xu56 %12 u56
-         |   .var xs56 %13 s56
-         |   .var xu64 %14 u64
-         |   .var xs64 %15 s64
+         |   .var xu32 %4 u32
+         |   .var xs32 %5 s32
+         |   .var xu64 %6 u64
+         |   .var xs64 %7 s64
          |   sizeof %0 > %0
          |   sizeof %1 > %1
          |   sizeof %2 > %2
@@ -61,14 +52,6 @@ class SizeofSpec extends BaseSpec {
          |   sizeof %5 > %5
          |   sizeof %6 > %6
          |   sizeof %7 > %7
-         |   sizeof %8 > %8
-         |   sizeof %9 > %9
-         |   sizeof %10 > %10
-         |   sizeof %11 > %11
-         |   sizeof %12 > %12
-         |   sizeof %13 > %13
-         |   sizeof %14 > %14
-         |   sizeof %15 > %15
          |   exit (00:u8)
          | .boot main
       """.stripMargin
@@ -78,18 +61,10 @@ class SizeofSpec extends BaseSpec {
           hasHeapVariable(1, 1, vmContext) &&
           hasHeapVariable(2, 2, vmContext) &&
           hasHeapVariable(3, 2, vmContext) &&
-          hasHeapVariable(4, 3, vmContext) &&
-          hasHeapVariable(5, 3, vmContext) &&
-          hasHeapVariable(6, 4, vmContext) &&
-          hasHeapVariable(7, 4, vmContext) &&
-          hasHeapVariable(8, 5, vmContext) &&
-          hasHeapVariable(9, 5, vmContext) &&
-          hasHeapVariable(10, 6, vmContext) &&
-          hasHeapVariable(11, 6, vmContext) &&
-          hasHeapVariable(12, 7, vmContext) &&
-          hasHeapVariable(13, 7, vmContext) &&
-          hasHeapVariable(14, 8, vmContext) &&
-          hasHeapVariable(15, 8, vmContext)
+          hasHeapVariable(4, 4, vmContext) &&
+          hasHeapVariable(5, 4, vmContext) &&
+          hasHeapVariable(6, 8, vmContext) &&
+          hasHeapVariable(7, 8, vmContext)
     }
   }
 
