@@ -25,10 +25,7 @@
  */
 package me.rand.simulator.test.instructions
 
-import me.rand.commons.idioms.Status._
 import me.rand.simulator.test.BaseSpec
-import me.rand.vm.engine.Variable.Scalar
-import me.rand.vm.engine.VmContext
 
 class SizeofSpec extends BaseSpec {
   "sizeof" should "pass %x > %y (scalar types)" in {
@@ -154,22 +151,4 @@ class SizeofSpec extends BaseSpec {
         true
     }
   }
-
-  private def hasHeapVariable(index: Int, value: Int, vmContext: VmContext): Boolean =
-    vmContext.heap.getVariable(index) match {
-      case Ok(Some(Scalar(_, result))) =>
-        result.toInt == value
-
-      case _ =>
-        false
-    }
-
-  private def hasStackVariable(index: Int, value: Int, vmContext: VmContext): Boolean =
-    vmContext.stack.getVariable(index) match {
-      case Ok(Some(Scalar(_, result))) =>
-        result.toInt == value
-
-      case _ =>
-        false
-    }
 }

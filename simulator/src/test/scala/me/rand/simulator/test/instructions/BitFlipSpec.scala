@@ -25,24 +25,11 @@
  */
 package me.rand.simulator.test.instructions
 
-import me.rand.commons.idioms.Status._
 import me.rand.simulator.main.SimulatorError
 import me.rand.simulator.test.BaseSpec
-import me.rand.vm.engine.{Variable, VmContext}
 import me.rand.vm.main.VmError.SyntaxError.NoMatchingProfile
 
 class BitFlipSpec extends BaseSpec {
-  private def main(body: String): String =
-    s"""
-       | $aStandardMachineConfiguration
-       | .bb main
-     """.stripMargin +
-      body +
-      s"""
-         |  exit (00:u8)
-         | .boot main
-     """.stripMargin
-
   "bitflip" should "pass ~%imm > _" in {
     successfullyAssembleAndExecute(
       main(body = "~ (aaaaaaaa:u32)")
@@ -60,7 +47,8 @@ class BitFlipSpec extends BaseSpec {
          """.stripMargin
       )
     ).thenVerify {
-      case vmContext => hasHeapValueEqualTo(~0xaaaaaaaa, "x", 0)(vmContext)
+      case vmContext =>
+        hasHeapVariable(0, ~0xaaaaaaaa, vmContext)
     }
   }
 
@@ -76,7 +64,7 @@ class BitFlipSpec extends BaseSpec {
       )
     ).thenVerify {
       case vmContext =>
-        hasHeapValueEqualTo(~0x87654321, "y", 1)(vmContext)
+        hasHeapVariable(1, ~0x87654321, vmContext)
     }
   }
 
@@ -93,7 +81,7 @@ class BitFlipSpec extends BaseSpec {
       )
     ).thenVerify {
       case vmContext =>
-        hasHeapValueEqualTo(~0x87654321, "y", 1)(vmContext)
+        hasHeapVariable(1, ~0x87654321, vmContext)
     }
   }
 
@@ -139,12 +127,4 @@ class BitFlipSpec extends BaseSpec {
       case SimulatorError.FromVmError(NoMatchingProfile("~", _)) => true
     }
   }
-
-  private def hasHeapValueEqualTo(value: Int, variableName: String, heapIndex: Int)(vmContext: VmContext): Boolean =
-    vmContext.heap.getVariable(heapIndex) match {
-      case Ok(Some(Variable.Scalar(name, v))) if name == variableName =>
-        v.toInt == value
-
-      case _ => false
-    }
 }

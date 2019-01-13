@@ -30,6 +30,7 @@ import java.io.PrintWriter
 import me.rand.asm.dasm.VmContextSnapshot
 import me.rand.commons.idioms.Status._
 import me.rand.simulator.main.{Main, SimulatorError, SimulatorOptions}
+import me.rand.vm.engine.Variable.Scalar
 import me.rand.vm.engine.VmContext
 import me.rand.vm.is.InstructionSetVersion
 import org.scalatest.FlatSpec
@@ -112,4 +113,51 @@ class BaseSpec extends FlatSpec {
 
   protected def aStandardMachineConfiguration: String =
     aMachDirectiveWithMachineWordLengthSetTo(8)
+
+  // A standard "main" function that will be used in many tests.
+  // May specify optional machine specifications (machptr), otherwise rely on the default VM configuration.
+  // May specify a given machine word optionally, otherwise use default 64 bytes.
+  // The main function is surrounded by mach spec plus a declaration of the main block on one end,
+  // an exit instruction and a boot directive on the other.
+  protected def main(body: String, optionalMachSpec: Option[String] = None, machineWordLength: Int = 8): String = {
+    val head = optionalMachSpec match {
+      case None =>
+        StringBuilder.newBuilder
+          .append(aMachDirectiveWithMachineWordLengthSetTo(machineWordLength)).append('\n')
+          .append(".bb main").append('\n')
+
+      case Some(text) =>
+        StringBuilder.newBuilder
+          .append(aMachDirectiveWithMachineWordLengthSetTo(machineWordLength)).append('\n')
+          .append(text).append('\n')
+          .append(".bb main").append('\n')
+    }
+    val tail =
+      s"""
+         | exit (00:u8)
+         | .boot main
+       """.stripMargin
+
+    head + body + tail
+  }
+
+  // Straightforward validation of a variable value in the heap, with no detailed check
+  protected def hasHeapVariable(index: Int, value: Int, vmContext: VmContext): Boolean =
+    vmContext.heap.getVariable(index) match {
+      case Ok(Some(Scalar(_, result))) =>
+        result.toInt == value
+
+      case _ =>
+        false
+    }
+
+  // Straightforward validation of a variable value in the stack, with no detailed check
+  protected def hasStackVariable(index: Int, value: Int, vmContext: VmContext): Boolean =
+    vmContext.stack.getVariable(index) match {
+      case Ok(Some(Scalar(_, result))) =>
+        result.toInt == value
+
+      case _ =>
+        false
+    }
 }
