@@ -27,12 +27,15 @@ package me.rand.vm.is
 
 import me.rand.commons.idioms.Status._
 import me.rand.vm.alu.Alu
-import me.rand.vm.engine.Instruction
 import me.rand.vm.engine.Variable.{Pointer, Scalar}
+import me.rand.vm.engine._
+import me.rand.vm.main.{ExecutionContext, VmError}
 
 object Increment {
   lazy val shortName = "++"
 
+  // Note: in theory one may be able to increment an instruction pointer, but that's absolute non-sense in
+  // this application context.
   def apply(): Instruction =
     Instruction.called(shortName)
       .|(
@@ -42,9 +45,38 @@ object Increment {
         }.withDefaultUpdateFunction
       )
       .|(
-        Instruction.Monadic(classOf[Pointer.ToVariable]).withComputeFunction {
-          (x, vmContext, _) =>
-            Ok(Scalar.anonymous(x.index + 1, vmContext))
-        }.withDefaultUpdateFunction
+        Instruction.Monadic(classOf[Pointer.ToVariable.InTheHeap]).withComputeFunction {
+          (x, _, _) =>
+            Ok(Pointer.ToVariable.InTheHeap.anonymous(x.index + 1))
+        }.withUpdateFunction(updateIfResultingPointerIsDefined)
       )
+      .|(
+        Instruction.Monadic(classOf[Pointer.ToVariable.InTheStack]).withComputeFunction {
+          (x, _, _) =>
+            Ok(Pointer.ToVariable.InTheStack.anonymous(x.index + 1))
+        }.withUpdateFunction(updateIfResultingPointerIsDefined)
+      )
+
+  private def updateIfResultingPointerIsDefined(result: Variable, out: Option[Variable.Pointer], vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError =
+    out match {
+      case None =>
+        verifyThatPointerIsDefined(result, vmContext) & (_ => Ok(vmContext))
+
+      case Some(output) =>
+        verifyThatPointerIsDefined(result, vmContext) & (_ =>
+          UpdateVariable.pointedBy(output).withValueOf(result)(vmContext, executionContext))
+    }
+
+  private def verifyThatPointerIsDefined(variable: Variable, vmContext: VmContext): Variable OrElse VmError =
+    variable match {
+      case Pointer.ToVariable.InTheHeap(_, index) =>
+        UpdateVariable.fetchTargetVariable(vmContext.heap, Some("++"), index)
+
+      case Pointer.ToVariable.InTheStack(_, index) =>
+        UpdateVariable.fetchTargetVariable(vmContext.stack, Some("++"), index)
+
+      case unexpected =>
+        // Not in this context, if this happens, clearly a bug
+        throw new RuntimeException(s"BUG! @++ when verifying that result of a pointer increment is a valid pointer but not a pointer: $unexpected")
+    }
 }

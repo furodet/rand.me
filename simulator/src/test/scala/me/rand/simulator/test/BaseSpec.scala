@@ -31,7 +31,7 @@ import me.rand.asm.dasm.VmContextSnapshot
 import me.rand.commons.idioms.Status._
 import me.rand.simulator.main.{Main, SimulatorError, SimulatorOptions}
 import me.rand.vm.engine.Variable.Scalar
-import me.rand.vm.engine.VmContext
+import me.rand.vm.engine.{Variable, VmContext}
 import me.rand.vm.is.InstructionSetVersion
 import org.scalatest.FlatSpec
 
@@ -61,8 +61,8 @@ class BaseSpec extends FlatSpec {
 
   protected def failToAssembleOrExecute(source: String): TestVerification[SimulatorError] =
     Main.main(setupSimulatorOptionsToAssembleAndRun(source)) match {
-      case Ok(_) =>
-        fail("unexpected success")
+      case Ok(vmContext) =>
+        fail(s"unexpected success: ${VmContextSnapshot.of(vmContext).all.mkString("\n")}")
 
       case Err(what) =>
         new TestVerification[SimulatorError] {
@@ -147,7 +147,8 @@ class BaseSpec extends FlatSpec {
       case Ok(Some(Scalar(_, result))) =>
         result.toInt == value
 
-      case _ =>
+      case whatever =>
+        println(s"wrong! $whatever")
         false
     }
 
@@ -157,7 +158,22 @@ class BaseSpec extends FlatSpec {
       case Ok(Some(Scalar(_, result))) =>
         result.toInt == value
 
-      case _ =>
+      case whatever =>
+        println(s"wrong! $whatever")
+        false
+    }
+
+  // Straightforward validation of a pointer in the heap, with no detailed check
+  protected def hasHeapVariable(index: Int, value: Variable.Pointer.ToVariable, vmContext: VmContext): Boolean =
+    (vmContext.heap.getVariable(index), value) match {
+      case (Ok(Some(Variable.Pointer.ToVariable.InTheHeap(_, address))), Variable.Pointer.ToVariable.InTheHeap(_, expected)) =>
+        expected == address
+
+      case (Ok(Some(Variable.Pointer.ToVariable.InTheStack(_, address))), Variable.Pointer.ToVariable.InTheStack(_, expected)) =>
+        expected == address
+
+      case (whatever, _) =>
+        println(s"wrong! $whatever")
         false
     }
 }

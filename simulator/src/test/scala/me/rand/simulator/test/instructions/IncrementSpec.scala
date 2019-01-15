@@ -25,25 +25,124 @@
  */
 package me.rand.simulator.test.instructions
 
+import me.rand.simulator.main.SimulatorError
 import me.rand.simulator.test.BaseSpec
+import me.rand.vm.engine.Variable
+import me.rand.vm.main.VmError.SyntaxError.NoMatchingProfile
+import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue.InvalidTargetReference
 
 class IncrementSpec extends BaseSpec {
+  "++" should "pass %x > _" in {
+    successfullyAssembleAndExecute(
+      main(body =
+        """
+          | .var x %0 u8
+          | copy (ff:u8) > %0
+          | ++ %0 > _
+        """.stripMargin
+      )
+    ).thenVerify {
+      case vmContext =>
+        // x should be unchanged
+        hasHeapVariable(0, 255, vmContext)
+    }
+  }
+
   "++" should "pass %x > %y" in {
     successfullyAssembleAndExecute(
       main(body =
-        s"""
-           | .var xu8 %0 u8
-           | .var xs8 %1 s8
-           | copy (ff:u8) > %0
-           | copy (fe:s8) > %1
-           | ++ %0 > %0
-           | ++ %1 > %1
-         """.stripMargin
+        """
+          | .var xu8 %0 u8
+          | .var xs8 %1 s8
+          | copy (ff:u8) > %0
+          | copy (fe:s8) > %1
+          | ++ %0 > %0
+          | ++ %1 > %1
+        """.stripMargin
       )
     ).thenVerify {
       case vmContext =>
         hasHeapVariable(0, 0, vmContext) &&
           hasHeapVariable(1, -1, vmContext)
+    }
+  }
+
+  "++" should "pass %x > %y (heap pointer)" in {
+    successfullyAssembleAndExecute(
+      main(body =
+        """
+          | .var x %0 s32
+          | .var px %1 ptr
+          | copy &%0 > %1
+          | ++ %1 > %1
+        """.stripMargin
+      )
+    ).thenVerify {
+      case vmContext =>
+        hasHeapVariable(1, Variable.Pointer.ToVariable.InTheHeap("px", 1), vmContext)
+    }
+  }
+
+  "++" should "fail %x > %y (invalid heap pointer)" in {
+    failToAssembleOrExecute(
+      main(body =
+        """
+          | .var x0 %0 s32
+          | .var px %10 ptr
+          | copy &%0 > %10
+          | ++ %10 > %10
+        """.stripMargin
+      )
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidTargetReference(_, 1, None)) => true
+    }
+  }
+
+  "++" should "pass %x > %y (stack pointer)" in {
+    successfullyAssembleAndExecute(
+      main(body =
+        """
+          | .push 2
+          | .var x0 $0 s32
+          | .var x1 $1 s32
+          | .var px %0 ptr
+          | copy &$0 > %0
+          | ++ %0 > %0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case vmContext =>
+        hasHeapVariable(0, Variable.Pointer.ToVariable.InTheStack("x1", 1), vmContext)
+    }
+  }
+
+  "++" should "fail %x > %y (invalid stack pointer)" in {
+    failToAssembleOrExecute(
+      main(body =
+        """
+          | .push 2
+          | .var x0 $0 s32
+          | .var px %0 ptr
+          | copy &$0 > %0
+          | ++ %0 > %0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidTargetReference(_, 1, None)) => true
+    }
+  }
+
+  "++" should "fail %x > _ (instruction pointer)" in {
+    failToAssembleOrExecute(
+      main(body =
+        """
+          | .var p %0 ptr
+          | copy &@main > %0
+          | ++ %0 > %0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case SimulatorError.FromVmError(NoMatchingProfile("++", _)) => true
     }
   }
 }

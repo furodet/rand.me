@@ -38,6 +38,7 @@ sealed trait Variable {
 }
 
 object Variable {
+  private val anonymousVariableName = "<undef>"
 
   sealed trait BasicType
 
@@ -60,9 +61,9 @@ object Variable {
   }
 
   object Scalar {
-    def anonymous(value: VmRegister) = Scalar("<undef>", value)
+    def anonymous(value: VmRegister) = Scalar(anonymousVariableName, value)
 
-    def anonymous(value: Int, vmContext: VmContext) = Scalar("<undef>", intToScalar(value, vmContext))
+    def anonymous(value: Int, vmContext: VmContext) = Scalar(anonymousVariableName, intToScalar(value, vmContext))
 
     private def intToScalar(value: Int, vmContext: VmContext): VmRegister = {
       val nrEncodingBits = 32 - Integer.numberOfLeadingZeros(value)
@@ -93,12 +94,20 @@ object Variable {
         override def getContainingVarSet(vmContext: VmContext): VarSet = vmContext.heap
       }
 
+      object InTheHeap {
+        def anonymous(index: Int) = new InTheHeap(anonymousVariableName, index)
+      }
+
       case class InTheStack(name: String, index: Int) extends ToVariable {
         override def rename(newName: String): Variable = copy(name = newName)
 
         override def getValueString: String = s"STACK[$index]"
 
         override def getContainingVarSet(vmContext: VmContext): VarSet = vmContext.stack
+      }
+
+      object InTheStack {
+        def anonymous(index: Int) = new InTheStack(anonymousVariableName, index)
       }
 
     }

@@ -60,24 +60,12 @@ class UpdateVariable(maybePointer: Option[Pointer]) {
                                 pointerName: String, variableIndex: Int,
                                 newValue: Variable): Variable OrElse IllegalEncodingError =
     for {
-      targetVariable <- fetchTargetVariable(varSet, Some(pointerName), variableIndex)
+      targetVariable <- UpdateVariable.fetchTargetVariable(varSet, Some(pointerName), variableIndex)
       mergedVariable = newValue.rename(targetVariable.name)
       castedVariable <- castSourceToTargetVariable(mergedVariable, targetVariable)
       // putVariable could not fail here: we just fetched the name at the same index.
       _ = varSet.putVariable(variableIndex, castedVariable)
     } yield castedVariable
-
-  private def fetchTargetVariable(varSet: VarSet, pointerName: Option[String], variableIndex: Int): Variable OrElse IllegalEncodingError =
-    varSet.getVariable(variableIndex) match {
-      case Err(error) =>
-        Err(InvalidTargetReference(pointerName, variableIndex, Some(error)))
-
-      case Ok(None) =>
-        Err(InvalidTargetReference(pointerName, variableIndex, None))
-
-      case Ok(Some(variable)) =>
-        Ok(variable)
-    }
 
   private def castSourceToTargetVariable(source: Variable, target: Variable): Variable OrElse IllegalEncodingError =
     (source, target) match {
@@ -103,4 +91,18 @@ object UpdateVariable {
   def pointedBy(maybePointer: Option[Pointer]) = new UpdateVariable(maybePointer)
 
   def pointedBy(pointer: Pointer) = new UpdateVariable(Some(pointer))
+
+  // Generic function used to validate that a pointer points to an actual variable. Can be used for updates and
+  // also to verify the validity of a result on pointer arithmetic operation.
+  def fetchTargetVariable(varSet: VarSet, pointerName: Option[String], variableIndex: Int): Variable OrElse IllegalEncodingError =
+    varSet.getVariable(variableIndex) match {
+      case Err(error) =>
+        Err(InvalidTargetReference(pointerName, variableIndex, Some(error)))
+
+      case Ok(None) =>
+        Err(InvalidTargetReference(pointerName, variableIndex, None))
+
+      case Ok(Some(variable)) =>
+        Ok(variable)
+    }
 }
