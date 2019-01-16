@@ -30,7 +30,6 @@ import me.rand.commons.idioms.Status._
 import me.rand.vm.alu.{Alu, VmRegister}
 import me.rand.vm.engine.Variable.{Pointer, Scalar}
 import me.rand.vm.engine._
-import me.rand.vm.main.{ExecutionContext, VmError}
 
 object Decrement {
   lazy val shortName = "--"
@@ -51,35 +50,12 @@ object Decrement {
         Instruction.Monadic(classOf[Pointer.ToVariable.InTheHeap]).withComputeFunction {
           (x, _, _) =>
             Ok(Pointer.ToVariable.InTheHeap.anonymous(x.index - 1))
-        }.withUpdateFunction(updateIfResultingPointerIsDefined)
+        }.withDefaultUpdateFunction
       )
       .|(
         Instruction.Monadic(classOf[Pointer.ToVariable.InTheStack]).withComputeFunction {
           (x, _, _) =>
             Ok(Pointer.ToVariable.InTheStack.anonymous(x.index - 1))
-        }.withUpdateFunction(updateIfResultingPointerIsDefined)
+        }.withDefaultUpdateFunction
       )
-
-  private def updateIfResultingPointerIsDefined(result: Variable, out: Option[Variable.Pointer], vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError =
-    out match {
-      case None =>
-        verifyThatPointerIsDefined(result, vmContext) & (_ => Ok(vmContext))
-
-      case Some(output) =>
-        verifyThatPointerIsDefined(result, vmContext) & (_ =>
-          UpdateVariable.pointedBy(output).withValueOf(result)(vmContext, executionContext))
-    }
-
-  private def verifyThatPointerIsDefined(variable: Variable, vmContext: VmContext): Variable OrElse VmError =
-    variable match {
-      case Pointer.ToVariable.InTheHeap(_, index) =>
-        UpdateVariable.fetchTargetVariable(vmContext.heap, Some("++"), index)
-
-      case Pointer.ToVariable.InTheStack(_, index) =>
-        UpdateVariable.fetchTargetVariable(vmContext.stack, Some("++"), index)
-
-      case unexpected =>
-        // Not in this context, if this happens, clearly a bug
-        throw new RuntimeException(s"BUG! @++ when verifying that result of a pointer increment is a valid pointer but not a pointer: $unexpected")
-    }
 }

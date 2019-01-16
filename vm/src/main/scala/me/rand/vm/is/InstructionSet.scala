@@ -42,6 +42,7 @@ object InstructionSet {
       Exit.shortName -> Exit(),
       Increment.shortName -> Increment(),
       Decrement.shortName -> Decrement(),
-      SizeOf.shortName -> SizeOf()
+      SizeOf.shortName -> SizeOf(),
+      Add.shortName -> Add()
     )
 }

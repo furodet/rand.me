@@ -111,11 +111,26 @@ object Instruction {
       }
 
     def withDefaultUpdateFunction: Signature =
-      withUpdateFunction(standardUpdateFunction)
+      withUpdateFunction(verifyThatResultIsValidThenUpdate)
   }
 
-  private def standardUpdateFunction(result: Variable, out: Option[Variable.Pointer], vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError =
-    UpdateVariable.pointedBy(out).withValueOf(result)(vmContext, executionContext)
+  private def verifyThatResultIsValidThenUpdate(result: Variable, out: Option[Variable.Pointer], vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError =
+    verifyThatResultIsValid(result, vmContext) & (_ => UpdateVariable.pointedBy(out).withValueOf(result)(vmContext, executionContext))
+
+  private def verifyThatResultIsValid(variable: Variable, vmContext: VmContext): Variable OrElse VmError =
+    variable match {
+      case scalar: Variable.Scalar =>
+        Ok(scalar)
+
+      case Variable.Pointer.ToVariable.InTheHeap(name, index) =>
+        UpdateVariable.fetchTargetVariable(vmContext.heap, Some(name), index)
+
+      case Variable.Pointer.ToVariable.InTheStack(name, index) =>
+        UpdateVariable.fetchTargetVariable(vmContext.stack, Some(name), index)
+
+      case address: Variable.Pointer.ToInstruction =>
+        Ok(address)
+    }
 
   case class Monadic[T1 <: Variable](vt1: Class[T1]) {
     def withComputeFunction(f: (T1, VmContext, ExecutionContext) => Variable OrElse VmError) =

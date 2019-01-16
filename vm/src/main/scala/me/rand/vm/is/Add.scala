@@ -25,34 +25,42 @@
  */
 package me.rand.vm.is
 
+import me.rand.commons.idioms.NormalizedNumber
 import me.rand.commons.idioms.Status._
-import me.rand.vm.alu.Alu
-import me.rand.vm.engine.Variable.{Pointer, Scalar}
-import me.rand.vm.engine._
+import me.rand.vm.alu.{Alu, VmRegister}
+import me.rand.vm.engine.Variable.Scalar
+import me.rand.vm.engine.{Instruction, Variable}
 
-object Increment {
-  lazy val shortName = "++"
+object Add {
+  lazy val shortName = "+"
 
-  // Note: in theory one may be able to increment an instruction pointer, but that's absolute non-sense in
+  // Note: in theory one may be able to add a scalar an instruction pointer, but that's absolute non-sense in
   // this application context.
-  def apply(): Instruction =
+  private[is] def apply(): Instruction =
     Instruction.called(shortName)
       .|(
-        Instruction.Monadic(classOf[Scalar]).withComputeFunction {
-          (x, _, _) =>
-            Ok(Scalar.anonymous(Alu.increment(x.value)))
+        Instruction.Dyadic(classOf[Scalar], classOf[Scalar])
+          .withComputeFunction {
+            (x, y, _, _) =>
+              Ok(Scalar.anonymous(Alu.add(x.value, y.value)))
+          }.withDefaultUpdateFunction
+      ).|(
+      Instruction.Dyadic(classOf[Variable.Pointer.ToVariable.InTheHeap], classOf[Scalar])
+        .withComputeFunction {
+          (x, y, vmContext, _) =>
+            val pointerType = vmContext.profile.pointerTypes.toHeap
+            val pointerValue = NormalizedNumber.IntToNormalizedNumber(x.index)
+            val sum = Alu.add(VmRegister.ofType(pointerType).withValue(pointerValue), y.value)
+            Ok(Variable.Pointer.ToVariable.InTheHeap.anonymous(sum.toInt))
         }.withDefaultUpdateFunction
-      )
-      .|(
-        Instruction.Monadic(classOf[Pointer.ToVariable.InTheHeap]).withComputeFunction {
-          (x, _, _) =>
-            Ok(Pointer.ToVariable.InTheHeap.anonymous(x.index + 1))
+    ).|(
+      Instruction.Dyadic(classOf[Variable.Pointer.ToVariable.InTheStack], classOf[Scalar])
+        .withComputeFunction {
+          (x, y, vmContext, _) =>
+            val pointerType = vmContext.profile.pointerTypes.toStack
+            val pointerValue = NormalizedNumber.IntToNormalizedNumber(x.index)
+            val sum = Alu.add(VmRegister.ofType(pointerType).withValue(pointerValue), y.value)
+            Ok(Variable.Pointer.ToVariable.InTheStack.anonymous(sum.toInt))
         }.withDefaultUpdateFunction
-      )
-      .|(
-        Instruction.Monadic(classOf[Pointer.ToVariable.InTheStack]).withComputeFunction {
-          (x, _, _) =>
-            Ok(Pointer.ToVariable.InTheStack.anonymous(x.index + 1))
-        }.withDefaultUpdateFunction
-      )
+    )
 }
