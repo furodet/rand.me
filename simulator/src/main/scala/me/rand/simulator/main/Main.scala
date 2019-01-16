@@ -2,6 +2,7 @@ package me.rand.simulator.main
 
 import java.io.{IOException, PrintWriter}
 
+import me.rand.asm.dasm.VmContextSnapshot
 import me.rand.asm.main.{AsmError, AsmOptions}
 import me.rand.commons.idioms.Logger.StandardLoggerConfiguration
 import me.rand.commons.idioms.Status._
@@ -23,9 +24,8 @@ object Main {
         System.err.println(error)
         System.exit(1)
 
-      case Ok(_) =>
-        // TODO: dump final context?
-        println("ok")
+      case Ok(vmContext) =>
+        println(VmContextSnapshot.of(vmContext).all.mkString("\n"))
     }
 
   def main(options: SimulatorOptions): VmContext OrElse SimulatorError =
