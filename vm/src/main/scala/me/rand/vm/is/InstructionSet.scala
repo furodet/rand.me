@@ -41,6 +41,7 @@ object InstructionSet {
       Copy.shortName -> Copy(),
       Exit.shortName -> Exit(),
       Increment.shortName -> Increment(),
+      Decrement.shortName -> Decrement(),
       SizeOf.shortName -> SizeOf()
     )
 }
