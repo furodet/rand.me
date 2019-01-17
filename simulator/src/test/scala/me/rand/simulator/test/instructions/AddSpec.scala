@@ -48,6 +48,26 @@ class AddSpec extends BaseSpec {
       hasHeapVariable(0, 0, vmContext) && hasHeapVariable(1, 1, vmContext)
   }
 
+  "+" should "pass %x %y > %z" in {
+    successfullyAssembleAndExecute(
+      main(body =
+        """
+          | .var x %0 u8
+          | .var y %1 s8
+          | .var z %2 u8
+          | copy (01:u8) > %0
+          | copy (ff:s8) > %1
+          | + %0 %1 > %2
+        """.stripMargin
+      )
+    ).thenVerify {
+      case vmContext =>
+        hasHeapVariable(2, 0, vmContext)
+    }
+  }
+
+  // TODO: heap, stack pointers, valid and with invalid result.
+
   "+" should "fail %x %y > _ (instruction pointer)" in {
     failToAssembleOrExecute(
       main(body =
