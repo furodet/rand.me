@@ -41,10 +41,10 @@ class BitFlipSpec extends BaseSpec {
   "bitflip" should "pass ~%imm > %x" in {
     successfullyAssembleAndExecute(
       main(body =
-        s"""
-           | .var x %0 u32
-           | ~ (aaaaaaaa:u32) > %0
-         """.stripMargin
+        """
+          | .var x %0 u32
+          | ~ (aaaaaaaa:u32) > %0
+        """.stripMargin
       )
     ).thenVerify {
       case vmContext =>
@@ -55,11 +55,11 @@ class BitFlipSpec extends BaseSpec {
   "bitflip" should "pass %x > %y" in {
     successfullyAssembleAndExecute(
       main(body =
-        s"""
-           | .var x %0 u32
-           | .var y %1 u32
-           | copy (87654321:u32) > %0
-           | ~ %0 > %1
+        """
+          | .var x %0 u32
+          | .var y %1 u32
+          | copy (87654321:u32) > %0
+          | ~ %0 > %1
         """.stripMargin
       )
     ).thenVerify {
@@ -71,12 +71,12 @@ class BitFlipSpec extends BaseSpec {
   "bitflip" should "pass $x > %y" in {
     successfullyAssembleAndExecute(
       main(body =
-        s"""
-           | .push 1
-           | .var x $$0 u32
-           | .var y %1 u32
-           | copy (87654321:u32) > $$0
-           | ~ $$0 > %1
+        """
+          | .push 1
+          | .var x $0 u32
+          | .var y %1 u32
+          | copy (87654321:u32) > $0
+          | ~ $0 > %1
         """.stripMargin
       )
     ).thenVerify {
@@ -88,10 +88,10 @@ class BitFlipSpec extends BaseSpec {
   "bitflip" should "fail %x > _ (heap pointer)" in {
     failToAssembleOrExecute(
       main(body =
-        s"""
-           | .var x %0 ptr
-           | copy &%0 > %0
-           | ~ %0 > _
+        """
+          | .var x %0 ptr
+          | copy &%0 > %0
+          | ~ %0 > _
         """.stripMargin
       )
     ).thenVerify {
@@ -102,11 +102,11 @@ class BitFlipSpec extends BaseSpec {
   "bitflip" should "fail %x > _ (stack pointer)" in {
     failToAssembleOrExecute(
       main(body =
-        s"""
-           | .push 1
-           | .var x $$0 ptr
-           | copy &$$0 > $$0
-           | ~ $$0 > _
+        """
+          | .push 1
+          | .var x $0 ptr
+          | copy &$0 > $0
+          | ~ $0 > _
         """.stripMargin
       )
     ).thenVerify {
@@ -117,10 +117,10 @@ class BitFlipSpec extends BaseSpec {
   "bitflip" should "fail %x > _ (instruction pointer)" in {
     failToAssembleOrExecute(
       main(body =
-        s"""
-           | .var x %0 ptr
-           | copy &@main > %0
-           | ~ %0 > _
+        """
+          | .var x %0 ptr
+          | copy &@main > %0
+          | ~ %0 > _
         """.stripMargin
       )
     ).thenVerify {

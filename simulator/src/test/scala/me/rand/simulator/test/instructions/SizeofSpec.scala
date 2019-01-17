@@ -30,36 +30,34 @@ import me.rand.simulator.test.BaseSpec
 class SizeofSpec extends BaseSpec {
   "sizeof" should "pass %x > %y (scalar types)" in {
     successfullyAssembleAndExecute(
-      s"""
-         | ${aMachDirectiveWithMachineWordLengthSetTo(256)}
-         | .bb main
-         |   .var xu8  %0 u8
-         |   .var xs8  %1 s8
-         |   .var xu16 %2 u16
-         |   .var xs16 %3 s16
-         |   .var xu32 %4 u32
-         |   .var xs32 %5 s32
-         |   .var xu64 %6 u64
-         |   .var xs64 %7 s64
-         |   .var xu128 %8 u128
-         |   .var xs128 %9 s128
-         |   .var xu256 %10 u256
-         |   .var xs256 %11 s256
-         |   sizeof %0 > %0
-         |   sizeof %1 > %1
-         |   sizeof %2 > %2
-         |   sizeof %3 > %3
-         |   sizeof %4 > %4
-         |   sizeof %5 > %5
-         |   sizeof %6 > %6
-         |   sizeof %7 > %7
-         |   sizeof %8 > %8
-         |   sizeof %9 > %9
-         |   sizeof %10 > %10
-         |   sizeof %11 > %11
-         |   exit (00:u8)
-         | .boot main
-      """.stripMargin
+      main(machineWordLength = 256, body =
+        """
+          |   .var xu8  %0 u8
+          |   .var xs8  %1 s8
+          |   .var xu16 %2 u16
+          |   .var xs16 %3 s16
+          |   .var xu32 %4 u32
+          |   .var xs32 %5 s32
+          |   .var xu64 %6 u64
+          |   .var xs64 %7 s64
+          |   .var xu128 %8 u128
+          |   .var xs128 %9 s128
+          |   .var xu256 %10 u256
+          |   .var xs256 %11 s256
+          |   sizeof %0 > %0
+          |   sizeof %1 > %1
+          |   sizeof %2 > %2
+          |   sizeof %3 > %3
+          |   sizeof %4 > %4
+          |   sizeof %5 > %5
+          |   sizeof %6 > %6
+          |   sizeof %7 > %7
+          |   sizeof %8 > %8
+          |   sizeof %9 > %9
+          |   sizeof %10 > %10
+          |   sizeof %11 > %11
+        """.stripMargin
+      )
     ).thenVerify {
       case vmContext =>
         hasHeapVariable(0, 1, vmContext) &&
@@ -79,17 +77,16 @@ class SizeofSpec extends BaseSpec {
 
   "sizeof" should "pass %x > %y (instruction pointer)" in {
     successfullyAssembleAndExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .machptr instruction u16
-         | .bb main
-         |   .var x %0 ptr
-         |   .var y %1 u32
-         |   copy &@main > %0
-         |   sizeof %0 > %1
-         |   exit (00:u8)
-         | .boot main
-       """.stripMargin
+      main(
+        optionalMachSpec = Some(".machptr instruction u16"),
+        body =
+          """
+            |   .var x %0 ptr
+            |   .var y %1 u32
+            |   copy &@main > %0
+            |   sizeof %0 > %1
+          """.stripMargin
+      )
     ).thenVerify {
       case vmContext =>
         hasHeapVariable(1, 2, vmContext)
@@ -98,17 +95,17 @@ class SizeofSpec extends BaseSpec {
 
   "sizeof" should "pass %x > %y (heap pointer)" in {
     successfullyAssembleAndExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .machptr heap u32
-         | .bb main
-         |   .var x %0 ptr
-         |   .var y %1 u32
-         |   copy &%1 > %0
-         |   sizeof %0 > %1
-         |   exit (00:u8)
-         | .boot main
-       """.stripMargin
+      main(
+        optionalMachSpec = Some(".machptr heap u32"),
+        body =
+          """
+            |   .var x %0 ptr
+            |   .var y %1 u32
+            |   copy &%1 > %0
+            |   sizeof %0 > %1
+            |
+          """.stripMargin
+      )
     ).thenVerify {
       case vmContext =>
         hasHeapVariable(1, 4, vmContext)
@@ -117,18 +114,17 @@ class SizeofSpec extends BaseSpec {
 
   "sizeof" should "pass %x > %$y (stack pointer)" in {
     successfullyAssembleAndExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .machptr stack u16
-         | .bb main
-         |   .push 1
-         |   .var x %0 ptr
-         |   .var y $$0 u32
-         |   copy &$$0 > %0
-         |   sizeof %0 > $$0
-         |   exit (00:u8)
-         | .boot main
-       """.stripMargin
+      main(
+        optionalMachSpec = Some(".machptr stack u16"),
+        body =
+          """
+            |   .push 1
+            |   .var x %0 ptr
+            |   .var y $0 u32
+            |   copy &$0 > %0
+            |   sizeof %0 > $0
+          """.stripMargin
+      )
     ).thenVerify {
       case vmContext =>
         hasStackVariable(0, 2, vmContext)
@@ -137,14 +133,12 @@ class SizeofSpec extends BaseSpec {
 
   "sizeof" should "pass %0 > _" in {
     successfullyAssembleAndExecute(
-      s"""
-         | $aStandardMachineConfiguration
-         | .bb main
-         |   .var x %0 u32
-         |   sizeof %0 > _
-         |   exit (00:u8)
-         | .boot main
-       """.stripMargin
+      main(body =
+        """
+          |   .var x %0 u32
+          |   sizeof %0 > _
+        """.stripMargin
+      )
     ).thenVerify {
       case _ =>
         // Nothing to check
