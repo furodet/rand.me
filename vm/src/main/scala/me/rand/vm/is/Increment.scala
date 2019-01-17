@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2018 rand.me project
+ * Copyright (c) 2018-2019 rand.me project
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
