@@ -27,7 +27,9 @@ package me.rand.simulator.test.instructions
 
 import me.rand.simulator.main.SimulatorError
 import me.rand.simulator.test.BaseSpec
+import me.rand.vm.engine.Variable
 import me.rand.vm.main.VmError.SyntaxError.NoMatchingProfile
+import me.rand.vm.main.VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue.InvalidTargetReference
 
 class AddSpec extends BaseSpec {
   "+" should "pass %x %y > _" in {
@@ -66,7 +68,81 @@ class AddSpec extends BaseSpec {
     }
   }
 
-  // TODO: heap, stack pointers, valid and with invalid result.
+  "+" should "pass %x %y > %z (heap pointer)" in {
+    successfullyAssembleAndExecute(
+      main(body =
+        """
+          | .var x %0 ptr
+          | .var y %1 u16
+          | .var z %2 u16
+          | copy (01:u8) > %1
+          | copy &%1 > %0
+          | + %0 %1 > %0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case vmContex =>
+        hasHeapVariable(0, Variable.Pointer.ToVariable.InTheHeap("z", 2), vmContex)
+    }
+  }
+
+  "+" should "fail %x imm > %z (invalid heap pointer)" in {
+    failToAssembleOrExecute(
+      main(body =
+        """
+          | .var x %0 ptr
+          | .var y %1 ptr
+          | copy &%1 > %0
+          | + %0 (01:u8) > %0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidTargetReference(_, 2, None)) => true
+    }
+  }
+
+  "+" should "pass %x %y > %z (stack pointer)" in {
+    successfullyAssembleAndExecute(
+      main(
+        // We will decrement the value, so need to precisely define the stack
+        // pointer type, so that normalization works.
+        optionalMachSpec =
+          Some(
+            """
+              | .machptr stack u16
+            """.stripMargin),
+        body =
+          """
+            | .push 2
+            | .var y $0 s16
+            | .var z $1 s16
+            | .var x %0 ptr
+            | copy (ffff:s16) > $0
+            | copy &$1 > %0
+            | + %0 $0 > %0
+          """.stripMargin
+      )
+    ).thenVerify {
+      case vmContext =>
+        hasHeapVariable(0, Variable.Pointer.ToVariable.InTheStack("y", 0), vmContext)
+    }
+  }
+
+  "+" should "fail %x %y" in {
+    failToAssembleOrExecute(
+      main(body =
+        """
+          | .push 2
+          | .var y $0 s16
+          | .var x %0 ptr
+          | copy &$0 > %0
+          | + %0 (01:u8) > %0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case SimulatorError.FromVmError(InvalidTargetReference(_, 1, None)) => true
+    }
+  }
 
   "+" should "fail %x %y > _ (instruction pointer)" in {
     failToAssembleOrExecute(
