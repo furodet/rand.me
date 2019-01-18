@@ -141,7 +141,7 @@ class AsmProgramBuilder(initialContext: VmContext) {
         Err(AsmProgramBuilderError.UndefinedBootstrapBlock)
 
       case Some((basicBlockName, lineNumber)) =>
-        completed.vmContext.setPcToBlockCalled(basicBlockName) ||
+        completed.vmContext.resetPcToBlockCalled(basicBlockName) ||
           (_ => AsmProgramBuilderError.NoSuchBootstrapBlock(basicBlockName, lineNumber))
     }
   }

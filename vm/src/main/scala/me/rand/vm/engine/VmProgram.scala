@@ -63,7 +63,7 @@ class VmProgram(val basicBlocks: Map[String, BasicBlock], val pc: Counter) {
         Err(NoSuchBasicBlock(blockName))
     }
 
-  private def setPc(pc: Counter) = new VmProgram(basicBlocks, pc)
+  def setPc(pc: Counter) = new VmProgram(basicBlocks, pc)
 }
 
 object VmProgram {
@@ -121,6 +121,9 @@ object VmProgram {
 
     def atTheBeginningOf(basicBlock: BasicBlock) =
       new Counter(Some(basicBlock), 0)
+
+    def inBlockWithIndex(basicBlock: BasicBlock, index: Int) =
+      new Counter(Some(basicBlock), index)
   }
 
 }

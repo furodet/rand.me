@@ -46,10 +46,15 @@ case class VmContext(heap: VarSet,
   def incrementPc: VmContext =
     setProgram(program.incrementPc)
 
-  def setPcToBlockCalled(blockName: String): VmContext OrElse VmContextError =
+  def resetPcToBlockCalled(blockName: String): VmContext OrElse VmContextError =
     program.setPcToBlockCalled(blockName) && setProgram
 
   def setProgram(newProgram: VmProgram): VmContext = copy(program = newProgram)
+
+  def movePc(programCounter: VmProgram.Counter): VmContext = {
+    val newProgram = program.setPc(programCounter)
+    setProgram(newProgram)
+  }
 
   def halt(exitCode: Int): VmContext = copy(exitCode = Some(exitCode))
 

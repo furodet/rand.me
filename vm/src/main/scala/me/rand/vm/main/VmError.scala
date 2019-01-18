@@ -83,6 +83,7 @@ object VmError {
     sealed trait VmFetchOperandError extends IllegalEncodingError
 
     object VmFetchOperandError {
+
       object UndefinedVariable extends VmFetchOperandError {
         override def toString: String = "undefined variable"
       }
@@ -114,21 +115,25 @@ object VmError {
             s"basic block pointer is invalid: no such basic block '$basicBlockName'"
         }
 
-        case class InvalidIndirect(variableName: String) extends IllegalEncodingError {
+        case object InvalidDestinationAddress extends InvalidPointerValue {
+          override def toString: String = "destination address does not refer to a valid basic block"
+        }
+
+        case class InvalidIndirect(variableName: String) extends InvalidPointerValue {
           override def toString: String =
             s"source operand '$variableName' redirects to an unexpected type of variable"
         }
 
-        case object InvalidRedirect extends IllegalEncodingError {
+        case object InvalidRedirect extends InvalidPointerValue {
           override def toString: String = "destination operand redirects to an unexpected type of variable"
         }
 
-        case class InvalidArrayBase(name: String) extends IllegalEncodingError {
+        case class InvalidArrayBase(name: String) extends InvalidPointerValue {
           override def toString: String =
             s"operand '$name' is not a valid base for indexing"
         }
 
-        case object IllegalDestinationPointer extends IllegalEncodingError {
+        case object IllegalDestinationPointer extends InvalidPointerValue {
           override def toString: String = "destination is neither a heap nor a stack variable"
         }
 

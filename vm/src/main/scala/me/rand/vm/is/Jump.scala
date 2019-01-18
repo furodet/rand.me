@@ -25,26 +25,32 @@
  */
 package me.rand.vm.is
 
-import me.rand.vm.alu.Comparator
-import me.rand.vm.engine.Instruction
+import me.rand.commons.idioms.Status._
+import me.rand.vm.engine.{Instruction, Variable, VmContext, VmProgram}
+import me.rand.vm.main.{ExecutionContext, VmError}
 
-object InstructionSet {
-  lazy val map: Map[String, Instruction] =
-    Map(
-      BitFlip.shortName -> BitFlip(),
-      Comparator.?=.name -> Compare(Comparator.?=),
-      Comparator.?≠.name -> Compare(Comparator.?≠),
-      Comparator.?<.name -> Compare(Comparator.?<),
-      Comparator.?≤.name -> Compare(Comparator.?≤),
-      Comparator.?>.name -> Compare(Comparator.?>),
-      Comparator.?≥.name -> Compare(Comparator.?≥),
-      Copy.shortName -> Copy(),
-      Exit.shortName -> Exit(),
-      Increment.shortName -> Increment(),
-      Decrement.shortName -> Decrement(),
-      SizeOf.shortName -> SizeOf(),
-      Add.shortName -> Add(),
-      Sub.shortName -> Sub(),
-      Jump.shortName -> Jump()
-    )
+object Jump {
+  lazy val shortName = "jump"
+
+  private[is] def apply(): Instruction =
+    Instruction.called(shortName)
+      .|(
+        Instruction.Monadic(classOf[Variable.Pointer.ToInstruction]).withComputeFunction {
+          (x, _, _) =>
+            Ok(x)
+        }.withUpdateFunction(doJump)
+      )
+
+  private def doJump(destination: Variable, out: Option[Variable.Pointer], vmContext: VmContext, executionContext: ExecutionContext): VmContext OrElse VmError = {
+    val pointer = destination.asInstanceOf[Variable.Pointer.ToInstruction]
+    pointer.value.basicBlock match {
+      case Some(basicBlock) =>
+        // Counter index will be incremented at the end of this execution => -1+1=0
+        val counter = VmProgram.Counter.inBlockWithIndex(basicBlock, -1)
+        Ok(vmContext.movePc(counter))
+
+      case None =>
+        Err(VmError.VmExecutionError.VmFetchOperandError.InvalidPointerValue.InvalidDestinationAddress)
+    }
+  }
 }

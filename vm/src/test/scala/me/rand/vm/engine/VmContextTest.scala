@@ -104,7 +104,7 @@ class VmContextTest extends FlatSpec {
       vmContext =>
         val c0 = vmContext.setProgram(aDummyProgramWithOneBasicBlockOfOneInstruction)
         (for {
-          c1 <- c0.setPcToBlockCalled("b0")
+          c1 <- c0.resetPcToBlockCalled("b0")
           instruction <- c1.program.nextInstruction
         } yield instruction) match {
           case Ok(InstructionInstance(instruction, _)) if instruction == InstructionSet.map(Exit.shortName) =>
@@ -122,7 +122,7 @@ class VmContextTest extends FlatSpec {
         val c0 = vmContext.setProgram(aDummyProgramWithOneBasicBlockOfOneInstruction)
         (
           for {
-            c1 <- c0.setPcToBlockCalled("b0")
+            c1 <- c0.resetPcToBlockCalled("b0")
             c2 = c1.incrementPc.incrementPc
             instruction <- c2.program.nextInstruction
           } yield instruction) match {
@@ -139,7 +139,7 @@ class VmContextTest extends FlatSpec {
     givenAValidVmContext {
       vmContext =>
         val c0 = vmContext.setProgram(aDummyProgramWithOneBasicBlockOfOneInstruction)
-        c0.setPcToBlockCalled("b1") match {
+        c0.resetPcToBlockCalled("b1") match {
           case Err(NoSuchBasicBlock("b1")) =>
             ok()
 
@@ -153,7 +153,7 @@ class VmContextTest extends FlatSpec {
     givenAValidVmContext {
       vmContext =>
         val c0 = vmContext.setProgram(aDummyProgramWithTwoBasicBlocksOfOneInstruction)
-        c0.setPcToBlockCalled("b1") match {
+        c0.resetPcToBlockCalled("b1") match {
           case Ok(c1) =>
             c1.program.pc.basicBlock match {
               case Some(basicBlock) if basicBlock.name == "b1" =>

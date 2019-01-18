@@ -23,28 +23,28 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.vm.is
+package me.rand.simulator.test.instructions
 
-import me.rand.vm.alu.Comparator
-import me.rand.vm.engine.Instruction
+import me.rand.simulator.test.BaseSpec
 
-object InstructionSet {
-  lazy val map: Map[String, Instruction] =
-    Map(
-      BitFlip.shortName -> BitFlip(),
-      Comparator.?=.name -> Compare(Comparator.?=),
-      Comparator.?≠.name -> Compare(Comparator.?≠),
-      Comparator.?<.name -> Compare(Comparator.?<),
-      Comparator.?≤.name -> Compare(Comparator.?≤),
-      Comparator.?>.name -> Compare(Comparator.?>),
-      Comparator.?≥.name -> Compare(Comparator.?≥),
-      Copy.shortName -> Copy(),
-      Exit.shortName -> Exit(),
-      Increment.shortName -> Increment(),
-      Decrement.shortName -> Decrement(),
-      SizeOf.shortName -> SizeOf(),
-      Add.shortName -> Add(),
-      Sub.shortName -> Sub(),
-      Jump.shortName -> Jump()
-    )
+class JumpSpec extends BaseSpec {
+  "jump" should "pass &@..." in {
+    successfullyAssembleAndExecute(
+      main(body =
+        """
+          | .var x %0 u32
+          | copy (ffffffff:u32) > %0
+          | jump &@foo
+          | exit (01:u8)
+          | .bb foo
+          |   copy (9abcdef0:u32) > %0
+          |   exit (02:u8)
+        """.stripMargin
+      )
+    ).thenVerify {
+      case vmContext =>
+        hasHeapVariable(0, 0x9abcdef0, vmContext) &&
+          (vmContext.exitCode.getOrElse(-1) == 2)
+    }
+  }
 }
