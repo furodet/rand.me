@@ -1,4 +1,4 @@
-/*-
+/*
  * Copyright (c) 2018-2019 rand.me project
  * All rights reserved.
  *
