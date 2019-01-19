@@ -25,7 +25,9 @@
  */
 package me.rand.simulator.test.instructions
 
+import me.rand.simulator.main.SimulatorError
 import me.rand.simulator.test.BaseSpec
+import me.rand.vm.main.VmError.SyntaxError.NoMatchingProfile
 
 class JumpSpec extends BaseSpec {
   "jump" should "pass &@..." in {
@@ -45,6 +47,49 @@ class JumpSpec extends BaseSpec {
       case vmContext =>
         hasHeapVariable(0, 0x9abcdef0, vmContext) &&
           (vmContext.exitCode.getOrElse(-1) == 2)
+    }
+  }
+
+  "jump" should "fail %x (scalar)" in {
+    failToAssembleOrExecute(
+      main(body =
+        """
+          | .var x %0 u32
+          | copy (9abcdef0:u32) > %0
+          | jump %0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case SimulatorError.FromVmError(NoMatchingProfile("jump", _)) => true
+    }
+  }
+
+  "jump" should "fail %x (heap pointer)" in {
+    failToAssembleOrExecute(
+      main(body =
+        """
+          | .var x %0 ptr
+          | copy &%0 > %0
+          | jump %0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case SimulatorError.FromVmError(NoMatchingProfile("jump", _)) => true
+    }
+  }
+
+  "jump" should "fail %x (stack pointer)" in {
+    failToAssembleOrExecute(
+      main(body =
+        """
+          | .push 1
+          | .var x $0 ptr
+          | copy &$0 > $0
+          | jump $0
+        """.stripMargin
+      )
+    ).thenVerify {
+      case SimulatorError.FromVmError(NoMatchingProfile("jump", _)) => true
     }
   }
 }
