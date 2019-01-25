@@ -35,7 +35,7 @@ import org.yaml.snakeyaml.constructor.Constructor
 
 import scala.io.Source
 
-class LoadConfiguration[T](source: Source, constructor: Constructor) {
+private[config] class LoadConfiguration[T](source: Source, constructor: Constructor) {
   def get: T OrElse LoadConfigurationError = try {
     val yaml = new Yaml(constructor)
     Ok(yaml.load[T](source.getLines().mkString("\n")))
@@ -47,7 +47,7 @@ class LoadConfiguration[T](source: Source, constructor: Constructor) {
   }
 }
 
-object LoadConfiguration {
+private[config] object LoadConfiguration {
 
   class LoadConfigurationFileMapper[T](targetClass: Class[T], constructor: Constructor) {
     def fromFile(fileName: String): LoadConfiguration[T] OrElse LoadConfigurationError =

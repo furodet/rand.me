@@ -12,7 +12,8 @@
         <module>commons</module>
         <module>vm</module>
         <module>asm</module>
-	<module>simulator</module>
+        <module>simulator</module>
+        <module>randasm</module>
     </modules>
 
     <properties>
