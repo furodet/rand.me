@@ -37,4 +37,8 @@ object RandMeConfigurationError {
     override def toString: String = s"mandatory information '$fieldName' is undefined"
   }
 
+  case class InvalidValue[T](fieldName: String, value: T, explain: String) extends RandMeConfigurationError {
+    override def toString: String = s"invalid value '$fieldName' = ${value.toString}: $explain"
+  }
+
 }

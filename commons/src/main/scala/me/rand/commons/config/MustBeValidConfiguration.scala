@@ -25,8 +25,26 @@
  */
 package me.rand.commons.config
 
-import me.rand.commons.idioms.Status.OrElse
+import me.rand.commons.idioms.Status._
 
 trait MustBeValidConfiguration {
   def assertIsOk: Unit OrElse RandMeConfigurationError
+
+  // Helpers to definitions using validation
+  protected val undefinedIntByDefault = 0
+
+  protected class Verification(val test: Boolean, val orElse: RandMeConfigurationError)
+
+  protected class VerificationBuilder(val test: Boolean) {
+    def thenReturn(otherwise: RandMeConfigurationError) = new Verification(test, otherwise)
+  }
+
+  def ifNot(test: Boolean) = new VerificationBuilder(test)
+
+  protected def verify(verifications: Verification*): Unit OrElse RandMeConfigurationError =
+    verifications.tryForEach {
+      v =>
+        if (v.test) Ok(())
+        else Err(v.orElse)
+    }
 }
