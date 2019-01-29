@@ -36,8 +36,8 @@ object RandAsmError {
     override def toString: String = s"configuration error: $error"
   }
 
-  case class FromVmError(error: VmError) extends RandAsmError {
-    override def toString: String = error.toString
+  case class FromVmConfigurationError(error: VmError) extends RandAsmError {
+    override def toString: String = s"configuration error: ${error.toString}"
   }
 
 }

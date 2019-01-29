@@ -25,13 +25,13 @@
  */
 package me.rand.randasm.main.process
 
-import me.rand.commons.config.RandMeConfiguration
+import me.rand.commons.config.MachineConfiguration
 import me.rand.commons.idioms.Status.OrElse
 import me.rand.vm.engine.VmContext
 import me.rand.vm.main.VmError
 
 object CreateEmptyVmContext {
-  def fromConfiguration(configuration: RandMeConfiguration.Machine): VmContext OrElse VmError = {
+  def fromConfiguration(configuration: MachineConfiguration): VmContext OrElse VmError = {
     VmContext.usingProfileString(s"bytes:${configuration.bytes}:heap:${configuration.heapSize}")
   }
 }

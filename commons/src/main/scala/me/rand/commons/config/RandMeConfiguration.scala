@@ -27,11 +27,10 @@ package me.rand.commons.config
 
 import java.beans.BeanProperty
 
-import me.rand.commons.config.RandMeConfiguration.Machine
 import me.rand.commons.idioms.Status._
 
 class RandMeConfiguration extends MustBeValidConfiguration {
-  @BeanProperty var machine: Machine = new Machine
+  @BeanProperty var machine: MachineConfiguration = new MachineConfiguration
 
   override def assertIsOk: Unit OrElse RandMeConfigurationError = machine.assertIsOk
 
@@ -40,24 +39,6 @@ class RandMeConfiguration extends MustBeValidConfiguration {
 }
 
 object RandMeConfiguration {
-
-  class Machine extends MustBeValidConfiguration {
-    @BeanProperty var version: String = ""
-    @BeanProperty var bytes: Int = 8
-    @BeanProperty var hpBytes: Int = undefinedIntByDefault
-    @BeanProperty var spBytes: Int = undefinedIntByDefault
-    @BeanProperty var ipBytes: Int = undefinedIntByDefault
-    @BeanProperty var heapSize: Int = 256
-
-    override def assertIsOk: Unit OrElse RandMeConfigurationError =
-      verify(
-        ifNot(version.nonEmpty).thenReturn(RandMeConfigurationError.UndefinedMandatoryField("version")),
-        ifNot(hpBytes >= 0).thenReturn(RandMeConfigurationError.InvalidValue("hpBytes", hpBytes, "must be greater than 0")),
-        ifNot(spBytes >= 0).thenReturn(RandMeConfigurationError.InvalidValue("spBytes", spBytes, "must be greater than 0")),
-        ifNot(ipBytes >= 0).thenReturn(RandMeConfigurationError.InvalidValue("ipBytes", ipBytes, "must be greater than 0")),
-        ifNot(heapSize >= 0).thenReturn(RandMeConfigurationError.InvalidValue("heapSize", heapSize, "must be greater than 0"))
-      )
-  }
 
   def loadFromFileAndValidate(file: String): RandMeConfiguration OrElse RandMeConfigurationError =
     LoadConfiguration.forClass(classOf[RandMeConfiguration]).fromFile(file) & (_.get) match {

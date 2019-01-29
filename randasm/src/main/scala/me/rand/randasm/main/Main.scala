@@ -26,7 +26,7 @@
 package me.rand.randasm.main
 
 import me.rand.asm.dasm.VmContextSnapshot
-import me.rand.commons.config.RandMeConfiguration
+import me.rand.commons.config.{MachineConfiguration, RandMeConfiguration}
 import me.rand.commons.idioms.Status._
 import me.rand.randasm.main.process.CreateEmptyVmContext
 import me.rand.vm.engine.VmContext
@@ -57,6 +57,6 @@ object Main {
     RandMeConfiguration.loadFromFileAndValidate(path) || (error => RandAsmError.FromConfigurationError(error))
   }
 
-  private def tryInitializeVmContext(machine: RandMeConfiguration.Machine): VmContext OrElse RandAsmError =
-    CreateEmptyVmContext.fromConfiguration(machine) || (error => RandAsmError.FromVmError(error))
+  private def tryInitializeVmContext(machine: MachineConfiguration): VmContext OrElse RandAsmError =
+    CreateEmptyVmContext.fromConfiguration(machine) || (error => RandAsmError.FromVmConfigurationError(error))
 }
