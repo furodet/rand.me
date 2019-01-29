@@ -109,7 +109,7 @@ class BaseSpec extends FlatSpec {
     s".mach ${InstructionSetVersion.current} $specification"
 
   protected def aMachDirectiveWithMachineWordLengthSetTo(nrBytes: Int): String =
-    aMachDirectiveWithSpecification(s"bl:$nrBytes:heap:${VmContext.maximumNumberOfVariablesInHeap}")
+    aMachDirectiveWithSpecification(s"bytes:$nrBytes:heap:${VmContext.maximumNumberOfVariablesInHeap}")
 
   protected def aStandardMachineConfiguration: String =
     aMachDirectiveWithMachineWordLengthSetTo(8)

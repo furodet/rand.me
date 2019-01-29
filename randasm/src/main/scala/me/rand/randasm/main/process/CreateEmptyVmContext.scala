@@ -23,21 +23,15 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.randasm.main
+package me.rand.randasm.main.process
 
-import me.rand.commons.config.RandMeConfigurationError
+import me.rand.commons.config.RandMeConfiguration
+import me.rand.commons.idioms.Status.OrElse
+import me.rand.vm.engine.VmContext
 import me.rand.vm.main.VmError
 
-sealed trait RandAsmError
-
-object RandAsmError {
-
-  case class FromConfigurationError(error: RandMeConfigurationError) extends RandAsmError {
-    override def toString: String = s"configuration error: $error"
+object CreateEmptyVmContext {
+  def fromConfiguration(configuration: RandMeConfiguration.Machine): VmContext OrElse VmError = {
+    VmContext.usingProfileString(s"bytes:${configuration.bytes}:heap:${configuration.heapSize}")
   }
-
-  case class FromVmError(error: VmError) extends RandAsmError {
-    override def toString: String = error.toString
-  }
-
 }

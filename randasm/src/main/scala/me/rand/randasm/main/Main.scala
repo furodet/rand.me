@@ -25,8 +25,11 @@
  */
 package me.rand.randasm.main
 
+import me.rand.asm.dasm.VmContextSnapshot
 import me.rand.commons.config.RandMeConfiguration
 import me.rand.commons.idioms.Status._
+import me.rand.randasm.main.process.CreateEmptyVmContext
+import me.rand.vm.engine.VmContext
 
 object Main {
   def main(args: Array[String]): Unit = {
@@ -34,8 +37,8 @@ object Main {
       options <- RandAsmOptions.fromUserArgs(args)
       result <- main(options)
     } yield result) match {
-      case Ok(_) =>
-      // All right
+      case Ok(vmContext) =>
+        println(VmContextSnapshot.of(vmContext).all.mkString("\n"))
 
       case Err(error) =>
         System.err.println(error)
@@ -43,13 +46,17 @@ object Main {
     }
   }
 
-  def main(options: RandAsmOptions): Unit OrElse RandAsmError = {
-    tryLoadConfiguration(options.configurationFile.getAbsolutePath) && {
-      configuration =>
-        println(configuration)
-    }
+  def main(options: RandAsmOptions): VmContext OrElse RandAsmError = {
+    for {
+      configuration <- tryLoadConfiguration(options.configurationFile.getAbsolutePath)
+      initialVmContext <- tryInitializeVmContext(configuration.machine)
+    } yield initialVmContext
   }
 
-  private def tryLoadConfiguration(path: String): RandMeConfiguration OrElse RandAsmError =
+  private def tryLoadConfiguration(path: String): RandMeConfiguration OrElse RandAsmError = {
     RandMeConfiguration.loadFromFileAndValidate(path) || (error => RandAsmError.FromConfigurationError(error))
+  }
+
+  private def tryInitializeVmContext(machine: RandMeConfiguration.Machine): VmContext OrElse RandAsmError =
+    CreateEmptyVmContext.fromConfiguration(machine) || (error => RandAsmError.FromVmError(error))
 }

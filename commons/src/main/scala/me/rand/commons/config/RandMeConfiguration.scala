@@ -43,18 +43,18 @@ object RandMeConfiguration {
 
   class Machine extends MustBeValidConfiguration {
     @BeanProperty var version: String = ""
-    @BeanProperty var bits: Int = 32
-    @BeanProperty var hpBits: Int = undefinedIntByDefault
-    @BeanProperty var spBits: Int = undefinedIntByDefault
-    @BeanProperty var ipBits: Int = undefinedIntByDefault
+    @BeanProperty var bytes: Int = 8
+    @BeanProperty var hpBytes: Int = undefinedIntByDefault
+    @BeanProperty var spBytes: Int = undefinedIntByDefault
+    @BeanProperty var ipBytes: Int = undefinedIntByDefault
     @BeanProperty var heapSize: Int = 256
 
     override def assertIsOk: Unit OrElse RandMeConfigurationError =
       verify(
         ifNot(version.nonEmpty).thenReturn(RandMeConfigurationError.UndefinedMandatoryField("version")),
-        ifNot(hpBits >= 0).thenReturn(RandMeConfigurationError.InvalidValue("heapPointerBits", hpBits, "must be greater than 0")),
-        ifNot(spBits >= 0).thenReturn(RandMeConfigurationError.InvalidValue("stackPointerBits", spBits, "must be greater than 0")),
-        ifNot(ipBits >= 0).thenReturn(RandMeConfigurationError.InvalidValue("instrPointerBits", ipBits, "must be greater than 0")),
+        ifNot(hpBytes >= 0).thenReturn(RandMeConfigurationError.InvalidValue("hpBytes", hpBytes, "must be greater than 0")),
+        ifNot(spBytes >= 0).thenReturn(RandMeConfigurationError.InvalidValue("spBytes", spBytes, "must be greater than 0")),
+        ifNot(ipBytes >= 0).thenReturn(RandMeConfigurationError.InvalidValue("ipBytes", ipBytes, "must be greater than 0")),
         ifNot(heapSize >= 0).thenReturn(RandMeConfigurationError.InvalidValue("heapSize", heapSize, "must be greater than 0"))
       )
   }

@@ -175,7 +175,7 @@ class VmContextTest extends FlatSpec {
   }
 
   private def givenAValidVmContext(action: VmContext => Unit): Unit =
-    VmContext.usingProfileString(s"bl:1:heap:$aStandardHeapSize") match {
+    VmContext.usingProfileString(s"bytes:1:heap:$aStandardHeapSize") match {
       case Ok(vmContext) =>
         action(vmContext)
 

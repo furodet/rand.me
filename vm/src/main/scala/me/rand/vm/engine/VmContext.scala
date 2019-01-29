@@ -81,14 +81,14 @@ object VmContext {
     def fromString(profile: String): VmProfile OrElse VmProfileStringError = {
       val asStrings = profile.trim.toLowerCase.split(":").toList
       asStrings match {
-        case "bl" :: bl :: "heap" :: hsz :: Nil =>
+        case "bytes" :: bytes :: "heap" :: hsz :: Nil =>
           for {
-            byteLen <- readPositiveIntOrElse(profile, bl, maximumByteSizeAllowed, "bl")
+            byteLen <- readPositiveIntOrElse(profile, bytes, maximumByteSizeAllowed, "bytes")
             heapSize <- readPositiveIntOrElse(profile, hsz, maximumNumberOfVariablesInHeap, "heap")
           } yield new VmProfile(byteLen, heapSize)
 
         case _ =>
-          Err(VmProfileStringError.InvalidFormat(profile, "bl:...:heap:..."))
+          Err(VmProfileStringError.InvalidFormat(profile, "bytes:...:heap:..."))
       }
     }
 

@@ -77,37 +77,37 @@ class MachDirectiveSpec extends BaseSpec {
   ".mach" should "fail if machine word length is not an integer" in {
     failToAssembleOrExecute(
       s"""
-         | ${aMachDirectiveWithSpecification("bl:what?:heap:10")}
+         | ${aMachDirectiveWithSpecification("bytes:what?:heap:10")}
      """.stripMargin
     ).thenVerify {
-      case SimulatorError.FromAsmError(InvalidMachineSpecification(_, VmProfileStringError.NotAPositiveNumber(_, "bl"), 2)) => true
+      case SimulatorError.FromAsmError(InvalidMachineSpecification(_, VmProfileStringError.NotAPositiveNumber(_, "bytes"), 2)) => true
     }
   }
 
   ".mach" should "fail if machine word length is null" in {
     failToAssembleOrExecute(
       s"""
-         | ${aMachDirectiveWithSpecification("bl:0:heap:10")}
+         | ${aMachDirectiveWithSpecification("bytes:0:heap:10")}
      """.stripMargin
     ).thenVerify {
-      case SimulatorError.FromAsmError(InvalidMachineSpecification(_, VmProfileStringError.NotAPositiveNumber(_, "bl"), 2)) => true
+      case SimulatorError.FromAsmError(InvalidMachineSpecification(_, VmProfileStringError.NotAPositiveNumber(_, "bytes"), 2)) => true
     }
   }
 
   ".mach" should "fail if machine word length is too large" in {
     failToAssembleOrExecute(
       s"""
-         | ${aMachDirectiveWithSpecification(s"bl:${VmContext.maximumByteSizeAllowed + 1}:heap:10")}
+         | ${aMachDirectiveWithSpecification(s"bytes:${VmContext.maximumByteSizeAllowed + 1}:heap:10")}
      """.stripMargin
     ).thenVerify {
-      case SimulatorError.FromAsmError(InvalidMachineSpecification(_, VmProfileStringError.ValueExceedsMaximumAllowed(_, "bl", VmContext.maximumByteSizeAllowed), 2)) => true
+      case SimulatorError.FromAsmError(InvalidMachineSpecification(_, VmProfileStringError.ValueExceedsMaximumAllowed(_, "bytes", VmContext.maximumByteSizeAllowed), 2)) => true
     }
   }
 
   ".mach" should "fail if heap size is negative" in {
     failToAssembleOrExecute(
       s"""
-         | ${aMachDirectiveWithSpecification(s"bl:1:heap:-1")}
+         | ${aMachDirectiveWithSpecification(s"bytes:1:heap:-1")}
      """.stripMargin
     ).thenVerify {
       case SimulatorError.FromAsmError(InvalidMachineSpecification(_, VmProfileStringError.NotAPositiveNumber(_, "heap"), 2)) => true
@@ -117,7 +117,7 @@ class MachDirectiveSpec extends BaseSpec {
   ".mach" should "fail if heap size is too large" in {
     failToAssembleOrExecute(
       s"""
-         | ${aMachDirectiveWithSpecification(s"bl:1:heap:${VmContext.maximumNumberOfVariablesInHeap + 1}")}
+         | ${aMachDirectiveWithSpecification(s"bytes:1:heap:${VmContext.maximumNumberOfVariablesInHeap + 1}")}
        """.stripMargin
     ).thenVerify {
       case SimulatorError.FromAsmError(InvalidMachineSpecification(_, VmProfileStringError.ValueExceedsMaximumAllowed(_, "heap", VmContext.maximumNumberOfVariablesInHeap), 2)) => true
