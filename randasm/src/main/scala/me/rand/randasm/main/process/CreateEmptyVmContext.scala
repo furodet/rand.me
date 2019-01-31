@@ -26,12 +26,17 @@
 package me.rand.randasm.main.process
 
 import me.rand.commons.config.MachineConfiguration
-import me.rand.commons.idioms.Status.OrElse
+import me.rand.commons.idioms.Status._
 import me.rand.vm.engine.VmContext
 import me.rand.vm.main.VmError
 
 object CreateEmptyVmContext {
-  def fromConfiguration(configuration: MachineConfiguration): VmContext OrElse VmError = {
-    VmContext.usingProfileString(s"bytes:${configuration.bytes}:heap:${configuration.heapSize}")
+  def fromConfiguration(configuration: MachineConfiguration): VmContext OrElse VmError = for {
+    init <- VmContext.usingProfileString(s"bytes:${configuration.bytes}:heap:${configuration.heapSize}")
+    vmContext <- createPreamble(init)
+  } yield vmContext
+
+  private def createPreamble(vmContext: VmContext): VmContext OrElse VmError = {
+    ???
   }
 }
