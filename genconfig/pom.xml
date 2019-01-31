@@ -1,9 +1,9 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>rand.me.randasm</artifactId>
-    <name>rand.me random asm generator</name>
-    <description>rand.me random asm generator</description>
+    <artifactId>rand.me.genconfig</artifactId>
+    <name>rand.me configuration template generator</name>
+    <description>generates template configuration files for rand.me</description>
     <packaging>jar</packaging>
 
     <parent>
@@ -20,31 +20,14 @@
         </dependency>
 
         <dependency>
-            <groupId>org.scalatest</groupId>
-            <artifactId>scalatest_2.12</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.github.scopt</groupId>
-            <artifactId>scopt_2.12</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>com.lmnt</groupId>
             <artifactId>rand.me.commons</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>com.lmnt</groupId>
-            <artifactId>rand.me.vm</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.lmnt</groupId>
-            <artifactId>rand.me.asm</artifactId>
-            <version>${project.version}</version>
+            <groupId>com.github.scopt</groupId>
+            <artifactId>scopt_2.12</artifactId>
         </dependency>
     </dependencies>
 
@@ -79,7 +62,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>me.rand.randasm.main.Main</mainClass>
+                            <mainClass>me.rand.genconfig.Main</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
@@ -95,38 +78,6 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.7</version>
-                <configuration>
-                    <skipTests>true</skipTests>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.scalatest</groupId>
-                <artifactId>scalatest-maven-plugin</artifactId>
-                <version>1.0</version>
-                <configuration>
-                    <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
-                    <junitxml>.</junitxml>
-                    <filereports>WDF TestSuite.txt</filereports>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>test</id>
-                        <goals>
-                            <goal>test</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.scoverage</groupId>
-                <artifactId>scoverage-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>

@@ -1,0 +1,36 @@
+# Standard rand.me configuration for generic @bits@-bits machine.
+machine:
+  # Virtual machine version.
+  version: 0.1
+  # Word length, in bytes.
+  #  The word length represents the maximum size of native types handled
+  #  by the virtual machine. Derived types are any words of size 2^N, where
+  #  N is a power of two, signed and unsigned.
+  #  In other words, 64 bits machine support types u8, u16, u32, u64
+  #  (unsigned types) and s8, s16, s32, s64 (signed types).
+  # The maximum word length is 2048/8=256 bytes
+  bytes: @bytes@
+  # Pointer length, in bits.
+  #  Specifying the pointer length defines a basic data type to each type of
+  #  pointer in the system. It is typically used by sizeof to return the
+  #  exact size of a pointer.
+  # The virtual machine manages three address spaces
+  #   - the heap, storing global variables
+  #   - the stack, containing local variables and function parameters
+  #   - the instruction memory, including the program
+  # For each type of address space, an explicit pointer size can be specified.
+  # If unspecified, or equal to 0, the virtual machine uses the largest known
+  # data type, as defined by bits.
+  # Otherwise, definition of a pointer length shall strictly comply with
+  # the machine word definition (i.e. the bits)
+  #   === heap pointer size
+  hpBytes: 0
+  #   === stack pointer size
+  spBytes: 0
+  #   === instruction pointer size
+  ipBytes: 0
+  # Heap size
+  #  The heap contains the global variables used by a program. The number of
+  #  global variables shall not exceed the specified limit (but it can be less).
+  heapSize: 256
+
