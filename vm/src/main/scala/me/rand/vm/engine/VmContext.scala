@@ -34,7 +34,7 @@ import me.rand.vm.main.VmError._
 case class VmContext(heap: VarSet,
                      stack: VmStack,
                      program: VmProgram,
-                     exitCode: Option[Int],
+                     state: VmRunState,
                      profile: VmContext.VmContextProfile) {
   def createFrameOfSize(nrVariables: Int): VmContext = copy(stack = stack.createFrameOfSize(nrVariables))
 
@@ -56,7 +56,9 @@ case class VmContext(heap: VarSet,
     setProgram(newProgram)
   }
 
-  def halt(exitCode: Int): VmContext = copy(exitCode = Some(exitCode))
+  def halt(exitCode: Int): VmContext = copy(state = VmRunState.Stopped(exitCode))
+
+  def pause(): VmContext = copy(state = VmRunState.Paused)
 
   def putHeapVariable(id: Int, v: Variable): VmContext OrElse VmContextError =
     heap.putVariable(id, v) && (_ => this)
@@ -116,7 +118,7 @@ object VmContext {
     new VmContext(VarSet.InArray.called("heap").ofSize(vmProfile.varSetSize),
       VmStack.empty,
       VmProgram.empty,
-      None,
+      VmRunState.Running,
       VmContextProfile.default(vmTypes)
     )
   }

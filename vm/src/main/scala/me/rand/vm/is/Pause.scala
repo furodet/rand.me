@@ -25,27 +25,24 @@
  */
 package me.rand.vm.is
 
-import me.rand.vm.alu.Comparator
-import me.rand.vm.engine.Instruction
+import me.rand.commons.idioms.Status._
+import me.rand.vm.alu.VmRegister
+import me.rand.vm.engine.{Instruction, Variable}
 
-object InstructionSet {
-  lazy val map: Map[String, Instruction] =
-    Map(
-      BitFlip.shortName -> BitFlip(),
-      Comparator.?=.name -> Compare(Comparator.?=),
-      Comparator.?≠.name -> Compare(Comparator.?≠),
-      Comparator.?<.name -> Compare(Comparator.?<),
-      Comparator.?≤.name -> Compare(Comparator.?≤),
-      Comparator.?>.name -> Compare(Comparator.?>),
-      Comparator.?≥.name -> Compare(Comparator.?≥),
-      Copy.shortName -> Copy(),
-      Exit.shortName -> Exit(),
-      Pause.shortName -> Pause(),
-      Increment.shortName -> Increment(),
-      Decrement.shortName -> Decrement(),
-      SizeOf.shortName -> SizeOf(),
-      Add.shortName -> Add(),
-      Sub.shortName -> Sub(),
-      Jump.shortName -> Jump()
-    )
+
+object Pause {
+  lazy val shortName = "jump"
+
+  private[is] def apply(): Instruction =
+    Instruction.called(shortName)
+      .|(
+        Instruction.Zeroadic().withComputeFunction {
+          (vmContext, _) =>
+            val zero = Variable.Scalar.anonymous(VmRegister.ofType(vmContext.profile.vmTypes.maxUnsignedType).withValue(0))
+            Ok(zero)
+        }.withUpdateFunction(
+          (_, _, vmContext, _) =>
+            Ok(vmContext.pause())
+        )
+      )
 }

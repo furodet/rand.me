@@ -23,29 +23,16 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-package me.rand.vm.is
+package me.rand.vm.engine
 
-import me.rand.vm.alu.Comparator
-import me.rand.vm.engine.Instruction
+sealed trait VmRunState
 
-object InstructionSet {
-  lazy val map: Map[String, Instruction] =
-    Map(
-      BitFlip.shortName -> BitFlip(),
-      Comparator.?=.name -> Compare(Comparator.?=),
-      Comparator.?≠.name -> Compare(Comparator.?≠),
-      Comparator.?<.name -> Compare(Comparator.?<),
-      Comparator.?≤.name -> Compare(Comparator.?≤),
-      Comparator.?>.name -> Compare(Comparator.?>),
-      Comparator.?≥.name -> Compare(Comparator.?≥),
-      Copy.shortName -> Copy(),
-      Exit.shortName -> Exit(),
-      Pause.shortName -> Pause(),
-      Increment.shortName -> Increment(),
-      Decrement.shortName -> Decrement(),
-      SizeOf.shortName -> SizeOf(),
-      Add.shortName -> Add(),
-      Sub.shortName -> Sub(),
-      Jump.shortName -> Jump()
-    )
+object VmRunState {
+
+  case object Running extends VmRunState
+
+  case object Paused extends VmRunState
+
+  case class Stopped(exitCode: Int) extends VmRunState
+
 }

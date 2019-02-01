@@ -132,6 +132,23 @@ object Instruction {
         Ok(address)
     }
 
+  case class Zeroadic() {
+    def withComputeFunction(f: (VmContext, ExecutionContext) => Variable OrElse VmError) =
+      new PartialSignature(
+        variables =>
+          if (variables.isEmpty)
+            Some((vmContext: VmContext, executionContext: ExecutionContext) => {
+              f(vmContext, executionContext) && {
+                result =>
+                  executionContext.logger ~> s"=> ${result.getValueString}"
+                  result
+              }
+            })
+          else None,
+        List.empty
+      )
+  }
+
   case class Monadic[T1 <: Variable](vt1: Class[T1]) {
     def withComputeFunction(f: (T1, VmContext, ExecutionContext) => Variable OrElse VmError) =
       new PartialSignature(

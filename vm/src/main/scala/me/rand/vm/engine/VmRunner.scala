@@ -51,11 +51,11 @@ object VmRunner {
     @tailrec
     private def executeInstructionsOneByOne(context: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError = {
       executionContext.logger >> s"PC=${context.program.pc}"
-      context.exitCode match {
-        case Some(_) =>
+      context.state match {
+        case VmRunState.Stopped(_) | VmRunState.Paused =>
           Ok(context)
 
-        case None =>
+        case _ =>
           (for {
             instruction <- context.program.nextInstruction
             nextContext <- instruction.execute(context)

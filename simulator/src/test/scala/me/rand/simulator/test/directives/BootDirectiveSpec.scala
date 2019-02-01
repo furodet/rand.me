@@ -28,6 +28,7 @@ package me.rand.simulator.test.directives
 import me.rand.asm.main.AsmError
 import me.rand.simulator.main.SimulatorError
 import me.rand.simulator.test.BaseSpec
+import me.rand.vm.engine.VmRunState
 
 class BootDirectiveSpec extends BaseSpec {
   "a program" should "fail if no bootstrap is defined" in {
@@ -79,7 +80,12 @@ class BootDirectiveSpec extends BaseSpec {
        """.stripMargin
     ).thenVerify {
       case vmContext =>
-        vmContext.exitCode.isDefined && (vmContext.exitCode.get == 0x42)
+        vmContext.state match {
+          case VmRunState.Stopped(0x42) =>
+            true
+
+          case _ => false
+        }
     }
   }
 

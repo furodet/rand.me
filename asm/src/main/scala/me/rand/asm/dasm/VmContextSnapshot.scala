@@ -25,14 +25,14 @@
  */
 package me.rand.asm.dasm
 
-import me.rand.vm.engine.{VmContext, VmProgram}
+import me.rand.vm.engine.{VmContext, VmProgram, VmRunState}
 
 import scala.collection.mutable.ListBuffer
 
 class VmContextSnapshot(vmContext: VmContext) {
   def generics: List[String] = List(
     s"PROFILE: ${vmContext.profile}",
-    s"STATE: ${explainState(vmContext.exitCode)}"
+    s"STATE: ${explainState(vmContext.state)}"
   )
 
   def heap: List[String] = {
@@ -66,12 +66,15 @@ class VmContextSnapshot(vmContext: VmContext) {
 
   def all: List[String] = generics ++ heap ++ stack ++ program
 
-  private def explainState(maybeExitCode: Option[Int]): String =
-    maybeExitCode match {
-      case None =>
+  private def explainState(state: VmRunState): String =
+    state match {
+      case VmRunState.Running =>
         "running"
 
-      case Some(exitCode) =>
+      case VmRunState.Paused =>
+        "paused"
+
+      case VmRunState.Stopped(exitCode) =>
         s"exit:$exitCode"
     }
 

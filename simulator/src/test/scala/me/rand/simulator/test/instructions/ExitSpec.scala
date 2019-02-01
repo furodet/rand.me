@@ -28,7 +28,7 @@ package me.rand.simulator.test.instructions
 import me.rand.commons.idioms.Status._
 import me.rand.simulator.main.SimulatorError
 import me.rand.simulator.test.BaseSpec
-import me.rand.vm.engine.{Variable, VmContext}
+import me.rand.vm.engine.{Variable, VmContext, VmRunState}
 import me.rand.vm.main.VmError
 
 class ExitSpec extends BaseSpec {
@@ -111,8 +111,8 @@ class ExitSpec extends BaseSpec {
   }
 
   private def vmExitedWithCode(code: Int, vmContext: VmContext): Boolean =
-    vmContext.exitCode match {
-      case Some(value) if value == code =>
+    vmContext.state match {
+      case VmRunState.Stopped(value) if value == code =>
         true
 
       case _ =>

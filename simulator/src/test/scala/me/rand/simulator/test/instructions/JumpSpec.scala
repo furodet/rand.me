@@ -27,6 +27,7 @@ package me.rand.simulator.test.instructions
 
 import me.rand.simulator.main.SimulatorError
 import me.rand.simulator.test.BaseSpec
+import me.rand.vm.engine.VmRunState
 import me.rand.vm.main.VmError.SyntaxError.NoMatchingProfile
 
 class JumpSpec extends BaseSpec {
@@ -45,8 +46,14 @@ class JumpSpec extends BaseSpec {
       )
     ).thenVerify {
       case vmContext =>
-        hasHeapVariable(0, 0x9abcdef0, vmContext) &&
-          (vmContext.exitCode.getOrElse(-1) == 2)
+        hasHeapVariable(0, 0x9abcdef0, vmContext) && (
+          vmContext.state match {
+            case VmRunState.Stopped(2) =>
+              true
+
+            case _ => false
+          }
+          )
     }
   }
 
