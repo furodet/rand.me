@@ -31,7 +31,7 @@ import me.rand.vm.engine.{Instruction, Variable}
 
 
 object Pause {
-  lazy val shortName = "jump"
+  lazy val shortName = "pause"
 
   private[is] def apply(): Instruction =
     Instruction.called(shortName)
