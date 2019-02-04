@@ -42,7 +42,7 @@ class PauseSpec extends BaseSpec {
        """.stripMargin
     ).thenVerify {
       case vmContext: VmContext =>
-        vmIsPaused(vmContext)
+        vmIsPaused("main", 0, vmContext)
     }
   }
 
@@ -87,7 +87,7 @@ class PauseSpec extends BaseSpec {
        """.stripMargin
     ).thenVerify {
       case vmContext =>
-        vmIsPaused(vmContext) && (vmContext.heap.getVariable(0) match {
+        vmIsPaused("main", 2, vmContext) && (vmContext.heap.getVariable(0) match {
           case Ok(Some(Variable.Scalar(_, value))) if value.toInt == 0xab =>
             true
           case _ =>
@@ -96,9 +96,11 @@ class PauseSpec extends BaseSpec {
     }
   }
 
-  private def vmIsPaused(vmContext: VmContext): Boolean =
+  private def vmIsPaused(expectedBlockName: String, expectedPcIndex: Int, vmContext: VmContext): Boolean =
     vmContext.state match {
-      case VmRunState.Paused => true
+      case VmRunState.Paused(pc) =>
+        pc.basicBlock.isDefined && (pc.basicBlock.get.name == expectedBlockName) && (pc.index == expectedPcIndex)
+
       case _ => false
     }
 }

@@ -31,7 +31,7 @@ object VmRunState {
 
   case object Running extends VmRunState
 
-  case object Paused extends VmRunState
+  case class Paused(pc: VmProgram.Counter) extends VmRunState
 
   case class Stopped(exitCode: Int) extends VmRunState
 

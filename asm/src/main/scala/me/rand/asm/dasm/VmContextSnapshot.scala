@@ -71,8 +71,8 @@ class VmContextSnapshot(vmContext: VmContext) {
       case VmRunState.Running =>
         "running"
 
-      case VmRunState.Paused =>
-        "paused"
+      case VmRunState.Paused(pc) =>
+        s"paused @PC=$pc"
 
       case VmRunState.Stopped(exitCode) =>
         s"exit:$exitCode"

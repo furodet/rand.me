@@ -52,7 +52,7 @@ object VmRunner {
     private def executeInstructionsOneByOne(context: VmContext)(implicit executionContext: ExecutionContext): VmContext OrElse VmError = {
       executionContext.logger >> s"PC=${context.program.pc}"
       context.state match {
-        case VmRunState.Stopped(_) | VmRunState.Paused =>
+        case VmRunState.Stopped(_) | VmRunState.Paused(_) =>
           Ok(context)
 
         case _ =>

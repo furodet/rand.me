@@ -58,7 +58,7 @@ case class VmContext(heap: VarSet,
 
   def halt(exitCode: Int): VmContext = copy(state = VmRunState.Stopped(exitCode))
 
-  def pause(): VmContext = copy(state = VmRunState.Paused)
+  def pause(): VmContext = copy(state = VmRunState.Paused(program.pc))
 
   def putHeapVariable(id: Int, v: Variable): VmContext OrElse VmContextError =
     heap.putVariable(id, v) && (_ => this)
