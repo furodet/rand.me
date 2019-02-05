@@ -25,18 +25,41 @@
  */
 package me.rand.randasm.main.process
 
-import me.rand.commons.config.MachineConfiguration
+import me.rand.commons.config.{MachineConfiguration, RandMeConfigurationError}
 import me.rand.commons.idioms.Status._
+import me.rand.randasm.main.RandAsmError
 import me.rand.vm.engine.VmContext
-import me.rand.vm.main.VmError
+import me.rand.vm.engine.VmContext.VmContextProfile.PointerTypes
+import me.rand.vm.engine.VmTypes.VmType
 
 object CreateEmptyVmContext {
-  def fromConfiguration(configuration: MachineConfiguration): VmContext OrElse VmError = for {
-    init <- VmContext.usingProfileString(s"bytes:${configuration.bytes}:heap:${configuration.heapSize}")
-    vmContext <- createPreamble(init)
+  def fromConfiguration(configuration: MachineConfiguration): VmContext OrElse RandAsmError = for {
+    init <- createInitialVmContext(configuration)
+    vmContext <- setupPointerTypes(init, configuration)
   } yield vmContext
 
-  private def createPreamble(vmContext: VmContext): VmContext OrElse VmError = {
-    ???
-  }
+  private def createInitialVmContext(configuration: MachineConfiguration): VmContext OrElse RandAsmError =
+    VmContext.usingProfileString(s"bytes:${configuration.bytes}:heap:${configuration.heapSize}") ||
+      (error => RandAsmError.FromVmConfigurationError(error))
+
+  private def setupPointerTypes(vmContext: VmContext, configuration: MachineConfiguration): VmContext OrElse RandAsmError =
+    for {
+      v0 <- fetchAndSetPointerType(vmContext, configuration.ipBytes, "ipBytes", (pt, t) => pt.withInstructionPointerType(t))
+      v1 <- fetchAndSetPointerType(vmContext, configuration.hpBytes, "hpBytes", (pt, t) => pt.withHeapPointerType(t))
+      v2 <- fetchAndSetPointerType(vmContext, configuration.spBytes, "spBytes", (pt, t) => pt.withStackPointerType(t))
+    } yield v2
+
+  private def fetchAndSetPointerType(vmContext: VmContext, pointerBytes: Int, fieldName: String,
+                                     update: (PointerTypes, VmType) => PointerTypes): VmContext OrElse RandAsmError =
+    if (pointerBytes == 0) Ok(vmContext)
+    else {
+      vmContext.profile.vmTypes.select(pointerBytes, isSigned = false) match {
+        case None =>
+          Err(RandAsmError.FromConfigurationError(RandMeConfigurationError.InvalidValue(fieldName, pointerBytes, "not defining a known machine type")))
+
+        case Some(vmType) =>
+          val newPointerTypes = update(vmContext.profile.pointerTypes, vmType)
+          Ok(vmContext.withPointerTypes(newPointerTypes))
+      }
+    }
 }

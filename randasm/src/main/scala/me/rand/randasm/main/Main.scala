@@ -58,5 +58,5 @@ object Main {
   }
 
   private def tryInitializeVmContext(machine: MachineConfiguration): VmContext OrElse RandAsmError =
-    CreateEmptyVmContext.fromConfiguration(machine) || (error => RandAsmError.FromVmConfigurationError(error))
+    CreateEmptyVmContext.fromConfiguration(machine)
 }
